@@ -27,18 +27,21 @@ val inspect = (project.findProperty("dxbiInspect") as String?) == "true"
 
 // Where the app looks for its updates: the repository it was built from (GitHub Actions says which), so
 // a fork's TVs follow the fork's own releases rather than being offered builds signed with another key
-val updateRepo = System.getenv("DXBI_UPDATE_REPO") ?: System.getenv("GITHUB_REPOSITORY") ?: "notdxbi/dxbi-stremio"
+val updateRepo = System.getenv("DXBI_UPDATE_REPO") ?: System.getenv("GITHUB_REPOSITORY") ?: "ByteSizeData/streamflix"
 
 android {
     namespace = "com.notdxbi.dxbi.tv"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.notdxbi.dxbi.tv"
+        // StreamFlix's own id (and its own signing key): it installs beside dx.bi TV, never over it
+        applicationId = "app.streamflix.tv"
         minSdk = 24
         targetSdk = 35
         versionName = dxbiVersion
-        versionCode = versionParts[0] * 10000 + versionParts[1] * 100 + versionParts[2]
+        // (StreamFlix numbers its releases 2.38.401, 2.38.402…: dx.bi's 2.38.4, then its own count,
+        // so the last part runs into the hundreds)
+        versionCode = versionParts[0] * 1_000_000 + versionParts[1] * 10_000 + versionParts[2]
         buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
         // Released builds keep themselves current; test builds run the plugin they were built with
         buildConfigField("boolean", "SELF_UPDATE", "true")
@@ -52,13 +55,13 @@ android {
         create("tv") {
             dimension = "device"
             buildConfigField("boolean", "PHONE_UI", "false")
-            buildConfigField("String", "APK_NAME", "\"dxbi-tv.apk\"")
+            buildConfigField("String", "APK_NAME", "\"streamflix-tv.apk\"")
         }
         create("mobile") {
             dimension = "device"
-            applicationId = "com.notdxbi.dxbi.mobile"
+            applicationId = "app.streamflix.mobile"
             buildConfigField("boolean", "PHONE_UI", "true")
-            buildConfigField("String", "APK_NAME", "\"dxbi-mobile.apk\"")
+            buildConfigField("String", "APK_NAME", "\"streamflix-mobile.apk\"")
             proguardFiles("proguard-mobile.pro")
         }
     }
@@ -129,7 +132,7 @@ androidComponents {
     // with their own data, and run the plugin they were built with (a released one fetched over it would
     // hide the work being tested). dx.bi TV's test builds stay as they were.
     onVariants(selector().withFlavor("device" to "mobile").withBuildType("debug")) { variant ->
-        variant.applicationId.set("com.notdxbi.dxbi.mobile.dev")
+        variant.applicationId.set("app.streamflix.mobile.dev")
         variant.buildConfigFields.put("SELF_UPDATE", com.android.build.api.variant.BuildConfigField("boolean", "false", null))
         variant.outputs.forEach { it.versionName.set("$dxbiVersion-dev") }
     }

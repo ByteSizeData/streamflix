@@ -112,7 +112,7 @@ object Cast {
             if (!casting) return@addProgressListener
             if (position > 0) lastMs = position
             if (duration > 0) durationMs = duration
-            PlaybackBus.listener?.onProgress(lastMs, durationMs, !remote.isPlaying)
+            PlaybackBus.listener?.onProgress(lastMs, durationMs, !remote.isPlaying, remote.isBuffering)
         }, 5000)
         remote.registerCallback(object : RemoteMediaClient.Callback() {
             override fun onStatusUpdated() {

@@ -1,3 +1,5 @@
+> **This repository is StreamFlix**, a copy of [dx.bi](https://github.com/notdxbi/dxbi-stremio) under another name with some changes of its own. What it is, its apps and how they keep themselves current: [streamflix/README.md](streamflix/README.md). The rest of this page is dx.bi's own README, kept as it is.
+
 <p align="center">
   <img src="screenshots/banner.jpg" alt="DX.BI" width="100%">
 </p>

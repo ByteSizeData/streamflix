@@ -87,6 +87,8 @@ struct RootView: View {
         .onChange(of: scenePhase, initial: true) { _, phase in
             guard phase == .active else { return }
             Task { if let found = await Updates.check() { update = found } }
+            // (the plugin keeps itself current between app releases)
+            Task { await Updates.checkPlugin() }
         }
         .alert("dx.bi \(update?.version ?? "") is out", isPresented: Binding(get: { update != nil }, set: { if !$0 { update = nil } }), presenting: update) { release in
             Button("Open the Release") { UIApplication.shared.open(release.page) }

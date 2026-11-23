@@ -117,7 +117,7 @@ final class Page: NSObject {
             try { Object.defineProperty(window, name, { value: undefined, configurable: false, writable: false }); } catch (_) {}
           }
           const post = (message) => { try { window.webkit.messageHandlers.dxbi.postMessage(message); } catch (_) {} };
-          const ios = (window.__dxbiIos = { settings: \(Json.encode(savedSettings)), plugin: \(Json.quote(resource("dxbi.plugin.js"))), active: "", pendingClose: "", utcOffset: \(Self.utcOffset) });
+          const ios = (window.__dxbiIos = { settings: \(Json.encode(savedSettings)), plugin: \(Json.quote(Updates.plugin(bundled: resource("dxbi.plugin.js")))), active: "", pendingClose: "", utcOffset: \(Self.utcOffset) });
           window.DxbiTV = {
             pluginSource: () => ios.plugin,
             getSettings: (t, plugin) => JSON.stringify(ios.settings[plugin] || {}),
