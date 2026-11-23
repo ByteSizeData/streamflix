@@ -1,8 +1,9 @@
 # Draws StreamFlix's icons and TV banner into streamflix/art/overlay, laid out as the files they
 # replace (streamflix/brand.mjs copies them over dx.bi's at release time).
 #   powershell -ExecutionPolicy Bypass -File streamflix\art\make-art.ps1
-# The letters are Bebas Neue (tv/app/src/mobile/res/font/bebas_neue.ttf, SIL Open Font License),
-# filled gold to orange on a dark tile. Nothing here is dx.bi's logo, or anyone else's.
+# The letters are Bebas Neue (tv/app/src/mobile/res/font/bebas_neue.ttf, SIL Open Font License), in
+# the skin's own red (--dx-accent) on a black tile, like the name in the app's top bar. Plain upright
+# letters: nothing here is dx.bi's logo, or a copy of any streaming service's.
 Add-Type -AssemblyName System.Drawing
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $overlay = Join-Path $PSScriptRoot 'overlay'
@@ -19,9 +20,7 @@ function New-Art {
     $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
     if ($Tile) {
         $all = New-Object System.Drawing.Rectangle(0, 0, $Width, $Height)
-        $dark = New-Object System.Drawing.Drawing2D.LinearGradientBrush($all, [System.Drawing.Color]::FromArgb(255, 32, 32, 38), [System.Drawing.Color]::FromArgb(255, 8, 8, 11), 90.0)
-        $g.FillRectangle($dark, $all)
-        $dark.Dispose()
+        $g.Clear([System.Drawing.Color]::Black)
     } else {
         $g.Clear([System.Drawing.Color]::Transparent)
     }
@@ -39,7 +38,7 @@ function New-Art {
     $barTop = $t.Bottom + $Height * 0.05
     $barHeight = [Math]::Max(2.0, $Height * 0.035)
     $span = New-Object System.Drawing.RectangleF($t.X, $t.Y, $t.Width, ($barTop + $barHeight - $t.Y))
-    $fill = New-Object System.Drawing.Drawing2D.LinearGradientBrush($span, [System.Drawing.Color]::FromArgb(255, 255, 204, 0), [System.Drawing.Color]::FromArgb(255, 255, 94, 0), 30.0)
+    $fill = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 229, 9, 20))
     $g.FillPath($fill, $path)
     if ($Bar) { $g.FillRectangle($fill, [single]$t.X, [single]$barTop, [single]$t.Width, [single]$barHeight) }
     $fill.Dispose(); $g.Dispose()
@@ -55,11 +54,11 @@ $sizes = @{ mdpi = 1.0; hdpi = 1.5; xhdpi = 2.0; xxhdpi = 3.0; xxxhdpi = 4.0 }
 foreach ($d in $sizes.Keys) {
     $k = $sizes[$d]
     # the square icon (Android TV, and phones before Android 8)
-    New-Art -Width ([int](48 * $k)) -Height ([int](48 * $k)) -Text 'SF' -WidthShare 0.56 -HeightShare 0.48 -Tile $true -Bar $true -Out "$res\mipmap-$d\ic_launcher.png"
+    New-Art -Width ([int](48 * $k)) -Height ([int](48 * $k)) -Text 'SF' -WidthShare 0.60 -HeightShare 0.54 -Tile $true -Bar $false -Out "$res\mipmap-$d\ic_launcher.png"
     # the adaptive icon's front layer: only the middle two thirds is sure to show
-    New-Art -Width ([int](108 * $k)) -Height ([int](108 * $k)) -Text 'SF' -WidthShare 0.34 -HeightShare 0.30 -Tile $false -Bar $true -Out "$res\mipmap-$d\ic_launcher_foreground.png"
+    New-Art -Width ([int](108 * $k)) -Height ([int](108 * $k)) -Text 'SF' -WidthShare 0.34 -HeightShare 0.30 -Tile $false -Bar $false -Out "$res\mipmap-$d\ic_launcher_foreground.png"
 }
 # the tile on a TV's home screen
-New-Art -Width 960 -Height 540 -Text 'STREAMFLIX' -WidthShare 0.76 -HeightShare 0.42 -Tile $true -Bar $false -Out "$res\drawable\banner.png"
+New-Art -Width 960 -Height 540 -Text 'STREAMFLIX' -WidthShare 0.80 -HeightShare 0.44 -Tile $true -Bar $false -Out "$res\drawable\banner.png"
 # the iPhone and iPad icon (no transparency)
-New-Art -Width 1024 -Height 1024 -Text 'SF' -WidthShare 0.56 -HeightShare 0.48 -Tile $true -Bar $true -Out 'ios\Dxbi\Assets.xcassets\AppIcon.appiconset\icon-1024.png'
+New-Art -Width 1024 -Height 1024 -Text 'SF' -WidthShare 0.60 -HeightShare 0.54 -Tile $true -Bar $false -Out 'ios\Dxbi\Assets.xcassets\AppIcon.appiconset\icon-1024.png'
