@@ -1,5 +1,5 @@
 // dx.bi — Copyright (C) 2026 dx.bi. GNU General Public License, version 3 or later (see LICENSE).
-// dx.bi phone app: the page as an engine. Runs next to dxbi-tv.js in web.stremio.com, which keeps
+// StreamFlix phone app: the page as an engine. Runs next to dxbi-tv.js in web.stremio.com, which keeps
 // doing Stremio's work (account, addons, library, finding streams) while the app's native screens
 // show it. Native asks through __dxbiEngine.handle({id, op, args}); the answers, and the models it
 // watches as they change, go back through DxbiTV.engine as compact JSON (only what the screens use).
@@ -10,7 +10,7 @@
   const bridge = window.DxbiTV;
   if (!bridge || !bridge.engine) return;
   const send = (message) => {
-    try { bridge.engine(TOKEN, JSON.stringify(message)); } catch (err) { console.warn("[dx.bi engine] send failed", err); }
+    try { bridge.engine(TOKEN, JSON.stringify(message)); } catch (err) { console.warn("[StreamFlix engine] send failed", err); }
   };
 
   // Stremio's core runs in a worker: window.core appears once it has started, and every call is a Promise
@@ -221,7 +221,7 @@
       try {
         send({ type: "state", field, data: view(field, await core().getState(field)) });
       } catch (err) {
-        console.warn("[dx.bi engine] state failed", field, err);
+        console.warn("[StreamFlix engine] state failed", field, err);
       }
     }, 150));
   }
@@ -230,7 +230,7 @@
   let pageHandler = null;
   const onCoreEvent = (event) => {
     if (pageHandler) {
-      try { pageHandler(event); } catch (err) { console.warn("[dx.bi engine] page handler", err); }
+      try { pageHandler(event); } catch (err) { console.warn("[StreamFlix engine] page handler", err); }
     }
     if (!event) return;
     if (event.name === "NewState" && Array.isArray(event.args)) event.args.forEach(push);
@@ -243,7 +243,7 @@
       set(handler) { if (handler !== onCoreEvent) pageHandler = handler; },
     });
   } catch (err) {
-    console.warn("[dx.bi engine] can't hear Stremio's events", err);
+    console.warn("[StreamFlix engine] can't hear Stremio's events", err);
   }
 
   // ---------------------------------------------------------------------------
@@ -319,7 +319,7 @@
       const ctx = await core().getState("ctx");
       const found = ((ctx && ctx.profile && ctx.profile.addons) || []).find((a) => a.transportUrl === transportUrl);
       if (!found) throw new Error("that addon isn't installed");
-      if (found.flags && found.flags.protected) throw new Error("dx.bi needs this addon");
+      if (found.flags && found.flags.protected) throw new Error("StreamFlix needs this addon");
       await core().dispatch({ action: "Ctx", args: { action: "UninstallAddon", args: found } });
       push("installed_addons");
       push("remote_addons");
@@ -360,14 +360,14 @@
       if (!/^#\/player\//.test(link || "")) throw new Error("not a player link");
       location.hash = link;
     },
-    // dx.bi's own features (window.__dxbi)
+    // StreamFlix's own features (window.__dxbi)
     // ("phone.billboard", "viewers.select"…: called on the object it belongs to)
     async dx({ method, args }) {
       const path = String(method || "").split(".");
       let owner = window.__dxbi;
       for (const part of path.slice(0, -1)) owner = owner && owner[part];
       const fn = owner && owner[path[path.length - 1]];
-      if (typeof fn !== "function") throw new Error(`dx.bi has no ${method}`);
+      if (typeof fn !== "function") throw new Error(`StreamFlix has no ${method}`);
       return await fn.apply(owner, args || []);
     },
     route() { return location.hash; },
@@ -376,7 +376,7 @@
       if (!/^#\//.test(hash || "")) throw new Error("not a page address");
       location.hash = hash;
     },
-    // dx.bi settings (dxbi-tv.js keeps the list the TV shows)
+    // StreamFlix settings (dxbi-tv.js keeps the list the TV shows)
     settings() { return window.__dxbiTv && window.__dxbiTv.settings ? window.__dxbiTv.settings() : []; },
     async saveSetting({ key, value }) { await window.__dxbiTv.saveSetting(key, value); },
   };
@@ -409,12 +409,12 @@
         const now = Date.now();
         const out = (v) => !v.released || Date.parse(v.released) <= now;
         const target = finished ? videos.slice(i + 1).find((v) => v.season > 0 && out(v)) : videos[i];
-        console.info("[dx.bi engine] after playing", videoId, finished, "→", target && target.id, "(picked:", sel.streamPath && sel.streamPath.id, ")");
+        console.info("[StreamFlix engine] after playing", videoId, finished, "→", target && target.id, "(picked:", sel.streamPath && sel.streamPath.id, ")");
         if (!target || (sel.streamPath && sel.streamPath.id === target.id)) return;
         const streamPath = { resource: "stream", type: sel.metaPath.type, id: target.id, extra: [] };
         await ops.load({ field: "meta_details", model: "MetaDetails", args: { metaPath: sel.metaPath, streamPath, guessStream: false } });
       } catch (err) {
-        console.warn("[dx.bi engine] couldn't pick the next episode", err);
+        console.warn("[StreamFlix engine] couldn't pick the next episode", err);
       }
     },
   };
