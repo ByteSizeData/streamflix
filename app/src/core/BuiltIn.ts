@@ -1,5 +1,6 @@
 import { app } from "electron";
-import { cpSync, existsSync, readFileSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "fs";
+import { execFile } from "child_process";
 import { join } from "path";
 import Properties from "./Properties";
 import Helpers from "../utils/Helpers";
@@ -26,7 +27,8 @@ export function seedBuiltInPlugin(): void {
         const installedVersion = existsSync(installed)
             ? ExtractMetaData.extractMetadataFromFile(installed)?.version
             : null;
-        if (!installedVersion || (bundledVersion && Helpers.isNewerVersion(bundledVersion, installedVersion))) {
+        const custom = /simkl/i.test(bundledVersion || "");
+        if (!installedVersion || (bundledVersion && (custom ? installedVersion !== bundledVersion : Helpers.isNewerVersion(bundledVersion, installedVersion)))) {
             writeFileSync(installed, content, "utf-8");
             logger.info(`Installed the built-in dx.bi plugin v${bundledVersion}.`);
         }
@@ -74,4 +76,69 @@ export async function offerEnhancedImport(): Promise<void> {
             logger.warn(`Couldn't import ${item}: ${(err as Error).message}`);
         }
     }
+}
+
+/**
+ * Stremio's own app (Stremio 5) keeps its web profile, sign-in, addons, library and settings included,
+ * in a WebView2 folder. Like the Stremio Enhanced import, dx.bi offers once to copy it, so it opens
+ * signed in and set up just as Stremio was. Stremio has to be closed meanwhile: it holds the files open.
+ */
+export async function offerStremioImport(): Promise<void> {
+    const from = Properties.stremioImportPath;
+    const to = Properties.enhancedPath;
+    if (!from) return;
+    const marker = join(to, ".stremio-import-offered");
+    // Asked once, except after "Skip" (Stremio was open): then again next time. A profile that has no
+    // marker at all is from before this build (plain dx.bi) and is left alone; the one dx.bi makes for
+    // itself during a skipped first run must not count as that.
+    const state = existsSync(marker) ? readFileSync(marker, "utf8").trim() : "";
+    if (state ? state !== "skipped" : existsSync(join(to, "Local Storage"))) return;
+    if (!existsSync(join(from, "Local Storage"))) return;
+    mkdirSync(to, { recursive: true });
+    const offered = (result = "") => writeFileSync(marker, result || new Date().toISOString());
+
+    // (DXBI_IMPORT=copy|fresh answers for automated tests)
+    const preset = process.env.DXBI_IMPORT;
+    const choice = preset ? (preset === "copy" ? 0 : 1) : await Helpers.showAlert(
+        "question",
+        "Bring your Stremio setup?",
+        "dx.bi found the Stremio app on this computer. It can copy your Stremio sign-in, addons, library and settings " +
+        "over, so dx.bi opens just as Stremio was.\n\nStremio itself isn't changed.",
+        ["Copy my setup", "Start fresh"]
+    );
+    if (choice !== 0) { offered(); return; } // Start fresh: not asked again
+
+    while (await isRunning("stremio-shell-ng.exe")) {
+        const again = preset ? 1 : await Helpers.showAlert("warning", "Close Stremio first", "Stremio is still open, and it keeps its files to itself while it runs. Close it, then press Try again.", ["Try again", "Skip"]);
+        if (again !== 0) { offered("skipped"); return; } // skipped for now: offered again next time
+    }
+    let failed = "";
+    for (const item of ["Local Storage", "IndexedDB"]) {
+        const src = join(from, item);
+        if (!existsSync(src)) continue;
+        // copied whole or not at all: never half a folder
+        const tmp = join(to, `${item}.import`);
+        try {
+            rmSync(tmp, { recursive: true, force: true });
+            cpSync(src, tmp, { recursive: true });
+            rmSync(join(to, item), { recursive: true, force: true });
+            renameSync(tmp, join(to, item));
+            logger.info(`Imported ${item} from Stremio.`);
+        } catch (err) {
+            rmSync(tmp, { recursive: true, force: true });
+            failed = (err as Error).message;
+            logger.warn(`Couldn't import ${item} from Stremio: ${failed}`);
+        }
+    }
+    offered();
+    if (failed && !preset) await Helpers.showAlert("warning", "Couldn't copy your Stremio setup", `Part of it couldn't be copied (${failed}). You can sign in to Stremio in dx.bi instead.`, ["OK"]);
+}
+
+function isRunning(image: string): Promise<boolean> {
+    if (process.platform !== "win32") return Promise.resolve(false);
+    return new Promise((resolve) => {
+        execFile("tasklist", ["/FI", `IMAGENAME eq ${image}`], { windowsHide: true }, (err, stdout) => {
+            resolve(!err && String(stdout).toLowerCase().includes(image.toLowerCase()));
+        });
+    });
 }

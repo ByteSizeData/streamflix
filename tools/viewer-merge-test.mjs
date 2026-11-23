@@ -6,16 +6,20 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const source = readFileSync(join(root, "dxbi.plugin.js"), "utf8");
+// (a Windows checkout has CRLF line ends; the marker below is looked for with LF)
+const source = readFileSync(join(root, "dxbi.plugin.js"), "utf8").replace(/\r\n/g, "\n");
 const code = source.slice(source.indexOf("  const SYNCED ="), source.indexOf("  // ---------------------------------------------------------------------------\n  // Viewers (\"Who's watching?\")"));
 const calls = [];
+const stores = new Map(); // the data a device was set up with → its store
 function setup(data, viewerCount = 2) {
   const store = {
-    data, saved: 0,
-    put(k, e) { this.data[k] = e; },
+    data, saved: 0, dirty: new Set(), scheduled: 0,
+    put(k, e) { this.data[k] = e; this.saveLocal(); this.dirty.add(k); this.schedule(); },
     saveLocal() { this.saved++; },
+    schedule() { this.scheduled++; },
     get(k, f) { return this.data[k]?.v ?? f; },
   };
+  stores.set(data, store);
   const noop = { apply() {}, load() {}, reset() {}, switched() { calls.push("switched"); } };
   const local = new Map([["profile", JSON.stringify({ auth: { key: "k", user: { _id: "u1" } } })]]);
   return vm.runInNewContext(code + "\n({ SYNCED, syncMerge, cloudSync })", {
@@ -75,6 +79,12 @@ assert.deepEqual(plain(data["stats:va"].v), { kept: true }, "local-only data mov
 assert.equal(data["hidden:vb"], undefined);
 assert.ok(calls.includes("switched"), "the library refreshes");
 console.log("PASS a title watched on another device goes to its viewer, not the first one");
+
+// Whatever a merge brings, the store is written out once (each write is the whole store: a TV froze on a dozen)
+assert.equal(stores.get(data).saved, 1, "one write of the store for the whole merge");
+assert.equal(stores.get(data).scheduled, 1, "and one save to the file asked for");
+assert.deepEqual([...stores.get(data).dirty].sort(), ["hidden:va", "libraryOwners", "stats:va", "viewers"], "with every entry it changed");
+console.log("PASS a merge writes the store once");
 
 // A device that already has the merged result still has to send it: the server holds the other copy
 const holder = {

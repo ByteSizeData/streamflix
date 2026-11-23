@@ -10,7 +10,9 @@ How it works:
 
 - Playback: when Stremio opens its player, the stream (with its headers, subtitles and saved position) is handed to `PlayerActivity`, a Media3/ExoPlayer player. Stremio's player screen stays underneath, silent, and gets `TimeChanged` / `PausedChanged` / `Ended` from the native player, so Continue Watching and watched marks work as usual.
 
-- The dx.bi plugin is the one at the repository root, copied in at build time. `Updates` keeps a newer copy from GitHub between app releases, and offers new app releases (downloaded and handed to Android's installer).
+- Thai subtitles (dx.bi settings → Thai subtitles, on by default): as soon as a film's or an episode's streams are on screen, `ThaiSubtitles` asks OpenSubtitles' REST API (rest.opensubtitles.org, as `dxbi-tv/<version>`) for its Thai files by its IMDb id, and nothing else; the stream's release name, when it's known in time, only picks between the answers on the TV. The best one or two are kept for the title in the app's cache (20 MB at most), without the adverts OpenSubtitles puts in them, and the player starts with Thai on whenever there's a Thai file. One that comes after the video started is added once, with a short wait for the picture.
+
+- The dx.bi plugin is the one at the repository root, copied in at build time. `Updates` keeps a newer copy from GitHub between app releases, and offers new app releases (downloaded and handed to Android's installer). A custom build, whose plugin `@version` carries a suffix (`2.26.0-simkl.1`), is left alone: the suffix goes into the app's version name, and `Updates` then fetches and offers nothing, so upstream's plugin never replaces the custom one.
 
 - Torrents need a Stremio streaming server elsewhere on the network (Settings → Streaming); debrid streams play directly.
 

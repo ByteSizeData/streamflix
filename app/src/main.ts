@@ -25,7 +25,7 @@ import DeviceClock from "./core/DeviceClock";
 import FolderPicker from "./core/FolderPicker";
 import Downloads from "./core/Downloads";
 import { externalPlayerController } from "./controllers/externalPlayerController";
-import { offerEnhancedImport, seedBuiltInPlugin } from "./core/BuiltIn";
+import { offerEnhancedImport, offerStremioImport, seedBuiltInPlugin } from "./core/BuiltIn";
 import MpvShell from "./core/MpvShell";
 import MiniPlayer from "./core/MiniPlayer";
 import { ipcMain } from "electron";
@@ -34,6 +34,9 @@ import { isFullScreen, maximize, setFullScreen, useManualMaximize } from "./core
 import { setupAutoUpdate } from "./core/AutoUpdate";
 
 app.setName("dxbi");
+// DXBI_DATA_DIR keeps a source build or a test run entirely apart from an installed dx.bi: its browser
+// profile (sign-in, settings, library) as well as its plugins, themes and server (core/Properties.ts)
+if (process.env.DXBI_DATA_DIR) app.setPath("userData", process.env.DXBI_DATA_DIR);
 const userDataPath = app.getPath('userData');
 
 export let mainWindow: BrowserWindow | null;
@@ -206,6 +209,7 @@ app.on("ready", async () => {
 
     // First launch: bring Stremio Enhanced's setup over if wanted, then put the built-in dx.bi in place
     await offerEnhancedImport();
+    await offerStremioImport();
     seedBuiltInPlugin();
     
     if(!process.argv.includes("--no-stremio-server")) {

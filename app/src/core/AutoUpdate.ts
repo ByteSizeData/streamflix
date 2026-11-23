@@ -20,6 +20,7 @@ export function canAutoUpdate(): boolean {
 export function setupAutoUpdate(window: () => BrowserWindow | null): void {
     ipcMain.on(IPC_CHANNELS.AUTO_UPDATE_AVAILABLE, (event) => { event.returnValue = canAutoUpdate(); });
     if (!canAutoUpdate()) return;
+    if (/simkl/i.test(app.getVersion())) { logger.info("Custom build (Simkl): the app doesn't update itself."); return; }
 
     autoUpdater.logger = { info: (m: unknown) => logger.info(String(m)), warn: (m: unknown) => logger.warn(String(m)), error: (m: unknown) => logger.error(String(m)), debug: () => {} };
     autoUpdater.autoDownload = true;

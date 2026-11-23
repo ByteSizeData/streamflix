@@ -286,6 +286,65 @@ assert.doesNotMatch(escaped, /<img src=x|javascript:/);
 assert.equal(a.artworkUrl("data:text/html,bad"), null);
 console.log("PASS addon title/artwork values remain escaped and limited to HTTP(S) artwork");
 
+const back = setup();
+let shown = null, scheduled = 0;
+back.hero.show = index => { shown = index; };
+back.hero.schedule = () => { scheduled++; };
+const pickedButton = { matches: selector => selector === ".dx-hero-slide.is-active .dx-btn" };
+back.hero.el = { isConnected: true, contains: node => node === pickedButton, remove() {} };
+back.hero.index = 0;
+back.hero.stalled = true;
+back.document.activeElement = pickedButton;
+back.hero.resumeIfStalled();
+assert.equal(shown, null, "coming back with a billboard button selected must not change the slide under it");
+assert.equal(scheduled, 1);
+assert.equal(back.hero.stalled, false);
+back.hero.stalled = true;
+back.document.activeElement = { matches: () => false };
+back.hero.resumeIfStalled();
+assert.equal(shown, 1, "with nothing of its own selected, a stalled billboard moves on");
+back.hero.stalled = true;
+back.hero.remove();
+assert.equal(back.hero.stalled, false, "a billboard taken down starts afresh");
+console.log("PASS the billboard, back after a while away, leaves a selected title up");
+
+// TV: the fresh read cards share is of the page they were met on, and only a read that worked
+// writes a title off as not in Stremio's state
+function tvMeta() {
+    const env = { route: "board", reads: [], fail: false };
+    const states = {
+        board: { catalogs: [{ content: { content: [{ id: "tt1", type: "movie", name: "Home one", poster: "p" }] } }] },
+        discover: { catalog: { content: [{ id: "tt2", type: "movie", name: "Discover two", poster: "p" }] } },
+    };
+    const getState = async model => { env.reads.push(model); if (env.fail) throw Error("core busy"); return states[model] || {}; };
+    const coreMeta = vm.runInNewContext(slice("  const coreMeta =", "  // Posters that already print a rating") + "\ncoreMeta", {
+        IN_TV: true, setTimeout, metadataSource: { generation: 1, refresh() {} },
+        core: () => ({ getState }), currentRoute: () => env.route, isImdb: id => /^tt\d+$/.test(id || ""),
+    });
+    return { coreMeta, env };
+}
+const leftDiscover = tvMeta();
+leftDiscover.env.route = "discover";
+const discoverRead = leftDiscover.coreMeta.fresh(Date.now(), ["movie:tt2"]);
+leftDiscover.env.route = "detail"; // a title opened before the read began
+const leftHome = tvMeta();
+const homeRead = leftHome.coreMeta.fresh(Date.now(), ["movie:tt1"]);
+leftHome.env.route = "discover";
+const failing = tvMeta();
+failing.env.fail = true;
+const failedRead = failing.coreMeta.fresh(Date.now(), ["movie:tt1"]);
+const ownRow = tvMeta();
+const ownRead = ownRow.coreMeta.fresh(Date.now(), ["movie:tt9"]);
+await Promise.all([discoverRead, homeRead, failedRead, ownRead]);
+assert.deepEqual(leftDiscover.env.reads, ["discover"], "the read is of the models of the page the cards were met on");
+assert.ok(leftDiscover.coreMeta.get("movie", "tt2"), "a title opened from Discover keeps the page's read");
+assert.equal(leftDiscover.coreMeta.absent.has("movie:tt2"), false);
+assert.deepEqual(leftHome.env.reads, ["board", "continue_watching_preview"]);
+assert.equal(leftHome.coreMeta.absent.has("movie:tt1"), false, "Home's titles must not be written off by a read of Discover");
+assert.equal(failing.coreMeta.unread("movie:tt1"), true, "a read that failed writes nothing off");
+assert.equal(ownRow.coreMeta.unread("movie:tt9"), false, "a title a good read didn't have is not read for again");
+console.log("PASS TV: a title is written off only by a read of its own page's models that worked");
+
 if (process.argv[2]) {
     const folder = resolve(process.argv[2]); mkdirSync(folder, { recursive: true });
     const css = readFileSync(join(root, "dxbi.theme.css"), "utf8");

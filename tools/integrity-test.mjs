@@ -48,10 +48,16 @@ check("no comment inside a selector list (a rule dropped into another's selector
 });
 
 check("TV and Windows keep the 'no blur' rule (canary for 2.24's broken selector list)", () => {
-  const rule = [...noComments.matchAll(/([^{}]*)\{([^{}]*)\}/g)].find(([, sel]) => sel.split(",").map((s) => s.trim()).includes(".dx-tv #app *"));
-  assert.ok(rule, "no rule for '.dx-tv #app *'");
-  assert.match(rule[2], /backdrop-filter:\s*none\s*!important/, "the '.dx-tv #app *' rule no longer turns blur off");
-  assert.ok(rule[1].includes(".dx-win #app *"), "Windows dropped out of the 'no blur' rule");
+  const rules = [...noComments.matchAll(/([^{}]*)\{([^{}]*)\}/g)];
+  const has = (name) => rules.find(([, sel]) => sel.split(",").map((s) => s.trim()).includes(name));
+  const win = has(".dx-win #app *");
+  assert.ok(win, "no rule for '.dx-win #app *'");
+  assert.match(win[2], /backdrop-filter:\s*none\s*!important/, "the '.dx-win #app *' rule no longer turns blur off");
+  // This build's TV has it in the one rule a TV tries on every element ("nothing glides"), not in
+  // Windows' rule: two rules on every element cost a TV twice the matching
+  const tv = has(".dx-tv #app *") || has("html.dx-tv :not(.dx-preview)");
+  assert.ok(tv, "no 'no blur' rule for the TV");
+  assert.match(tv[2], /backdrop-filter:\s*none\s*!important/, "the TV's rule no longer turns blur off");
 });
 
 // ---- the plugin ----
@@ -62,7 +68,8 @@ check("the theme bundled in the plugin matches dxbi.theme.css (run tools/bundle-
 });
 
 check("versions agree (plugin @version, PLUGIN_VERSION, desktop app)", () => {
-  const meta = plugin.match(/@version\s+([\d.]+)/)[1];
+  // (a custom build's version carries a suffix, "2.38.3-simkl.1", in all four places)
+  const meta = plugin.match(/@version\s+(\S+)/)[1];
   const constant = plugin.match(/const PLUGIN_VERSION = "([^"]+)"/)[1];
   const app = read("app/version").trim();
   const pkg = JSON.parse(read("app/package.json")).version;

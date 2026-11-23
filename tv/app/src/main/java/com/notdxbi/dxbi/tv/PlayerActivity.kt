@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -29,9 +31,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -65,7 +69,7 @@ class PlayerActivity : AppCompatActivity() {
     private val partyTick = object : Runnable {
         override fun run() {
             val exo = player ?: return
-            val duration = exo.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+            val duration = durationOf(exo)
             PlaybackBus.listener?.onPartyTick(exo.currentPosition, duration, !exo.playWhenReady, exo.playbackState == Player.STATE_BUFFERING, exo.playbackParameters.speed)
             handler.postDelayed(this, 500)
         }
@@ -144,6 +148,19 @@ class PlayerActivity : AppCompatActivity() {
     private var closed = false
     private var lastError: String? = null
     private var lastText: List<String?> = emptyList()
+    // Thai subtitles (ThaiSubtitles): the title's lookup; the stream as it was set up; whether its Thai
+    // files are still to be added when they come (there was no Thai to start with), once a play; and,
+    // while the stream is set up again with them, the audio track the viewer had picked
+    private var thai: ThaiSubtitles.Job? = null
+    private var mediaItem: MediaItem? = null
+    private var thaiLate = false
+    // (dx.bi settings → Start with Thai subtitles: a Thai one comes on by itself. Off: Thai is only listed)
+    private var thaiStart = false
+    private var thaiResetting = false
+    private var pickedAudio: String? = null
+    private val thaiChanged: (ThaiSubtitles.Job) -> Unit = { handler.post { thaiArrived() } }
+    // The video's length, kept for the moment the player doesn't know it while the stream is set up again
+    private var knownDuration = 0L
 
     private val reportProgress = object : Runnable {
         override fun run() {
@@ -182,7 +199,8 @@ class PlayerActivity : AppCompatActivity() {
             val exo = player
             if (exo != null) {
                 val format = android.text.format.DateFormat.getTimeFormat(this@PlayerActivity)
-                val left = if (exo.duration > 0) ((exo.duration - exo.currentPosition) / exo.playbackParameters.speed).toLong() else 0L
+                val duration = durationOf(exo)
+                val left = if (duration > 0) ((duration - exo.currentPosition) / exo.playbackParameters.speed).toLong() else 0L
                 val now = System.currentTimeMillis()
                 clock.text = format.format(now) + if (left > 0) " · Ends at ${format.format(now + left)}" else ""
             }
@@ -199,6 +217,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Diary.start(this)
         // Phones play full screen sideways, like Netflix (either way round), unless the viewer chose
         // dx.bi settings → Player → Turn with my phone; TVs stay landscape
         if (phone) requestedOrientation =
@@ -218,6 +237,7 @@ class PlayerActivity : AppCompatActivity() {
         skipButton.setOnClickListener { doSkip() }
 
         val stream = JSONObject(intent.getStringExtra(EXTRA_STREAM) ?: "{}")
+        Diary.note("player opened: ${stream.optString("url").take(200)} from ${stream.optLong("startMs", 0L) / 1000} s${if (savedInstanceState != null) " (made again by Android)" else ""}")
         // dx.bi for phones: its controls, gestures, small window and downloads (none in dx.bi TV)
         extras = Phone.player(host, stream)
         segments = stream.optJSONArray("skips")?.let { list ->
@@ -259,7 +279,9 @@ class PlayerActivity : AppCompatActivity() {
         val online = OkHttpDataSource.Factory(http)
             .setUserAgent(if (ownAgent) null else "dxbi-tv/${BuildConfigVersion.name(this)}")
             .setDefaultRequestProperties(headers)
-        val dataSource = extras?.dataSource(online) ?: online
+        // (a link that leads on to the file is followed once a play, not at every seek: StickyRedirects)
+        val followed = StickyRedirects(online)
+        val dataSource = extras?.dataSource(followed) ?: followed
 
         // The TV's own decoders first, falling back to software ones when a format isn't supported
         val renderers = Renderers()
@@ -267,7 +289,8 @@ class PlayerActivity : AppCompatActivity() {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
         val exo = ExoPlayer.Builder(this, renderers)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSource))
+            // (files on the TV too: the Thai subtitles it keeps. Everything from the network still goes through OkHttp)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, dataSource)))
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .setSeekBackIncrementMs(SEEK_STEP_MS)
@@ -297,36 +320,67 @@ class PlayerActivity : AppCompatActivity() {
         // Subtitles start in Stremio's subtitle language (Settings → Player) when dx.bi's "Subtitles when
         // a video starts" is on: the page sends that language, and marks the subtitle file to start
         // with. Off (dx.bi's default, like Netflix): pick one from the subtitles button.
+        // With dx.bi's Thai subtitles on (dx.bi settings, on by default), the Thai ones are listed first
+        // under the subtitles button; with "Start with Thai subtitles" too (off by default), a Thai one
+        // starts on whenever the film or episode has one, before any other language.
+        // With neither a start language nor Thai to start with, nothing shows by itself: a release's
+        // own track marked "default" stays off as well (its "forced" one, the lines spoken in another
+        // language, still shows).
         // Files with several audio tracks (dual-audio releases) start in Stremio's audio language
         // (Settings → Player), when they have it
+        val thaiOn = stream.optBoolean("thaiSubtitles", false)
+        thaiStart = thaiOn && stream.optBoolean("thaiStart", false)
+        // (the subtitles menu: Thai, then English, then the file's other languages)
+        if (thaiOn) (controls as? PlayerControls)?.subtitlesFirst = listOf(THAI_CODES, setOf("en", "eng", "english"))
         val audioLanguage = stream.optString("audioLanguage").ifEmpty { null }
         val subtitleLanguage = stream.optString("subtitleLanguage").ifEmpty { null }
         exo.trackSelectionParameters = exo.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-            .setPreferredTextLanguage(subtitleLanguage)
+            .apply {
+                if (thaiStart) setPreferredTextLanguages(*listOfNotNull("th", subtitleLanguage).toTypedArray())
+                else setPreferredTextLanguage(subtitleLanguage)
+                if (!thaiStart && subtitleLanguage == null) setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+            }
             .setSelectUndeterminedTextLanguage(false)
             .apply { if (audioLanguage != null) setPreferredAudioLanguage(audioLanguage) }
             .build()
 
         val subtitles = mutableListOf<MediaItem.SubtitleConfiguration>()
+        var addonThai = 0
         stream.optJSONArray("subtitles")?.let { list ->
             for (i in 0 until list.length()) {
                 val s = list.optJSONObject(i) ?: continue
                 val subUrl = s.optString("url").takeIf { it.isNotEmpty() } ?: continue
+                val lang = s.optString("lang")
+                // (the page lists Thai first; the first one starts on)
+                val isThai = thaiOn && lang.lowercase() in THAI_CODES
+                if (isThai) addonThai++
                 subtitles += MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUrl))
                     .setId(extras?.subtitleId(s.optString("source", "addon"), i))
                     .setMimeType(subtitleMime(subUrl))
-                    .setLanguage(s.optString("lang").ifEmpty { null })
-                    .setLabel(s.optString("label").ifEmpty { s.optString("lang") })
-                    .setSelectionFlags(if (s.optBoolean("start")) C.SELECTION_FLAG_DEFAULT else 0)
+                    .setLanguage(lang.ifEmpty { null })
+                    .setLabel(s.optString("label").ifEmpty { lang })
+                    .setSelectionFlags(if ((thaiStart && isThai && addonThai == 1) || s.optBoolean("start")) C.SELECTION_FLAG_DEFAULT else 0)
                     .build()
             }
+        }
+        // The Thai files the app downloads, after any the addons offer: the ones it has go in now (the page
+        // asked for them when the title's streams came up, so they're usually here). With no Thai to start
+        // with and the lookup still going, the video starts anyway and thaiArrived adds them when they come
+        if (thaiOn) thai = ThaiSubtitles.request(applicationContext, stream.optJSONObject("thaiLookup"))
+        thai?.let { job ->
+            job.listen(thaiChanged)
+            val done = job.done
+            val ready = job.ready
+            subtitles.addAll(addonThai, thaiTracks(job, addonThai, ready))
+            thaiLate = addonThai == 0 && ready == 0 && !done
         }
 
         val item = MediaItem.Builder()
             .setUri(Uri.parse(url))
             .setSubtitleConfigurations(subtitles)
             .build()
+        mediaItem = item
         exo.setMediaItem(item, stream.optLong("startMs", 0L).coerceAtLeast(0L))
         exo.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
@@ -337,11 +391,23 @@ class PlayerActivity : AppCompatActivity() {
             // brings the current one up straight away
             override fun onTracksChanged(tracks: Tracks) {
                 val text = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }.flatMap { g -> (0 until g.length).filter { g.isTrackSelected(it) }.map { i -> g.getTrackFormat(i).id } }
+                if (thaiResetting) {
+                    // (the stream set up again with the Thai files, thaiArrived: its tracks come back with
+                    // Thai on from where it stands, so no seek, which would start its loading over once more)
+                    lastText = text
+                    if (tracks.groups.isNotEmpty()) {
+                        thaiResetting = false
+                        pickAudioAgain()
+                    }
+                    return
+                }
                 if (text.isNotEmpty() && text != lastText) exo.seekTo(exo.currentPosition)
                 lastText = text
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                Diary.note("player error at ${exo.currentPosition / 1000} s: ${error.errorCodeName}, ${error.cause?.javaClass?.simpleName}: ${error.cause?.message?.take(300)}, memory ${Diary.memory()}")
+                if (again(exo, error)) return
                 lastError = (if (torrent) TorrentEngine.failed() else null) ?: describe(error)
                 // A phone: a format this player can't handle may play in another app. Handed on, it
                 // closes without an error (the page would otherwise move on to another stream)
@@ -376,6 +442,9 @@ class PlayerActivity : AppCompatActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val exo = player ?: return super.dispatchKeyEvent(event)
         if (event.action == KeyEvent.ACTION_DOWN) {
+            // (a button held down, repeating: see seek)
+            keyHeld = event.repeatCount > 0
+            heldFor = if (keyHeld) event.eventTime - event.downTime else 0L
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_SPACE -> { exo.playWhenReady = !exo.playWhenReady; controls.show(); return true }
                 KeyEvent.KEYCODE_MEDIA_PLAY -> { exo.play(); return true }
@@ -474,6 +543,113 @@ class PlayerActivity : AppCompatActivity() {
         playerView.requestFocus()
     }
 
+    /** The first [count] Thai files of [job] as subtitle tracks, numbered on from the [before] the addons offer */
+    private fun thaiTracks(job: ThaiSubtitles.Job, before: Int, count: Int): List<MediaItem.SubtitleConfiguration> =
+        (1..count).map { slot ->
+            val n = before + slot
+            MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(job.file(slot)))
+                .setMimeType(MimeTypes.APPLICATION_SUBRIP)
+                .setLanguage("th")
+                .setLabel(if (n > 1) "Thai $n" else "Thai")
+                .setSelectionFlags(if (thaiStart && n == 1) C.SELECTION_FLAG_DEFAULT else 0)
+                .build()
+        }
+
+    /**
+     * The lookup was still going when the video started, with no Thai to show: the first file to come
+     * goes in, with any other there by then, once a play. Media3 can't give a playing video another
+     * subtitle file, so the stream is set up again with them, where it stands: next to nothing while it
+     * is still starting, a short wait for the picture after that. Not when the viewer has picked
+     * subtitles or Off in the meantime, or the video is at its end.
+     */
+    private fun thaiArrived() {
+        val exo = player ?: return
+        val job = thai ?: return
+        val item = mediaItem ?: return
+        if (!thaiLate || closed) return
+        val ready = job.ready
+        if (ready == 0) {
+            if (job.done) thaiLate = false
+            return
+        }
+        val params = exo.trackSelectionParameters
+        if (C.TRACK_TYPE_TEXT in params.disabledTrackTypes || params.overrides.keys.any { it.type == C.TRACK_TYPE_TEXT }) {
+            thaiLate = false
+            return
+        }
+        // (the video's own Thai track is on already: nothing to add, and no reason to stop the picture. A
+        // release's own track is timed to it; a downloaded one may not be)
+        val ownThai = exo.currentTracks.groups.any { g ->
+            g.type == C.TRACK_TYPE_TEXT && (0 until g.length).any { g.isTrackSelected(it) && g.getTrackFormat(it).language?.lowercase() in THAI_CODES }
+        }
+        if (ownThai) {
+            thaiLate = false
+            return
+        }
+        // (a menu that's open lists the tracks as they are now: it waits until the menu is closed, and
+        // a pick made there stands)
+        if (controls.panelOpen) {
+            handler.postDelayed({ thaiArrived() }, 1000)
+            return
+        }
+        thaiLate = false
+        val state = exo.playbackState
+        if (state == Player.STATE_IDLE || state == Player.STATE_ENDED || upNextCard.visibility == View.VISIBLE) return
+        // (Thai that doesn't start on by itself is only for the subtitles menu: worth setting the stream
+        // up again while it is still starting, not a wait for the picture once the film is under way)
+        if (!thaiStart && state == Player.STATE_READY && exo.currentPosition > LATE_THAI_MS) {
+            Log.i("dxbi", "Thai subtitles came ${exo.currentPosition} ms in: not added to this play (they aren't set to start on)")
+            return
+        }
+        val local = item.localConfiguration ?: return
+        if (exo.currentMediaItem?.localConfiguration?.uri != local.uri) return
+        val withThai = item.buildUpon()
+            .setSubtitleConfigurations(thaiTracks(job, 0, ready) + local.subtitleConfigurations)
+            .build()
+        // The playing position, play or pause, speed and the subtitle timing stay as they are. A picked
+        // audio track is found again once the tracks are back (pickAudioAgain); the length is kept for
+        // the reports to the page while the player doesn't know it (durationOf)
+        pickedAudio = params.overrides.values.firstOrNull { it.type == C.TRACK_TYPE_AUDIO }
+            ?.let { o -> o.trackIndices.firstOrNull()?.let { o.mediaTrackGroup.getFormat(it).id } }
+        durationOf(exo)
+        thaiResetting = true
+        // (the last picture stays up while it buffers, rather than a black screen)
+        playerView.setKeepContentOnPlayerReset(true)
+        mediaItem = withThai
+        Log.i("dxbi", "Thai subtitles came after the start: $ready added at ${exo.currentPosition} ms (${if (state == Player.STATE_READY) "playing" else "starting"})")
+        exo.setMediaItem(withThai, /* resetPosition = */ false)
+    }
+
+    /**
+     * The audio track the viewer had picked, found again after the stream was set up again with the
+     * Thai files: the tracks are new ones (and their ids gain "0:" when the stream had no subtitles
+     * before), so it goes by the track's own id in the file
+     */
+    private fun pickAudioAgain() {
+        val exo = player ?: return
+        val id = pickedAudio?.substringAfterLast(':') ?: return
+        pickedAudio = null
+        for (g in exo.currentTracks.groups) {
+            if (g.type != C.TRACK_TYPE_AUDIO) continue
+            for (i in 0 until g.length) {
+                if (g.getTrackFormat(i).id?.substringAfterLast(':') != id) continue
+                if (!g.isTrackSelected(i)) {
+                    exo.trackSelectionParameters = exo.trackSelectionParameters.buildUpon()
+                        .setOverrideForType(TrackSelectionOverride(g.mediaTrackGroup, i))
+                        .build()
+                }
+                return
+            }
+        }
+    }
+
+    /** The video's length; while the stream is set up again (thaiArrived), the one it had. 0 before it's known */
+    private fun durationOf(exo: ExoPlayer): Long {
+        val duration = exo.duration
+        if (duration != C.TIME_UNSET && duration > 0) knownDuration = duration
+        return knownDuration
+    }
+
     /** Moves the subtitles by [byMs] and returns where they are now */
     private fun shiftSubtitles(byMs: Long): Long {
         if (byMs != 0L) {
@@ -492,8 +668,12 @@ class PlayerActivity : AppCompatActivity() {
         controls.fit(config.screenWidthDp, config.orientation == Configuration.ORIENTATION_PORTRAIT)
     }
 
+    // (Every change of the screen is taken here, and none makes Android build the player again: see
+    // the manifest. A TV coming on, or its HDR mode changing, is such a change, and a player built
+    // again was a player closed.)
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        Diary.note("player: the screen changed (hdr ${newConfig.isScreenHdr}, wide colour ${newConfig.isScreenWideColorGamut}, ${newConfig.screenWidthDp}x${newConfig.screenHeightDp} dp)")
         if (::controls.isInitialized) fitControls()
     }
 
@@ -507,29 +687,126 @@ class PlayerActivity : AppCompatActivity() {
         playerView.requestFocus()
     }
 
+    // Skips with the remote. The first press goes at once; presses that follow quickly add up
+    // ("+40 s") and go as one skip when they stop. Every skip outside what is loaded opens the
+    // stream again, so a button pressed a few times, or held (a remote repeats twenty times a
+    // second), was a burst of openings, each dropping the one before: more than the TV's decoder
+    // and the stream's server would take, and the play ended.
+    private var skipFrom = C.TIME_UNSET // where the run of presses began
+    private var skipTo = C.TIME_UNSET // where a run has got to, while it waits to go
+    private var skipAt = 0L // when the last press was
+    private var keyHeld = false // the press being handled is a held button's repeat
+    private var heldFor = 0L // and how long that button has been down, in ms
+
+    // A held button goes faster the longer it is held: ten seconds a count at first, then thirty,
+    // then a minute, then two. Twenty minutes is about six seconds of holding and half an hour
+    // about eight, and the label shows where it has got to all the while. It still goes as one skip
+    // when the button is let go: the stream is opened once, wherever the hold ends.
+    private fun step(): Long = SEEK_STEP_MS * when {
+        !keyHeld || heldFor < 1500 -> 1
+        heldFor < 4000 -> 3
+        heldFor < 8000 -> 6
+        else -> 12
+    }
+
+    private fun span(seconds: Long): String = when {
+        seconds < 60 -> "$seconds s"
+        seconds % 60 == 0L -> "${seconds / 60} min"
+        else -> "${seconds / 60} min ${seconds % 60} s"
+    }
+    private val commitSkip = Runnable {
+        val exo = player
+        val to = skipTo
+        skipTo = C.TIME_UNSET
+        if (exo != null && to != C.TIME_UNSET && !closed) {
+            Diary.note("skip to ${to / 1000} s (a run of presses, from ${skipFrom / 1000} s)")
+            exo.seekTo(to)
+        }
+    }
+
     private fun seek(direction: Int) {
         val exo = player ?: return
-        if (direction > 0) exo.seekForward() else exo.seekBack()
-        seekFlash.text = if (direction > 0) "+10 s   ${clock(exo.currentPosition)}" else "−10 s   ${clock(exo.currentPosition)}"
+        val now = SystemClock.elapsedRealtime()
+        val since = now - skipAt
+        // (a held button's repeats: a few a second count, not all twenty. Presses of their own all
+        // count, however quick)
+        if (keyHeld && since in 0 until SKIP_REPEAT_MS) return
+        skipAt = now
+        val run = skipTo != C.TIME_UNSET || since < SKIP_RUN_MS
+        val here = exo.currentPosition
+        if (!run || skipFrom == C.TIME_UNSET) skipFrom = here
+        val duration = exo.duration.takeIf { it != C.TIME_UNSET && it > 0 }
+        var to = maxOf(0L, (if (skipTo != C.TIME_UNSET) skipTo else here) + direction * step())
+        // (never onto the very end, which is where a held button runs to: a skip that lands there
+        // ends the play, marks it watched and starts the next episode, or sits there loading)
+        if (duration != null) to = minOf(to, maxOf(here, duration - SKIP_END_MS))
+        handler.removeCallbacks(commitSkip)
+        if (run) {
+            skipTo = to
+            handler.postDelayed(commitSkip, SKIP_SETTLE_MS)
+        } else if (to != here) {
+            Diary.note("skip to ${to / 1000} s (from ${here / 1000} s)")
+            exo.seekTo(to)
+        }
+        val by = (to - skipFrom) / 1000
+        seekFlash.text = "${if (by < 0) "−" else "+"}${span(kotlin.math.abs(by))}   ${clock(to)}"
         seekFlash.visibility = View.VISIBLE
         handler.removeCallbacks(hideFlash)
         handler.postDelayed(hideFlash, 900)
     }
 
+    // A play that fails once it is under way (a skip the server answered badly, a decoder that
+    // wouldn't start again after one) is taken up again from where it stood, twice at most in a
+    // minute, before it is given up. A stream that never started is a bad stream: no second try.
+    private var againCount = 0
+    private var againAt = 0L
+    private fun again(exo: ExoPlayer, error: PlaybackException): Boolean {
+        if (closed || torrent || durationOf(exo) <= 0) return false
+        val now = SystemClock.elapsedRealtime()
+        if (now - againAt > AGAIN_WINDOW_MS) againCount = 0
+        // (a server that answers "too many requests" or "busy" is given a moment before each try,
+        // and a third one: asked again at once it answers the same)
+        val code = (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
+        val busy = code == 429 || code == 503
+        if (againCount >= (if (busy) 3 else 2)) return false
+        againCount++
+        againAt = now
+        Log.w("dxbi", "the player stopped at ${exo.currentPosition} ms (${error.errorCodeName}: ${error.cause?.javaClass?.simpleName}): starting again from there, try $againCount")
+        handler.removeCallbacks(commitSkip)
+        skipTo = C.TIME_UNSET
+        Diary.note("starting again from ${exo.currentPosition / 1000} s, try $againCount${if (busy) ", after a wait: the server answered $code" else ""}")
+        if (busy) {
+            val wait = AGAIN_BUSY_MS * againCount
+            seekFlash.text = "The stream's server is busy: trying again"
+            seekFlash.visibility = View.VISIBLE
+            handler.removeCallbacks(hideFlash)
+            handler.postDelayed(hideFlash, wait + 1500)
+            handler.postDelayed({ if (!closed && player === exo) exo.prepare() }, wait)
+        } else {
+            exo.prepare()
+        }
+        return true
+    }
+
     private fun report() {
         val exo = player ?: return
-        val duration = exo.duration.takeIf { it != C.TIME_UNSET } ?: 0L
-        if (extras?.keep(exo.currentPosition, duration, ended = false) != true) PlaybackBus.listener?.onProgress(exo.currentPosition, duration, !exo.isPlaying)
+        val duration = durationOf(exo)
+        // A pause and a wait for data go to the page apart: the Simkl scrobbler there must not take a
+        // stall at the moment of a report for the viewer pausing (Stremio's progress treats both as not playing)
+        val state = exo.playbackState
+        val paused = !exo.playWhenReady || state == Player.STATE_ENDED || state == Player.STATE_IDLE
+        if (extras?.keep(exo.currentPosition, duration, ended = false) != true) PlaybackBus.listener?.onProgress(exo.currentPosition, duration, paused, state == Player.STATE_BUFFERING)
     }
 
     /** Closes the player and says how it went ([positionMs]/[durationMs]: where another app left it, instead of this one) */
     private fun finishWith(ended: Boolean = false, error: String? = null, next: Boolean = false, positionMs: Long? = null, durationMs: Long? = null) {
         if (closed) return
         closed = true
+        Diary.note("player closed${if (ended) " at the end" else ""}${if (next) ", on to the next" else ""}${if (error != null) ", with an error: $error" else ""}, at ${(positionMs ?: player?.currentPosition ?: 0L) / 1000} s, memory ${Diary.memory()}")
         handler.removeCallbacksAndMessages(null)
         if (::controls.isInitialized) controls.release()
         val exo = player
-        val duration = durationMs?.takeIf { it > 0 } ?: exo?.duration?.takeIf { it != C.TIME_UNSET } ?: 0L
+        val duration = durationMs?.takeIf { it > 0 } ?: exo?.let { durationOf(it) } ?: 0L
         val position = if (ended) duration else positionMs ?: exo?.currentPosition ?: 0L
         if (extras?.keep(position, duration, ended) != true) PlaybackBus.closed(position, duration, ended, error, next)
         if (torrent) TorrentEngine.close()
@@ -542,6 +819,20 @@ class PlayerActivity : AppCompatActivity() {
         // the progress so far is kept
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N || !isInPictureInPictureMode) player?.pause()
         report()
+    }
+
+    // dx.bi left with the player open (Home, the TV asleep): MainActivity stopped when the player opened
+    // and doesn't see it, so when it began is kept, and whether that was long enough to leave the page
+    // stale (MainActivity.onStart) is worked out once dx.bi is back on screen: here, or in MainActivity
+    // when the home screen's start closes the player instead (or it closed while dx.bi was away)
+    override fun onStart() {
+        super.onStart()
+        PlaybackBus.backOnScreen()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!isFinishing) PlaybackBus.playerLeftAt = SystemClock.elapsedRealtime()
     }
 
     override fun onUserLeaveHint() {
@@ -626,9 +917,11 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (!closed) Diary.note("player destroyed by Android while it played (finishing $isFinishing, for a screen change $isChangingConfigurations)")
         if (!closed) finishWith()
         handler.removeCallbacksAndMessages(null)
         if (PlaybackBus.player === this) PlaybackBus.player = null
+        thai?.unlisten(thaiChanged)
         if (::controls.isInitialized) controls.release()
         if (::zoom.isInitialized) zoom.release()
         extras?.release()
@@ -723,7 +1016,16 @@ class PlayerActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_STREAM = "stream"
+        // How addons write Thai
+        private val THAI_CODES = setOf("th", "tha", "thai")
         private const val PROGRESS_INTERVAL_MS = 5000L
         private const val SEEK_STEP_MS = 10_000L
+        private const val LATE_THAI_MS = 15_000L
+        private const val SKIP_REPEAT_MS = 180L
+        private const val SKIP_RUN_MS = 700L
+        private const val SKIP_SETTLE_MS = 450L
+        private const val SKIP_END_MS = 10_000L
+        private const val AGAIN_WINDOW_MS = 60_000L
+        private const val AGAIN_BUSY_MS = 3000L
     }
 }

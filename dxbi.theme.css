@@ -2695,8 +2695,10 @@ html[data-dx-lite] .dx-hero-dot.is-active::after {
 #app [class*="toasts-container"] [class*="toast-item-container"] {
     border-radius: var(--dx-radius) !important;
     background: var(--dx-surface-2) !important;
-    border: 1px solid var(--dx-line) !important;
-    border-left: 3px solid var(--dx-accent) !important;
+    /* (sides written out, not `border` and then one side: see "A SIDE AFTER THE WHOLE" below) */
+    border-style: solid !important;
+    border-width: 1px 1px 1px 3px !important;
+    border-color: var(--dx-line) var(--dx-line) var(--dx-line) var(--dx-accent) !important;
     box-shadow: var(--dx-shadow-2) !important;
     animation: dx-slide-in 0.35s var(--dx-ease-out) both;
 }
@@ -4038,8 +4040,12 @@ body[data-dx-ptitle] #app .custom-episode-title {
     margin: 0 !important;
     padding: 0.85rem 1rem !important;
     background: rgba(19, 19, 23, 0.86) !important;
-    border: 1px solid var(--dx-line);
-    border-bottom: 0;
+    /* A SIDE AFTER THE WHOLE: `border: 1px solid var(…)` followed by `border-bottom: 0` is a rule
+       the browser can't write out again (the three sides left come out empty), and dx.bi TV keeps
+       the styles as the browser writes them out: the panel lost its border there. */
+    border-style: solid;
+    border-width: 1px 1px 0;
+    border-color: var(--dx-line);
     backdrop-filter: blur(24px) saturate(140%);
     z-index: 2;
 }
@@ -4128,6 +4134,16 @@ html[data-dx-rows] [class*="streams-list-container"] [class*="stream-placeholder
     contain-intrinsic-size: auto 96px;
 }
 
+/* Not on a TV. Its browser is Android's, where a button taking the selection has the browser ask
+   every element of the page whether it can take focus (for the keyboard's Next and Previous keys),
+   and each skipped row it asks about is laid out there and then, one row at a time: 337 layouts,
+   three and a half seconds on a SHIELD, every time the remote went from the streams to the bar above
+   them. A TV's rows are drawn a few to a frame by the plugin instead (streamRows). */
+.dx-tv [data-dxv] {
+    content-visibility: visible;
+    contain-intrinsic-size: none;
+}
+
 [data-dxv]:hover,
 [data-dxv]:focus-within {
     content-visibility: visible;
@@ -4204,6 +4220,30 @@ html[data-dx-rows] [class*="streams-list-container"] [class*="stream-placeholder
     overflow-wrap: anywhere;
 }
 
+/* A language's flag, in a stream row and in the Language menu, in front of its name: a touch larger
+   than the words, and no taller a line for it (a menu option's words would drop below the others'
+   and lose their foot). Its font is the page's, whose flag font draws it on Windows too: see BASE. */
+.dx-flag {
+    display: inline;
+    margin-right: 0.3em;
+    font-size: 1.1em;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 0;
+}
+
+/* The row's languages keep the size of its other facts (Stremio sizes every element 1rem of its own),
+   and a flag keeps to its name at a line's end, as the flags after the first two do to each other */
+.dxv-lang,
+.dxv-more {
+    font: inherit;
+    white-space: nowrap;
+}
+
+.dxv-more .dx-flag {
+    margin-right: 0.2em;
+}
+
 .dxv-main u {
     font: 400 0.72rem/1.3 Inter, system-ui, sans-serif !important;
     color: var(--dx-text-3);
@@ -4223,6 +4263,62 @@ html[data-dx-rows] [class*="streams-list-container"] [class*="stream-placeholder
 
 [data-dx-best] .dxv-best {
     display: block;
+}
+
+/* TV: the best match and the Trailer button in colours of their own, plain to pick out from the
+   sofa. The best match is the stream selected as a title opens (OK plays it), in gold; the Trailer
+   is one press to its left, in blue. Flat colours and one inset line: nothing here moves or blurs.
+   (The remote's ring is an outline, and its dark band replaces the gold line while the row has it.) */
+.dx-tv #app [data-dxv][data-dx-best] {
+    background: linear-gradient(100deg, rgba(255, 196, 0, 0.36), rgba(255, 120, 0, 0.2) 55%, rgba(255, 45, 85, 0.18)) !important;
+    box-shadow: inset 0 0 0 2px #ffc400;
+    border-radius: var(--dx-radius-s);
+}
+
+.dx-tv #app [data-dxv][data-dx-best] .dxv-q {
+    background: linear-gradient(135deg, #ffb300, #ff5e00) !important;
+}
+
+.dx-tv #app [data-dxv][data-dx-best] .dxv-main {
+    border-bottom-color: transparent;
+}
+
+.dx-tv #app [data-dx-best] .dxv-best {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    color: #1a1200;
+    background: linear-gradient(90deg, #ffe14d, #ffb300);
+}
+
+.dx-tv #app a[data-dx-trailer] {
+    background: linear-gradient(100deg, #00c2ff, #2b6bff) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    opacity: 1 !important;
+}
+
+.dx-tv #app a[data-dx-trailer] svg,
+.dx-tv #app a[data-dx-trailer] [class*="label-"] {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+
+/* TV: a stream the page selected by itself (the best match as a title opens, the stream gone back to
+   after a trailer) wears the remote's ring like one stepped to. The browser only counts a selection
+   as the keyboard's when a key made it. */
+.dx-tv #app [data-dxv]:focus,
+.dx-tv #app [data-dxv][data-dx-picked] {
+    outline: 3px solid var(--dx-focus, #fff) !important;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.85) !important;
+    z-index: 2;
+}
+
+.dx-tv #app section[class*="streams-"] [class*="group-"] > [data-dxv]:focus:not([data-dx-best]) {
+    background: rgba(255, 255, 255, 0.08);
+    --dxv-tile: var(--dx-accent);
 }
 
 .dxv-state {
@@ -4383,9 +4479,16 @@ html[data-dx-rows] section[class*="streams-"] [class*="group-"] > a[class*="stre
     background: var(--dx-accent) !important;
 }
 
-.dx-tv #app section[class*="streams-"] [class*="group-"] > [data-dxv] {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 5.5rem;
+/* TV, the redesign's rows: each is a box of its own kind all along, so the selection's ring
+   changes nothing but what is drawn (see the older page's rows, further down), and the panel
+   scrolls a row far enough in for its ring to show whole. (No content-visibility: auto here: see
+   "Not on a TV" above.) */
+.dx-tv #app section[class*="streams-"] [class*="group-"] > a[class*="stream-"] {
+    isolation: isolate;
+}
+
+html.dx-tv:not(.dx-phone) #app section[class*="streams-"][class*="panel-"] > [class*="body-"] {
+    scroll-padding-block: 10px;
 }
 
 .dx-streambar {
@@ -4590,7 +4693,16 @@ html[data-dx-rows] section[class*="streams-"] [class*="group-"] > a[class*="stre
     text-align: center;
 }
 
-.dx-stream-empty button {
+.dx-streambar [role="button"],
+.dx-stream-empty [role="button"],
+div.dxq-play {
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.dx-stream-empty button,
+.dx-stream-empty [role="button"] {
     height: 2.2rem;
     padding: 0 1rem;
     border-radius: var(--dx-radius);
@@ -4800,13 +4912,10 @@ body[data-dx-route="player"] > [class*="seek-tooltip"] {
 /* Chromium on Windows can leave stale copies of a scrolled panel on screen when it has a blurred
    (backdrop-filter) background: the streams list then looks like rows drawn over each other.
    Solid backgrounds instead (dx.bi's plugin adds .dx-win on Windows). TVs (.dx-tv, dx.bi TV) get the
-   same, since their graphics are far weaker than a computer's. */
-/* (keep this rule whole: in 2.24 another rule was dropped into the middle of its selector list, and
-   Windows and TVs got their blurs back, 39 TV badges each became a GPU layer of its own) */
+   same, since their graphics are far weaker than a computer's (theirs is in the one rule a TV tries
+   on every element, "nothing glides" below). */
 .dx-win #app *,
-.dx-win body > *,
-.dx-tv #app *,
-.dx-tv body > * {
+.dx-win body > * {
     backdrop-filter: none !important;
 }
 
@@ -4967,6 +5076,22 @@ html.dx-tv {
     animation: none !important;
 }
 
+/* TV: the active dot's progress line is a nine-second animation, and the graphics chip composed the
+   whole screen afresh for it forty times a second while nothing else moved (a SHIELD: 500 frames in
+   twelve idle seconds, none on a page without the billboard), with the remote waiting behind each.
+   The active dot is plain white instead. */
+.dx-tv .dx-hero-dot.is-active::after {
+    animation: none !important;
+}
+
+/* TV: the hover card's glow is a 30px blur of the artwork, blurred again on every frame of the
+   card's fade and lift, and its soft shadow another 28px blur: a stall at each title the remote
+   rests on. A plain shadow line instead. */
+.dx-tv .dx-preview-aura,
+.dx-tv .dx-preview::before {
+    filter: none !important;
+}
+
 /* TV: only the billboard picture on show (and one fading out) is kept on the graphics chip: each of
    the others was a full-screen layer held in memory. The top bar turns solid at once, as its fade
    was redrawn in full on every frame of the jump down into the rows. */
@@ -4988,14 +5113,9 @@ html.dx-tv {
 /* TV: the stream list. Stremio's own text in each row stays in the page under dx.bi's row (the
    plugin reads it), but squeezed into a 1px box its long file names wrapped a letter to a line:
    thousands of lines laid out again whenever the list changed, the freeze while streams arrive.
-   On a TV it isn't laid out at all, and rows out of view aren't drawn until they're near. */
+   On a TV it isn't laid out at all. */
 .dx-tv [data-dxv] > :not(.dxv-row):not([class*="menu-container"]):not(.dxd-stream) {
     display: none !important;
-}
-
-.dx-tv #app [class*="streams-list-container"] [class*="streams-container"] > [data-dxv] {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 5.5rem;
 }
 
 .dx-tv #app [class*="meta-row"] > [class*="meta-items-container"] {
@@ -5024,10 +5144,62 @@ html.dx-tv {
     filter: brightness(0.45);
 }
 
-/* TV: the page jumps instead of gliding, so the selection never waits off screen for a slow scroll
-   (rows still glide sideways: the plugin asks for that itself) */
-.dx-tv #app * {
+/* TV: nothing glides or fades from one look to the next: a change shows at once. Every frame of a
+   transition is a turn of the page's one thread, with the remote waiting behind it, and a single
+   press started several: Stremio's menu dots fading on the title left and the title reached (a
+   tenth of a second each, the whole screen put together afresh as each began and ended), the
+   stream list's tiles and rows, the billboard's pictures for over a second every nine. The page
+   jumps instead of gliding too, so the selection never waits off screen for a slow scroll (rows
+   still glide sideways: the plugin asks for that itself), and nothing is blurred glass (see
+   "WINDOWS AND TV" above). One rule holds all of it, because it is tried on every element.
+   The hover card keeps its own short fade and growth (set below). Animations are named one by one
+   after this rule instead: a time for them written here, on every element, made each restyle of
+   the page cost twice as much. */
+html.dx-tv :not(.dx-preview) {
+    backdrop-filter: none !important;
     scroll-behavior: auto !important;
+    transition: none !important;
+}
+
+/* Stremio takes its menus and drawers off the page when their closing transition ends (see "Must
+   stay a transition" in the player's panels): those keep one, too short to see, so that end comes */
+html.dx-tv [class*="-enter"],
+html.dx-tv [class*="-exit"] {
+    transition: all 0.01ms !important;
+}
+
+/* The entrances: the billboard, a title's picture, logo and its panel of streams or episodes
+   (sliding in while its rows were still arriving), menus, dialogs, messages. Each ends as the
+   thing looks anyway, and nothing waits for one to end. (The title page of November 2026 fades its
+   picture in and slides its whole content up, 430 stream rows with it.) */
+.dx-tv .dx-hero,
+.dx-tv .dx-sb-menu,
+.dx-tv #app [class*="metadetails-container"] > [class*="background-image-layer"] img,
+.dx-tv #app [class*="meta-preview-container"] [class*="logo"],
+.dx-tv #app [class*="metadetails-content"] [class*="videos-list-container"],
+.dx-tv #app [class*="metadetails-content"] [class*="streams-list-container"],
+.dx-tv #app [class*="details-"] > [class*="background-"] img,
+.dx-tv #app [class*="details-"] > [class*="content-"],
+.dx-tv #app [class*="menu-container"][class*="menu-direction"] > *,
+.dx-tv #app [class*="modal-container"],
+.dx-tv #app [class*="modal-dialog-container"],
+.dx-tv #app [class*="toasts-container"] [class*="toast-item-container"] {
+    animation: none !important;
+}
+
+/* Stremio marks the episode just chosen with a border that fades for three seconds, redrawn on
+   every frame of them. It ends at once (a time too short to see rather than none: the border it
+   ends with stays, as before). */
+.dx-tv #app [class*="video-container"][class*="selected"] {
+    animation-duration: 0.01ms !important;
+}
+
+/* (what ::before and ::after draw isn't reached by the rule above: the tabs' underline, the Remove
+   tab's label, whose opening was laid out afresh on every frame, and the knob of Stremio's switches) */
+html.dx-tv #app nav[class*="vertical-nav-bar"] a[class*="nav-tab-button"]::after,
+html.dx-tv #app [class*="meta-item-container"] [class*="dismiss-icon-layer"]::before,
+html.dx-tv #app [class*="toggle-container"] [class*="toggle"]::before {
+    transition: none !important;
 }
 
 /* TV: the hover card's glow and soft shadow are big blurred layers redrawn as it opens */
@@ -5037,10 +5209,13 @@ html.dx-tv {
 }
 
 /* TV: the card fades and grows in place rather than unfolding from the poster's outline (a moving
-   clip the stick redrew in full on every frame), and its artwork holds still */
+   clip the stick redrew in full on every frame), and its artwork holds still. That fade is left
+   to it ("nothing glides" above passes it by), and it only has a layer of its own while it moves,
+   rather than one kept for it the whole time. */
 .dx-tv .dx-preview {
     scale: 0.94;
     transition: scale 0.18s ease, opacity 0.18s ease, visibility 0s linear 0.18s;
+    will-change: auto;
 }
 
 .dx-tv .dx-preview.is-open {
@@ -5060,6 +5235,104 @@ html.dx-tv {
 
 .dx-tv .dx-preview.is-open .dx-preview-media::before {
     animation: none;
+}
+
+/* TV: a long stream list. The white ring's place above its neighbours (z-index, in "what the
+   remote is on" above) turned the row gaining it and the row losing it into boxes of another kind
+   (ones that stack their own contents), and Chromium lays out afresh around a box that changes
+   kind: the list and, through the list's height, the whole title page, at every press (60-70 ms
+   of each on a desktop slowed to a TV's pace). Each row is that kind of box all along now, so the
+   ring changes nothing but what is drawn… */
+.dx-tv #app [class*="streams-list-container"] [class*="streams-container"] > [class*="stream-container"] {
+    isolation: isolate;
+}
+
+/* …and the list is an island: rows arriving, sorted or changed are worked out inside it, without
+   the page around it. Not on a phone, where the list can be as tall as its rows.
+   (Rows drawn only when near the screen, content-visibility: auto, were tried here and left out:
+   each press then took more frames, and opening a title more layout, not less.) */
+html.dx-tv:not(.dx-phone) #app [class*="streams-list-container"] > [class*="streams-container"] {
+    contain: strict;
+}
+
+/* The list's box cut the white ring off a row resting at its top or bottom edge: the first row, and
+   each row the remote steps to past an edge (the box scrolls only as far as it must). Room for the
+   ring inside the box, and the remote's rows stop short of its edges by as much. */
+html.dx-tv:not(.dx-phone) #app [class*="streams-list-container"] > [class*="streams-container"] {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    scroll-padding-block: 7px;
+}
+
+/* Stremio's own contents stay in a row once dx.bi's are in (unseen, in a box one pixel wide: see
+   "CLEAN STREAM LIST"). Laid out at that width, a word to a line, they were most of the work of a
+   list arriving. On a TV they are not laid out at all (the plugin reads their text, which is
+   still there), and neither is a row whose dx.bi version isn't in yet: it is out of sight until
+   then anyway, and keeps a row's height meanwhile. */
+.dx-tv [data-dxv] > :not(.dxv-row):not([class*="menu-container"]) {
+    content-visibility: hidden;
+}
+
+html.dx-tv[data-dx-rows] #app [class*="streams-list-container"] [class*="streams-container"] > [class*="stream-container"]:not([data-dxv]) {
+    content-visibility: hidden;
+    contain-intrinsic-block-size: 4.75rem;
+}
+
+/* TV: a move from one title to the next only redraws the two of them. Three things had Chromium
+   put the whole screen together again at every such press instead, several times the work (each
+   of the three is enough to bring that back).
+   One: rows snap to their titles, and Chromium keeps note, on the row, of which of the things it
+   snaps to holds the selection. Rows snap to a speck at each title's edge now (the same resting
+   places), and a speck never holds it. */
+.dx-tv #app [class*="board-content-"]:not([class*="board-content-container"]) [class*="meta-row"] > [class*="meta-items-container"] > [class*="meta-item-"],
+.dx-tv #app [class*="search-content"] [class*="meta-row"] > [class*="meta-items-container"] > [class*="meta-item-"] {
+    scroll-snap-align: none;
+}
+
+.dx-tv #app [class*="board-content-"]:not([class*="board-content-container"]) [class*="meta-row"] > [class*="meta-items-container"] > [class*="meta-item-"]::before,
+.dx-tv #app [class*="search-content"] [class*="meta-row"] > [class*="meta-items-container"] > [class*="meta-item-"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+    scroll-snap-align: start;
+}
+
+/* Two: the Remove tab of a Continue Watching title could be clicked as soon as its title was
+   selected, though it only shows under the mouse or when selected itself. Now it can be clicked
+   when it shows (a phone's is left as it was: a finger has no "under"). */
+html.dx-tv:not(.dx-phone) #app [class*="meta-item-container"]:focus-within:not(.hovered, .active, .selected) [class*="dismiss-icon-layer"]:not(:focus-visible) {
+    pointer-events: none;
+}
+
+/* Three: Stremio's menu dots went from not drawn at all to drawn. They are always drawn now, in
+   clear ink until their title is selected or pointed at (not where the screen is touched: there
+   Stremio shows them on every title). */
+@media not all and (any-pointer: coarse) {
+    .dx-tv #app [class*="meta-item-container"] [class*="menu-label-container"] {
+        opacity: 1;
+    }
+
+    .dx-tv #app [class*="meta-item-container"]:not(:focus-within, .hovered, .active, .selected) [class*="menu-label-container"] > svg {
+        color: transparent;
+    }
+}
+
+/* TV: a row's arrows and page marks wait for a mouse, which a TV seldom has. Unseen, each was
+   still a layer of the screen (for where a click would land), reworked on every frame its row
+   moved: they stay out of the picture until a pointer is over their row. */
+.dx-tv .dx-arrow,
+.dx-tv .dx-row-pages {
+    visibility: hidden;
+}
+
+.dx-tv [class*="meta-row"]:hover > .dx-arrow:not(.is-hidden),
+.dx-tv [class*="meta-row"]:hover > .dx-row-pages,
+.dx-tv [class*="meta-row"]:focus-visible > .dx-row-pages {
+    visibility: visible;
 }
 
 /* Kids profiles and hidden titles (plugin): titles that mustn't show, and rows left with none, are

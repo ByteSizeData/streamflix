@@ -179,6 +179,20 @@ dx.bi keeps itself up to date. On Windows and Linux it downloads new versions in
 
 <br>
 
+## Simkl (this build)
+
+This build adds Simkl to dx.bi: your Simkl lists as rows on Home, and what you watch marked on Simkl.
+
+1. In dx.bi, open your profile menu (top right) → **Simkl**.
+2. Simkl needs a free app key of your own: sign in at [simkl.com/settings/developer](https://simkl.com/settings/developer/), create a new app (any name, say "dx.bi"; choose a TV, device or command-line type if it asks; if it wants a redirect address, use `urn:ietf:wg:oauth:2.0:oob`), and paste its **Client ID** into dx.bi.
+3. Press **Connect**, open simkl.com/pin and type the code dx.bi shows. Done: the rows appear on Home.
+
+Under *Settings → dx.bi → Simkl*: which lists show (Watching and Plan to Watch, or every list), whether anime is included, and whether what you watch is sent to Simkl (Watching now after 15 seconds of real playing, watched at 80%). The connection is kept per viewer, on this computer only.
+
+The first time this build opens it also offers to copy the Stremio app's sign-in, addons, library and settings over, so it opens just as Stremio was.
+
+<br>
+
 ## Read this first
 
 > [!IMPORTANT]

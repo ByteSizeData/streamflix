@@ -38,10 +38,20 @@ object Updates {
         OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
     }
 
+    /**
+     * A custom build (its version carries a suffix such as "-simkl.1", from the plugin it was built
+     * with): upstream's plugin and APK must never replace it, so nothing is fetched or offered.
+     */
+    fun custom(context: Context): Boolean = BuildConfigVersion.name(context).contains("-")
+
     /** The plugin to run: the bundled one, or a newer one fetched earlier */
     fun pluginSource(context: Context): String {
         val bundled = context.assets.open("dxbi.plugin.js").bufferedReader().use { it.readText() }
         val updated = File(context.filesDir, UPDATED_PLUGIN)
+        if (custom(context)) {
+            updated.delete() // a copy fetched by an earlier, standard build
+            return bundled
+        }
         if (updated.exists()) {
             val text = updated.readText()
             if (isNewer(version(text), version(bundled))) return text
@@ -54,12 +64,13 @@ object Updates {
      * The plugin as the TV runs it: without the intro film and the picture enhancer's shaders, which
      * dx.bi TV never uses: about 40% smaller, so a 2 GB TV has that much less to hold while starting.
      */
+    // (\r?\n: a build made on Windows carries the plugin with CRLF line ends, and went untrimmed)
     fun forTv(source: String): String = source
-        .replace(Regex("""(\n  function introVideoData\(\) \{\n    return )"[^\n]*"""), "$1\"\";")
-        .replace(Regex("""(\n  function anime4kShaders\(\) \{\n    return )\{[^\n]*"""), "$1{};")
+        .replace(Regex("""(\r?\n  function introVideoData\(\) \{\r?\n    return )"[^\r\n]*"""), "$1\"\";")
+        .replace(Regex("""(\r?\n  function anime4kShaders\(\) \{\r?\n    return )\{[^\r\n]*"""), "$1{};")
 
     fun checkPlugin(context: Context) = thread(name = "dxbi-plugin-update") {
-        if (!ENABLED) return@thread
+        if (custom(context) || !ENABLED) return@thread
         try {
             val text = get(PLUGIN_URL) ?: return@thread
             if (!text.contains("@name dx.bi")) return@thread
@@ -113,7 +124,7 @@ object Updates {
     }
 
     fun checkApp(activity: MainActivity) = thread(name = "dxbi-app-update") {
-        if (offering || !ENABLED) return@thread
+        if (offering || custom(activity) || !ENABLED) return@thread
         lastCheck = System.currentTimeMillis()
         try {
             val found = try { fromApi() } catch (_: Exception) { null } ?: fromPage() ?: return@thread

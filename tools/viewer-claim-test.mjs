@@ -13,7 +13,8 @@ assert.ok(start > 0 && end > start, "viewerLibrary found");
 
 function device(list, current, library = {}) {
   const data = new Map();
-  const store = { get: (k, f) => (data.has(k) ? data.get(k) : f), set: (k, v) => data.set(k, v) };
+  // (`data`: the store's entries as the plugin keeps them; who is saved as a viewer is read from there)
+  const store = { data: {}, get: (k, f) => (data.has(k) ? data.get(k) : f), set: (k, v) => data.set(k, v) };
   const viewers = { list: () => ({ list: list.map((id) => ({ id })) }), current: () => ({ id: current }), key: (s) => `${s}:${current}` };
   const localStorage = { getItem: (k) => (k === "library" ? JSON.stringify({ items: library }) : null) };
   const lib = vm.runInNewContext(`${source.slice(start, end)}\nviewerLibrary`, { store, viewers, localStorage, JSON, Object, Map, Set, Array, Date, String, Promise, setTimeout, log() {}, core: () => ({}), window: {}, preview: { library: {} }, libraryWatched: {}, episodes: { index: new Map() }, scheduleSync() {} });

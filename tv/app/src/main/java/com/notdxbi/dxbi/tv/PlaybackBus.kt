@@ -2,6 +2,7 @@ package com.notdxbi.dxbi.tv
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.SystemClock
 import org.json.JSONObject
 
 /**
@@ -13,7 +14,8 @@ import org.json.JSONObject
  */
 object PlaybackBus {
     interface Listener {
-        fun onProgress(positionMs: Long, durationMs: Long, paused: Boolean)
+        /** paused: the viewer's pause (or the end); buffering: playing, but waiting for data */
+        fun onProgress(positionMs: Long, durationMs: Long, paused: Boolean, buffering: Boolean)
         fun onClosed()
         fun onPartyTick(positionMs: Long, durationMs: Long, paused: Boolean, buffering: Boolean, rate: Float)
         fun onPartyLeave()
@@ -33,6 +35,30 @@ object PlaybackBus {
 
     @Volatile
     private var pendingClose: String? = null
+
+    /** How the player closed is still waiting for the page to take it */
+    val closePending: Boolean get() = pendingClose != null
+
+    /**
+     * When dx.bi was left with the player open (Home, the TV asleep), until it's back on screen: the
+     * page under the player sat there all that time, unseen
+     */
+    @Volatile
+    var playerLeftAt = 0L
+
+    /**
+     * The page is stale (it sat through a long time away, see MainActivity.onStart) and dx.bi starts
+     * afresh the next time it's left and come back to. False in a new process, which has a new page.
+     */
+    @Volatile
+    var pageStale = false
+
+    /** dx.bi is back on screen after being left with the player open: away long enough to go stale? */
+    fun backOnScreen() {
+        val left = playerLeftAt
+        playerLeftAt = 0
+        if (left != 0L && SystemClock.elapsedRealtime() - left > MainActivity.FRESH_AFTER_MS) pageStale = true
+    }
 
     fun started(json: String) {
         activePlayback = json

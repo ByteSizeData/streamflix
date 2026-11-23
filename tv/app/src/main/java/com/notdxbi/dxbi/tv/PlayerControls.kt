@@ -56,6 +56,8 @@ class PlayerControls(
     private val leaveParty: () -> Unit,
     private val leave: (Boolean) -> Unit,
 ) : Controls {
+    /** Subtitle languages listed before the others in the subtitles menu, in this order (each: its codes) */
+    var subtitlesFirst: List<Set<String>> = emptyList()
     private val root: View = activity.findViewById(R.id.controls)
     private val panel: View = activity.findViewById(R.id.panel)
     private val panelTitle: TextView = activity.findViewById(R.id.panel_title)
@@ -321,7 +323,14 @@ class PlayerControls(
             }
         }
         var number = 0
-        for (group in groups) for (i in 0 until group.length) {
+        // (subtitles: the languages asked for first, Thai then English in this build, whether they
+        // are the file's own tracks or an addon's; then the rest as the file has them)
+        val tracks = groups.flatMap { g -> (0 until g.length).map { g to it } }
+        val listed = if (type != C.TRACK_TYPE_TEXT || subtitlesFirst.isEmpty()) tracks else tracks.sortedBy { (g, i) ->
+            val language = g.getTrackFormat(i).language?.lowercase()?.substringBefore('-').orEmpty()
+            subtitlesFirst.indexOfFirst { language in it }.let { if (it < 0) subtitlesFirst.size else it }
+        }
+        for ((group, i) in listed) {
             val supported = group.isTrackSupported(i)
             // (a sound track that can't play stays listed, so it's clear why there's no sound)
             if (!supported && type != C.TRACK_TYPE_AUDIO) continue

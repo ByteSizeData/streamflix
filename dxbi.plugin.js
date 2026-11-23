@@ -3,7 +3,6 @@
  * @description Netflix-style Stremio: billboard, carousels and hover previews, reviews and ratings, skip intro and up next, a better player, watch parties and more. The dx.bi look is built in.
  * @version 2.38.4
  * @author dx.bi
- * @updateUrl https://raw.githubusercontent.com/notdxbi/dxbi-stremio/main/dxbi.plugin.js
  */
 // dx.bi — Copyright (C) 2026 dx.bi. Free software under the GNU General Public License, version 3
 // or later (see LICENSE and NOTICE.md at github.com/notdxbi/dxbi-stremio). Versions up to 2.15.9: MIT.
@@ -155,6 +154,9 @@
     whoIsWatching: true,
     enhance: "off",
     streamTools: true,
+    streamSort: "default",
+    streamSite: "none",
+    streamDubbed: false,
     splash: true,
     introSound: true,
     uiSounds: false,
@@ -162,12 +164,18 @@
     soundVolume: "subtle",
     focusColour: "white",
     tvTorrents: false,
+    thaiSubtitles: true,
+    thaiStart: false,
+    subtitlesThaiEnglish: true,
     animeTitles: true,
     trailerDelay: "0",
     watchParty: true,
     partyFollow: true,
     partyActivity: true,
     partySounds: true,
+    simklRows: "watching",
+    simklScrobble: true,
+    simklAnime: true,
   };
 
   const SCHEMA = [
@@ -202,7 +210,10 @@
         { label: "Yellow", value: "yellow" },
       ],
     },
-    { key: "liteMode", type: "select", label: "Lite mode", description: "For slower TV boxes: loads fewer Home rows at once, skips hover cards and sharper posters, and ignores presses that arrive too late. Auto turns on with 2 GB of memory or less.", defaultValue: DEFAULTS.liteMode, tvOnly: true, options: [{ label: "Auto", value: "auto" }, { label: "On", value: "on" }, { label: "Off", value: "off" }] },
+    { key: "thaiSubtitles", type: "toggle", label: "Thai subtitles", description: "dx.bi TV finds Thai subtitles on OpenSubtitles by itself and lists them first under the player's subtitles button. They stay off until you pick one there, unless Start with Thai subtitles is on.", defaultValue: DEFAULTS.thaiSubtitles, tvOnly: true },
+    { key: "thaiStart", type: "toggle", label: "Start with Thai subtitles", description: "Films and episodes start with Thai subtitles on whenever there are some. Off: no subtitles show until you pick them with the player's subtitles button.", defaultValue: DEFAULTS.thaiStart, tvOnly: true },
+    { key: "subtitlesThaiEnglish", type: "toggle", label: "Only Thai and English subtitles", description: "The player's subtitles button lists Thai and English only (and Stremio's own subtitle language, when one is set), so the TV fetches a handful of subtitle files as a video starts and not a hundred. Off: every language your addons offer.", defaultValue: DEFAULTS.subtitlesThaiEnglish, tvOnly: true },
+    { key: "liteMode", type: "select", label: "Lite mode", description: "For slower TV boxes: loads fewer Home rows at once, skips hover cards and sharper posters, and stops a held button running on when the TV falls behind. Auto turns on with 2 GB of memory or less.", defaultValue: DEFAULTS.liteMode, tvOnly: true, options: [{ label: "Auto", value: "auto" }, { label: "On", value: "on" }, { label: "Off", value: "off" }] },
     { key: "forYou", type: "toggle", label: "Because you watched", description: "A Home row based on what you watched last, skipped for kids viewers. Popular titles in the same genres, or real recommendations if you add a TMDB key below.", defaultValue: DEFAULTS.forYou },
     { key: "quickPlay", type: "toggle", label: "Just press Play", description: "Play and episode clicks start the best stream straight away, and dx.bi remembers what you choose. Skips streams that would start a new debrid download.", defaultValue: DEFAULTS.quickPlay },
     { key: "quickPlayMemory", type: "select", label: "Remember my stream choice", defaultValue: DEFAULTS.quickPlayMemory, options: [{ label: "For each series", value: "series" }, { label: "Everywhere", value: "global" }] },
@@ -416,6 +427,9 @@
     },
     { key: "remainingTime", type: "toggle", label: "Show time remaining", description: "The player clock counts down, like Netflix (click it to switch back).", defaultValue: DEFAULTS.remainingTime },
     { key: "streamTools", type: "toggle", label: "Stream sorting & filters", description: "Sort streams by quality, seeds or size and filter by quality, language, source, provider, instant and HDR.", defaultValue: DEFAULTS.streamTools },
+    { key: "streamSort", type: "select", label: "Order streams by", description: "How a title's streams are listed. The list's own sort menu overrides this until you press Reset there.", defaultValue: DEFAULTS.streamSort, options: [{ label: "Addon order", value: "default" }, { label: "Best quality", value: "quality" }, { label: "Best quality, smallest first", value: "quality-size" }, { label: "Most seeds", value: "seeds" }, { label: "Largest first", value: "size-desc" }, { label: "Smallest first", value: "size-asc" }] },
+    { key: "streamSite", type: "select", label: "Release site first", description: "Streams from this site (Torrentio's site tag, or YIFY in the file name) go to the top of the list whatever the order, and lead the best match.", defaultValue: DEFAULTS.streamSite, options: [{ label: "None", value: "none" }, { label: "YTS (YIFY)", value: "yts" }, { label: "EZTV", value: "eztv" }, { label: "1337x", value: "1337x" }, { label: "TorrentGalaxy", value: "torrentgalaxy" }, { label: "ThePirateBay", value: "thepiratebay" }, { label: "RARBG", value: "rarbg" }, { label: "NyaaSi", value: "nyaasi" }] },
+    { key: "streamDubbed", type: "toggle", label: "English dub first (anime and foreign films)", description: "On an anime, or a film or show that isn't in English, releases with an English dub (said outright, a second audio track, or on a foreign title English among its languages where the release doesn't say it's only subtitles) come before the rest, whatever the order, and lead the best match; on a foreign title, even before the release site. Films and shows in English are left to the order.", defaultValue: DEFAULTS.streamDubbed },
     { key: "watchParty", type: "toggle", label: "Watch party", description: "Watch in sync with friends: start a party from the people button, send the code, and everyone opens the same title from their own addons and debrid account. Shared play, pause and seeking, waits for anyone buffering, chat and reactions. End-to-end encrypted, no account needed.", defaultValue: DEFAULTS.watchParty },
     { key: "partyFollow", type: "toggle", label: "Watch party: follow the host", description: "Open whatever the host plays (including the next episode), picking the same release from your own addons.", defaultValue: DEFAULTS.partyFollow },
     { key: "partyActivity", type: "toggle", label: "Watch party: chat & activity in the player", description: "Messages, reactions and who paused or skipped, shown briefly over the video.", defaultValue: DEFAULTS.partyActivity },
@@ -436,6 +450,20 @@
         { label: "Loud", value: "loud" },
       ],
     },
+    {
+      key: "simklRows",
+      type: "select",
+      label: "Simkl lists on Home",
+      description: "Your Simkl lists as rows under My List. Connect Simkl from your profile menu (top right) → Simkl.",
+      defaultValue: DEFAULTS.simklRows,
+      options: [
+        { label: "Watching and Plan to Watch", value: "watching" },
+        { label: "Every list (also On Hold and Completed)", value: "all" },
+        { label: "Off", value: "off" },
+      ],
+    },
+    { key: "simklScrobble", type: "toggle", label: "Send what I watch to Simkl", description: "Shows a title as Watching now on Simkl once it has really played for a while, and marks it watched when you've seen 80% of it (otherwise Simkl keeps your place).", defaultValue: DEFAULTS.simklScrobble },
+    { key: "simklAnime", type: "toggle", label: "Simkl: include anime", description: "Anime from your Simkl lists in the rows too. With an Anime Kitsu addon installed, Watching cards open the next episode.", defaultValue: DEFAULTS.simklAnime },
   ];
 
   // Settings come in groups (the dx.bi app and dx.bi TV show them as sections with a search). Each
@@ -443,10 +471,11 @@
   const SETTING_GROUPS = [
     ["Look", ["liteMode", "accent", "posterAccent", "focusColour", "builtInTheme", "crispPosters", "ratings", "animeTitles", "wideContinue"]],
     ["Home", ["myList", "forYou", "videoRowsOnly", "billboard", "billboardSource", "billboardInterval", "newEpisodes", "airingRow", "whoIsWatching"]],
+    ["Simkl", ["simklRows", "simklScrobble", "simklAnime"]],
     ["Hover cards & trailers", ["previews", "trailers", "trailerDelay"]],
-    ["Browsing & library", ["watchedTitles", "librarySort", "streamRows", "streamTools", "addonTools", "watchStats", "reviews", "tmdbKey", "mdblistKey", "profileSync"]],
+    ["Browsing & library", ["watchedTitles", "librarySort", "streamRows", "streamTools", "streamSort", "streamSite", "streamDubbed", "addonTools", "watchStats", "reviews", "tmdbKey", "mdblistKey", "profileSync"]],
     ["Player", ["quickPlay", "quickPlayMemory", "quickPlayQuality", "quickPlayFallback", "tvTorrents", "playerExtras", "remainingTime", "playerClock", "seekPreviews", "enhance", "pictureSound", "streamStats", "rememberPlayback", "playerKeys", "pip", "externalPlayer", "convertVideo"]],
-    ["Subtitles", ["subtitleStyle", "subtitleFont", "subtitleCustomFont", "subtitlesStart", "hdrSubtitles"]],
+    ["Subtitles", ["thaiSubtitles", "thaiStart", "subtitlesThaiEnglish", "subtitleStyle", "subtitleFont", "subtitleCustomFont", "subtitlesStart", "hdrSubtitles"]],
     ["Episodes & skipping", ["skipButtons", "autoSkip", "upNext", "preloadNext", "fillerGuide", "skipFiller"]],
     ["Watch party", ["watchParty", "partyFollow", "partyActivity", "partySounds"]],
     ["Intro & sounds", ["splash", "introSound", "uiSounds", "soundVolume"]],
@@ -496,7 +525,7 @@
       await window.StremioEnhancedAPI?.clearRegisteredSettings?.(PLUGIN_KEY);
     } catch (_) { /* nothing registered yet */ }
     // dx.bi TV's own options stay out of the app's and Stremio Enhanced's settings
-    Promise.resolve(API.registerSettings(SCHEMA.filter((o) => IN_TV || !o.tvOnly))).catch((err) => log("settings not registered", err));
+    Promise.resolve(API.registerSettings(SCHEMA.filter((o) => (IN_TV ? !o.notTv : !o.tvOnly)))).catch((err) => log("settings not registered", err));
     const values = await Promise.all(
       Object.keys(DEFAULTS).map((key) => API.getSetting(key).then((v) => [key, v]).catch(() => [key, null]))
     );
@@ -581,6 +610,7 @@
     close: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     remove: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M7.5 7.5l9 9M16.5 7.5l-9 9"/></svg>',
     playSmall: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M8 5.2v13.6a.8.8 0 0 0 1.22.68l10.8-6.8a.8.8 0 0 0 0-1.36L9.22 4.52A.8.8 0 0 0 8 5.2z"/></svg>',
+    simkl: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 15.2c.8.9 1.9 1.3 3.2 1.3 2 0 3.3-1 3.3-2.5 0-3.3-6.3-1.6-6.3-4.7 0-1.4 1.2-2.3 3-2.3 1.2 0 2.2.4 2.9 1.2"/></svg>',
   };
 
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -597,15 +627,46 @@
     return { type: decodeURIComponent(m[1]), id: decodeURIComponent(m[2]) };
   }
 
+  // Which title a card is for (the type and id in its link) is asked again and again, of every card,
+  // by every part of dx.bi: on a TV, looking the link up and taking it apart each time was the
+  // largest part of every pass. It is kept per card for as long as the card has the same link
+  // pointing at the same place. The title and poster are read from the page when they are asked
+  // for (a poster can change under the same link, and most askers want neither).
+  const cardLinks = new WeakMap(); // card → { link, href, parsed }
   function cardInfo(card) {
-    const link = card.querySelector('a[class*="meta-item-link"]') || card.querySelector("a[href]");
-    if (!link) return null;
+    let kept = cardLinks.get(card);
+    if (kept && !(kept.link.isConnected && card.contains(kept.link))) kept = null;
+    if (!kept) {
+      const found = card.querySelector('a[class*="meta-item-link"]') || card.querySelector("a[href]");
+      if (!found) return null;
+      kept = { link: found, href: null, parsed: null };
+      cardLinks.set(card, kept);
+    }
+    const link = kept.link;
     const href = link.getAttribute("href") || "";
-    const parsed = parseDetailHref(href);
-    if (!parsed) return null;
-    const title = card.querySelector('[class*="title-label"]')?.textContent?.trim() || link.getAttribute("title") || "";
-    const poster = card.querySelector('img[class*="poster-image"]')?.getAttribute("src") || "";
-    return { ...parsed, href, title, poster, link };
+    if (href !== kept.href) {
+      kept.href = href;
+      kept.parsed = parseDetailHref(href);
+    }
+    if (!kept.parsed) return null;
+    let title;
+    let poster;
+    return {
+      type: kept.parsed.type,
+      id: kept.parsed.id,
+      href,
+      get title() {
+        if (title === undefined) title = card.querySelector('[class*="title-label"]')?.textContent?.trim() || link.getAttribute("title") || "";
+        return title;
+      },
+      set title(value) { title = value; },
+      get poster() {
+        if (poster === undefined) poster = card.querySelector('img[class*="poster-image"]')?.getAttribute("src") || "";
+        return poster;
+      },
+      set poster(value) { poster = value; },
+      link,
+    };
   }
 
   // Navigate the way Stremio's own links do (pushState, then popstate so its router renders).
@@ -688,28 +749,64 @@
     memory.set(key, meta);
     if (memory.size > 1500) memory.delete(memory.keys().next().value);
     try {
-      localStorage.setItem(META_PREFIX + key, JSON.stringify({ t: Date.now(), m: meta }));
+      const t = Date.now();
+      localStorage.setItem(META_PREFIX + key, JSON.stringify({ t, m: meta }));
+      if (cacheTidy.ages) cacheTidy.ages.set(META_PREFIX + key, t);
       if (++writes % 50 === 0) pruneCache(900);
     } catch (_) {
       pruneCache(0);
     }
   }
 
-  // Keep the cache bounded: drop expired entries, then the oldest beyond `limit`
+  // Keep the cache bounded: drop expired entries, then the oldest beyond `limit` (0, asked for when
+  // storage is full: the older half goes). This used to happen on the spot, reading every cached
+  // title back in full to see how old it was (up to 950 of them in one go), in the middle of
+  // filling Home. Now each entry's age is read off its first few characters, a few dozen at a
+  // time while nothing else is going on, and remembered (`ages`) for the next tidy-up.
+  const cacheTidy = { ages: null, unread: null, going: null, limit: -1, timer: 0 };
   function pruneCache(limit) {
-    try {
-      const entries = [];
-      for (const k of Object.keys(localStorage)) {
-        if (!k.startsWith(META_PREFIX)) continue;
-        let t = 0;
-        try { t = JSON.parse(localStorage.getItem(k)).t || 0; } catch (_) { /* corrupt entry */ }
-        if (Date.now() - t > META_TTL) localStorage.removeItem(k);
-        else entries.push([k, t]);
-      }
-      const keep = limit || Math.floor(entries.length / 2);
-      entries.sort((a, b) => a[1] - b[1]);
-      entries.slice(0, Math.max(0, entries.length - keep)).forEach(([k]) => localStorage.removeItem(k));
-    } catch (_) { /* ignore */ }
+    const tidy = cacheTidy;
+    // (a full storage's 0 comes before the routine limit)
+    tidy.limit = tidy.limit < 0 ? limit : Math.min(tidy.limit, limit);
+    if (tidy.timer) return;
+    const later = (fn) => (window.requestIdleCallback ? window.requestIdleCallback(fn, { timeout: 2000 }) : setTimeout(fn, 200));
+    const step = () => {
+      tidy.timer = 0;
+      try {
+        if (!tidy.ages) {
+          tidy.ages = new Map();
+          tidy.unread = Object.keys(localStorage).filter((k) => k.startsWith(META_PREFIX));
+        }
+        for (let n = 0; n < 40 && tidy.unread.length; n++) {
+          const k = tidy.unread.pop();
+          if (tidy.ages.has(k)) continue; // written since
+          const m = /^\{"t":(\d+)/.exec(localStorage.getItem(k) || ""); // (a corrupt entry counts as expired)
+          tidy.ages.set(k, m ? Number(m[1]) : 0);
+        }
+        if (!tidy.unread.length && !tidy.going && tidy.limit >= 0) {
+          const now = Date.now();
+          const fresh = [];
+          tidy.going = [];
+          for (const [k, t] of tidy.ages) {
+            if (now - t > META_TTL) tidy.going.push(k);
+            else fresh.push([k, t]);
+          }
+          const keep = tidy.limit || Math.floor(fresh.length / 2);
+          fresh.sort((a, b) => a[1] - b[1]);
+          for (const [k] of fresh.slice(0, Math.max(0, fresh.length - keep))) tidy.going.push(k);
+          tidy.limit = -1;
+        }
+        if (tidy.going) {
+          for (const k of tidy.going.splice(0, 60)) {
+            localStorage.removeItem(k);
+            tidy.ages.delete(k);
+          }
+          if (!tidy.going.length) tidy.going = null;
+        }
+        if (tidy.unread.length || tidy.going || tidy.limit >= 0) tidy.timer = later(step);
+      } catch (_) { /* storage not there: nothing to tidy */ }
+    };
+    tidy.timer = later(step);
   }
 
   // The AniList entry that is this title: same name (ignoring case, punctuation and accents), a
@@ -746,14 +843,31 @@
     };
   }
 
-  function getMeta(type, id) {
+  // `whenIdle` (a slower TV, see `lite`): the details are only wanted for the score on a poster's
+  // badge. A whole Cinemeta document per poster, four at a time, each one unpacked on the page's
+  // own thread and then saved, all landed just as a new row or page of posters came in (thirty-odd
+  // inside a second on Discover). Those wait their turn (`idleQueue`): one at a time, and only
+  // while the remote is at rest.
+  const idleQueue = [];
+  let idleWait = 0;
+  function getMeta(type, id, whenIdle) {
     if (!isImdb(id) || (type !== "movie" && type !== "series")) return Promise.resolve(null);
     const key = `${type}:${id}`;
     const cached = readCached(key);
     if (cached !== undefined) return Promise.resolve(cached);
-    if (inflight.has(key)) return inflight.get(key);
+    if (inflight.has(key)) {
+      // (wanted for more than a badge after all: it stops waiting)
+      const waiting = whenIdle ? -1 : idleQueue.findIndex((job) => job.key === key);
+      if (waiting >= 0) {
+        queue.push(idleQueue.splice(waiting, 1)[0]);
+        pump();
+      }
+      return inflight.get(key);
+    }
     const p = new Promise((resolve) => {
-      queue.push({ type, id, key, resolve });
+      // (`at` and `press`: which batch it came in, see pump)
+      if (whenIdle && IN_TV && lite.on) idleQueue.push({ type, id, key, resolve, at: performance.now(), press: keyNav.lastPress });
+      else queue.push({ type, id, key, resolve });
       pump();
     });
     inflight.set(key, p);
@@ -761,23 +875,39 @@
   }
 
   function pump() {
-    while (active < 4 && queue.length) {
-      const job = queue.shift();
-      active++;
-      fetch(`https://v3-cinemeta.strem.io/meta/${job.type}/${job.id}.json`, { signal: AbortSignal.timeout(10000) })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((j) => {
-          const meta = slimMeta(j && j.meta);
-          if (meta) writeCached(job.key, meta);
-          job.resolve(meta);
-        })
-        .catch(() => job.resolve(null))
-        .finally(() => {
-          active--;
-          inflight.delete(job.key);
-          pump();
-        });
-    }
+    while (active < 4 && queue.length) fetchCinemeta(queue.shift());
+    if (!idleQueue.length || active || idleWait) return;
+    idleWait = setTimeout(() => {
+      idleWait = 0;
+      const resting = !document.hidden && performance.now() - keyNav.lastPress > 1500;
+      if (resting && !active && !queue.length && idleQueue.length) {
+        // The newest batch first, in the order it came. After a minute of paging through Discover the
+        // posters on show were queued last, and were served after every poster long gone from the
+        // page; but a batch is drawn top rows first, and Home's first rows are the ones in view. A
+        // batch is what came with no press of the remote and no 3 s gap in between.
+        let i = idleQueue.length - 1;
+        while (i > 0 && idleQueue[i].press === idleQueue[i - 1].press && idleQueue[i].at - idleQueue[i - 1].at < 3000) i--;
+        fetchCinemeta(idleQueue.splice(i, 1)[0]);
+      } else if (document.hidden) idleWait = setTimeout(() => { idleWait = 0; pump(); }, 5000); // nobody is looking
+      else pump();
+    }, 400);
+  }
+
+  function fetchCinemeta(job) {
+    active++;
+    fetch(`https://v3-cinemeta.strem.io/meta/${job.type}/${job.id}.json`, { signal: AbortSignal.timeout(10000) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const meta = slimMeta(j && j.meta);
+        if (meta) writeCached(job.key, meta);
+        job.resolve(meta);
+      })
+      .catch(() => job.resolve(null))
+      .finally(() => {
+        active--;
+        inflight.delete(job.key);
+        pump();
+      });
   }
 
   // ---------------------------------------------------------------------------
@@ -858,10 +988,15 @@
   // Route + header state
   // ---------------------------------------------------------------------------
 
+  // (asked some twenty-five times a pass: worked out once per address)
+  const routeNow = { hash: null, route: "board" };
   function currentRoute() {
-    const hash = (location.hash || "#/").replace(/^#/, "");
-    const first = hash.split(/[/?]/).filter(Boolean)[0] || "board";
-    return first;
+    const hash = location.hash;
+    if (hash !== routeNow.hash) {
+      routeNow.hash = hash;
+      routeNow.route = (hash || "#/").replace(/^#/, "").split(/[/?]/).filter(Boolean)[0] || "board";
+    }
+    return routeNow.route;
   }
 
   function updateRoute() {
@@ -887,10 +1022,17 @@
     get FIRST() { return lite.on ? 3 : 6; },
     LOW: 3,
     get AHEAD() { return lite.on ? 3 : 6; },
+    // How far Home's rows have been asked for, as last seen: { ready: the first one not asked for yet
+    // (-1: none left), at: when that was seen }
+    known: null,
+    // …when Stremio was last asked, while its answer is awaited, and the row the remote has reached
+    asking: 0,
+    wanted: 0,
 
     preload(tries = 4) {
       const all = homeLayout.active();
       if (!IN_TV && !all) return;
+      this.known = null;
       clearTimeout(this.timer);
       this.timer = setTimeout(async () => {
         const { getState, dispatch } = core();
@@ -913,16 +1055,27 @@
     },
 
     // The remote came down to the row at `index`: the next few are asked for in one go (one row per
-    // press rebuilt Home at every press)
+    // press rebuilt Home at every press). To say how far it has got, Stremio hands over the whole of
+    // Home (every title of every row, a quarter of a megabyte) and a TV read all of it at each Down:
+    // it's asked only once the remote is near the last row known to be on its way, and one question
+    // at a time. (What's known is not trusted for long: Home can be built afresh under the remote.)
     async ahead(index) {
       if (!IN_TV || homeLayout.active()) return;
       const { getState } = core();
       if (!getState || currentRoute() !== "board") return;
+      const known = this.known;
+      if (known && performance.now() - known.at < 20000 && (known.ready < 0 || known.ready - index > this.LOW)) return;
+      this.wanted = index;
+      // (an answer that never comes mustn't stop the asking for good)
+      if (this.asking && performance.now() - this.asking < 5000) return;
+      const asked = this.asking = performance.now();
       let board;
-      try { board = await getState("board"); } catch (_) { return; }
+      try { board = await getState("board"); } catch (_) { return; } finally { if (this.asking === asked) this.asking = 0; }
       const catalogs = board && Array.isArray(board.catalogs) ? board.catalogs : [];
       const ready = catalogs.findIndex((c) => !c || !c.content);
-      if (ready < 0 || ready - index > this.LOW) return;
+      if (catalogs.length) this.known = { ready, at: performance.now() };
+      // (the remote may have gone further down while Stremio answered)
+      if (ready < 0 || ready - this.wanted > this.LOW) return;
       this.load(board, ready + this.AHEAD);
     },
 
@@ -930,7 +1083,11 @@
       const { dispatch } = core();
       const start = board.catalogs.findIndex((c) => !c || !c.content);
       end = Math.min(end, board.catalogs.length);
-      if (dispatch && start >= 0 && start < end) dispatch({ action: "CatalogsWithExtra", args: { action: "LoadRange", args: { start, end } } }, "board");
+      if (dispatch && start >= 0 && start < end) {
+        dispatch({ action: "CatalogsWithExtra", args: { action: "LoadRange", args: { start, end } } }, "board");
+        // those are on their way: the next to ask for comes after them
+        this.known = { ready: end < board.catalogs.length ? end : -1, at: performance.now() };
+      }
     },
   };
 
@@ -964,9 +1121,12 @@
     }
   }
 
-  // A gliding row sends a scroll event every frame: its arrows and page dots catch up once a frame
+  // A gliding row sends a scroll event every frame: its arrows and page dots catch up once a frame.
+  // TV: they only ever show under a mouse, so a row the remote turns is left alone (measuring it had
+  // the TV lay the page out again on every frame of the glide, for arrows nobody could see).
   const arrowRows = new Set();
   function arrowsSoon(row) {
+    if (IN_TV && row !== hoverRow) return;
     if (!arrowRows.size) {
       requestAnimationFrame(() => {
         for (const r of arrowRows) updateArrows(r);
@@ -1157,11 +1317,17 @@
       return artworkUrl(m.background) || (isImdb(m.id) ? art.background(m.id) : artworkUrl(m.poster));
     },
 
+    // (asked for at every pass, by the billboard and the rows built under it: looked up in the page
+    // once, for as long as Home's own element stays in it)
+    hostEl: null,
     host() {
-      return document.querySelector('[class*="board-container"] [class*="board-content-"]:not([class*="board-content-container"])');
+      if (!this.hostEl || !this.hostEl.isConnected) this.hostEl = document.querySelector('[class*="board-container"] [class*="board-content-"]:not([class*="board-content-container"])');
+      return this.hostEl;
     },
 
     async ensure() {
+      // TV: nothing to keep up while the app isn't on screen (it is looked at again when it comes back)
+      if (IN_TV && document.hidden) return;
       await metadataSource.refresh();
       if (metadataSource.key === null && core().getState) return; // wait for the initial profile
       const host = this.host();
@@ -1219,6 +1385,21 @@
         }, { once: true });
       });
       this.el = el;
+      // TV: the billboard only changes slides while a fair part of it (a quarter) is on screen. Down
+      // among the rows it went on fading pictures in and out every few seconds, with the remote
+      // waiting behind each fade.
+      if (IN_TV) {
+        this.onScreen = true;
+        this.watch = new IntersectionObserver((entries) => {
+          this.onScreen = entries[entries.length - 1].intersectionRatio >= 0.25;
+          // back in view: on from where it stopped (`tick` leaves a title picked with the remote alone)
+          if (this.onScreen && this.stalled) {
+            this.stalled = false;
+            this.tick();
+          }
+        }, { threshold: [0, 0.25] });
+        this.watch.observe(el);
+      }
     },
 
     slideHtml(m, i) {
@@ -1256,13 +1437,18 @@
       if (!this.el || !this.items.length) return;
       this.index = (i + this.items.length) % this.items.length;
       this.el.classList.toggle("is-first", !!instant);
+      // TV: the theme leaves out the slow zoom and the dot's progress line there, so there is nothing
+      // to restart. Restarting them made the browser lay the whole page out on the spot, twice a
+      // slide (over a tenth of a second at a TV's pace when the billboard first went up).
       this.el.querySelectorAll(".dx-hero-slide").forEach((slide, n) => {
         const backdrop = slide.querySelector(".dx-hero-backdrop");
         if (n === this.index) {
           clearTimeout(backdrop._kbOff);
           if (!slide.classList.contains("is-active")) {
-            backdrop.classList.remove("kb");
-            void backdrop.offsetWidth; // restart the slow zoom from the beginning
+            if (!IN_TV) {
+              backdrop.classList.remove("kb");
+              void backdrop.offsetWidth; // restart the slow zoom from the beginning
+            }
             backdrop.classList.add("kb");
           }
           slide.classList.add("is-active");
@@ -1273,6 +1459,11 @@
         }
       });
       this.el.querySelectorAll(".dx-hero-dot").forEach((d, n) => {
+        if (IN_TV) {
+          const on = n === this.index;
+          if (d.classList.contains("is-active") !== on) d.classList.toggle("is-active", on);
+          return;
+        }
         d.classList.remove("is-active");
         if (n === this.index) {
           void d.offsetWidth; // restart the progress animation
@@ -1291,7 +1482,7 @@
     },
 
     tick() {
-      const visible = this.el && this.el.isConnected && currentRoute() === "board" && !document.hidden;
+      const visible = this.el && this.el.isConnected && currentRoute() === "board" && !document.hidden && (!IN_TV || this.onScreen);
       if (!visible) {
         // Off screen: stop here and resume with a fresh slide when Home is visible again
         this.stalled = true;
@@ -1306,14 +1497,21 @@
     },
 
     resumeIfStalled() {
-      if (this.stalled && this.el && this.el.isConnected && currentRoute() === "board" && !document.hidden) {
+      if (this.stalled && this.el && this.el.isConnected && currentRoute() === "board" && !document.hidden && (!IN_TV || this.onScreen)) {
         this.stalled = false;
-        this.show(this.index + 1);
+        // A title picked with the keyboard stays up, as in `tick` (asked of the element: just back,
+        // the window may not have its focus yet, and `:focus` then matches nothing)
+        const picked = document.activeElement;
+        if (picked && this.el.contains(picked) && picked.matches(".dx-hero-slide.is-active .dx-btn")) this.schedule();
+        else this.show(this.index + 1);
       }
     },
 
     remove() {
+      this.stalled = false; // (a billboard built afresh starts on its first slide)
       clearTimeout(this.timer);
+      if (this.watch) this.watch.disconnect();
+      this.watch = null;
       if (this.el) this.el.remove();
       this.el = null;
     },
@@ -1337,7 +1535,17 @@
     return document.querySelectorAll('[class*="board-content-"]:not([class*="board-content-container"]) [class*="meta-row-container"], [class*="search-content"] [class*="meta-row-container"]');
   }
 
+  // Whether one row is among them, asked of the row itself (the remote asks at every press, and
+  // going through the whole page for the answer was a good part of each one on a TV)
+  function isCarouselRow(row) {
+    return row.matches('[class*="meta-row-container"]') && !!row.parentElement
+      && !!row.parentElement.closest('[class*="board-content-"]:not([class*="board-content-container"]), [class*="search-content"]');
+  }
+
   function enhanceRow(row) {
+    // (already done: its page dots are the last thing in it)
+    const last = row.lastElementChild;
+    if (last && last.className === "dx-row-pages") return;
     const track = row.querySelector(':scope > [class*="meta-items-container"]');
     if (!track) return;
     if (!row.querySelector(":scope > .dx-arrow")) {
@@ -1365,6 +1573,9 @@
   const rowMeasures = new WeakMap();
   let hoverRow = null;
   function updateAllArrows(force) {
+    // TV: these rows are on Home and Search alone (going through the whole of any other page to
+    // find none was a few milliseconds of every pass there)
+    if (IN_TV && !/^(?:board|search)$/.test(currentRoute())) return;
     const rows = [...carouselRows()];
     rows.forEach(enhanceRow);
     if (!hoverRow || !hoverRow.isConnected || !rows.includes(hoverRow)) return;
@@ -1388,13 +1599,20 @@
     if (hoverRow) measureHover();
   }
 
-  function page(row, dir) {
+  // How far a row turns for one page. Measured apart from the turn itself, so the remote can measure
+  // before it moves the selection and turn the row after (measuring once the selection has moved
+  // makes the browser lay the page out a second time within the press).
+  function pageTurn(row) {
     const track = row.querySelector(':scope > [class*="meta-items-container"]');
-    if (!track) return;
+    if (!track) return null;
     const first = track.querySelector(':scope > [class*="meta-item"]');
     const step = first ? first.getBoundingClientRect().width : 200;
     const perPage = Math.max(1, Math.floor((track.clientWidth - 40) / step));
-    track.scrollBy({ left: dir * perPage * step, behavior: "smooth" });
+    return { track, by: perPage * step };
+  }
+
+  function page(row, dir, turn = pageTurn(row)) {
+    if (turn) turn.track.scrollBy({ left: dir * turn.by, behavior: "smooth" });
   }
 
   function measureRow(row) {
@@ -1442,24 +1660,100 @@
     at: 0,
     loading: null,
     MODELS: ["board", "discover", "search", "library", "continue_watching_preview"],
+    // TV: the models the page on show is drawn from (a title's page and the like sit on top of Home)
+    ON_SCREEN: { board: ["board", "continue_watching_preview"], discover: ["discover"], search: ["search"], library: ["library"] },
+    reading: null, // TV: the read under way
+    next: null, // TV: the read that `fresh` has asked for and that hasn't begun
+    askedAt: 0, // TV: when the last title waiting for that read came onto the page
+    asked: new Set(), // TV: the titles ("type:id") it is for
+    askedOn: new Set(), // TV: the pages (routes) those titles are drawn on
+    readOf: [], // TV: the models the latest read was of (none, when one of them failed)
+    absent: new Map(), // TV: titles such a read didn't have → the metadataSource.generation it was made in
 
+    // Each model read is a copy of all of it, handed across from Stremio's core and unpacked on the
+    // page's own thread (Home's is a quarter of a megabyte). A computer reads all five every four
+    // seconds. A TV reads only what the page on show is drawn from, no more than every twenty seconds
+    // unless a title has turned up that it knows nothing about (see `fresh`), and never two at once.
     refresh(force) {
       metadataSource.refresh();
       const { getState } = core();
       if (!getState) return Promise.resolve();
-      if (!force && Date.now() - this.at < 4000) return this.loading || Promise.resolve();
+      if (IN_TV && this.reading) return this.reading;
+      if (!force && Date.now() - this.at < (IN_TV ? 20000 : 4000)) return this.loading || Promise.resolve();
+      // (TV, on a title's page, in Settings…: no cards of its own, so nothing to keep up with. A card
+      // of Home's underneath that still wants a look, `force`, is in Home's models; `force` may also
+      // name the models, those of the page the cards were met on)
+      const models = !IN_TV ? this.MODELS : Array.isArray(force) ? force : this.ON_SCREEN[currentRoute()] || (force ? this.ON_SCREEN.board : null);
+      if (!models) return this.loading || Promise.resolve();
       this.at = Date.now();
+      this.readOf = models;
       const generation = metadataSource.generation;
       this.loading = (async () => {
-        for (const model of this.MODELS) {
+        for (const model of models) {
           try {
             const state = await getState(model);
             if (generation !== metadataSource.generation) return;
             this.collect(state, 0);
-          } catch (_) { /* model not loaded yet */ }
+          } catch (_) { if (this.readOf === models) this.readOf = []; } // (model not loaded yet: nothing is known to be missing)
         }
       })();
+      if (IN_TV) {
+        const reading = this.loading.finally(() => { if (this.reading === reading) this.reading = null; });
+        this.reading = reading;
+      }
       return this.loading;
+    },
+
+    // TV: Stremio's state as it stands at some moment after `since` (a time from Date.now(): when a
+    // card came onto the page, say). Rows arrive a few at a time, and a title that had only just
+    // arrived was looked for in an older read, not found, and fetched from Cinemeta instead, a whole
+    // document per poster, although Stremio had its score all along. Everything that turns up
+    // together now shares one fresh read, begun a moment later (the rest of the row is there by
+    // then), and never within a second of the last.
+    // (`on`: the pages the titles are drawn on, when the caller knows; otherwise the one on show)
+    fresh(since, keys, on) {
+      if (keys) {
+        for (const key of keys) this.asked.add(key);
+        for (const route of on || [currentRoute()]) this.askedOn.add(route);
+      }
+      if (this.at > since) return this.reading || Promise.resolve();
+      this.askedAt = Math.max(this.askedAt, since);
+      if (!this.next) {
+        const generation = metadataSource.generation;
+        const wait = Math.max(250, this.at + 1000 - Date.now());
+        const next = new Promise((resolve) => setTimeout(resolve, wait))
+          .then(() => this.reading)
+          .then(() => {
+            if (this.next === next) this.next = null;
+            const asked = this.asked;
+            const askedAt = this.askedAt;
+            // The models of the pages they were met on, not of the page on show by now (a title
+            // opened, Discover left for Home, in the meantime): a read of another page's models
+            // found none of them, and wrote them all off
+            const on = this.askedOn.size ? [...this.askedOn] : [currentRoute()];
+            const models = [...new Set(on.flatMap((route) => this.ON_SCREEN[route] || this.ON_SCREEN.board))];
+            const covered = () => models.every((model) => this.readOf.includes(model));
+            this.asked = new Set();
+            this.askedOn = new Set();
+            // (a read of them begun since the last of them came will do)
+            return Promise.resolve(this.at > askedAt && covered() ? this.reading : this.refresh(models)).then(() => {
+              // (a read that failed, or was of other models, says nothing about what is missing)
+              if (generation !== metadataSource.generation || !(this.at > askedAt) || !covered()) return;
+              // Not in Stremio's state at all (a row dx.bi builds itself, from the library or Simkl):
+              // no use reading it again for these
+              if (this.absent.size > 3000) this.absent.clear();
+              for (const key of asked) if (!this.map.has(key)) this.absent.set(key, generation);
+            });
+          })
+          .catch(() => { /* core busy: the next card asks again */ });
+        this.next = next;
+      }
+      return this.next;
+    },
+
+    // TV: is Stremio's state still to be read for this title ("type:id")?
+    unread(key) {
+      return !this.map.has(key) && this.absent.get(key) !== metadataSource.generation;
     },
 
     // Walk a state tree and remember anything that looks like a title
@@ -1535,9 +1829,11 @@
     }
     if (generation !== metadataSource.generation) return {};
     info._configuredMeta = !!configured;
-    const missing = !info.imdbRating || !(info.genres && info.genres.length) || !info.releaseInfo;
+    // (TV, for a badge: only the score is wanted, and it can wait until the remote is at rest)
+    const forBadge = IN_TV && !!scoreOnly;
+    const missing = !info.imdbRating || (!forBadge && (!(info.genres && info.genres.length) || !info.releaseInfo));
     if (imdbId && missing) {
-      const cinemeta = await getMeta(type, imdbId);
+      const cinemeta = await getMeta(type, imdbId, forBadge);
       if (cinemeta) {
         for (const [k, v] of Object.entries(cinemeta)) {
           if (k === "logo" && (configured || catalogMeta)) continue;
@@ -1598,44 +1894,116 @@
     return [...cards].some((a) => VIDEO_TYPES.has(decodeURIComponent(a.getAttribute("href").split("/detail/")[1].split("/")[0]).toLowerCase()));
   }
   // Stremio titles rows "Popular - Movie": named the way Netflix would ("Popular Films"). English
-  // only (other languages translate the type), and the same text node, so React's own updates still land
+  // only (other languages translate the type), and the same text node, so React's own updates still land.
+  // (The title text sits in an inner element on Stremio's current site, straight in the container on
+  // the public release dx.bi builds itself.) A row's title is looked at again only when Stremio has
+  // written it anew: every row's, at every pass, added up on a TV.
   const ROW_TYPE_NAMES = { Movie: "Films", Series: "Series" };
-  function rowTitles() {
-    // (the title text sits in an inner element on Stremio's current site, straight in the container on
-    // the public release dx.bi builds itself)
-    for (const box of document.querySelectorAll('#app [class*="board-row"] [class*="header-container"] [class*="title-container"]')) {
-      const t = box.querySelector(':scope > [class*="title"]') || box;
-      const node = [...t.childNodes].find((n) => n.nodeType === 3 && n.nodeValue.trim());
-      if (!node) continue;
-      const m = /^(.+) - (Movie|Series)$/.exec(node.nodeValue);
+  const rowTitled = new WeakMap(); // row → { node, text }: its title as last left
+  function rowTitle(row) {
+    const done = rowTitled.get(row);
+    if (done && done.node.isConnected && done.node.nodeValue === done.text) return;
+    const box = row.querySelector('[class*="header-container"] [class*="title-container"]');
+    if (!box) return;
+    const t = box.querySelector(':scope > [class*="title"]') || box;
+    const node = [...t.childNodes].find((n) => n.nodeType === 3 && n.nodeValue.trim());
+    if (!node) return;
+    const m = /^(.+) - (Movie|Series)$/.exec(node.nodeValue);
+    if (m) {
       // (a name that already says it, "Public Domain Movies", keeps just the name)
-      if (!m) continue;
       node.nodeValue = /\b(movies?|films?|series|shows?|anime)\b/i.test(m[1]) ? m[1] : `${m[1]} ${ROW_TYPE_NAMES[m[2]]}`;
       // (its tooltip too, where it has one)
       if (box.title && box.title !== node.nodeValue) box.title = node.nodeValue;
     }
+    rowTitled.set(row, { node, text: node.nodeValue });
   }
 
+  // (a row's kind comes from its See All link, found once per row and kept while the link stays put:
+  // looking every row's up at every pass, and the rows themselves in the whole page, added up on a TV)
+  const rowLinks = new WeakMap(); // row → { link, href, type }
   function filterRows() {
     if (currentRoute() !== "board") return;
-    rowTitles();
-    for (const row of document.querySelectorAll('[class*="board-content-"]:not([class*="board-content-container"]) > [class*="board-row"]')) {
-      const href = row.querySelector('[class*="header-container"] a[href^="#/discover/"]')?.getAttribute("href");
-      const type = href ? decodeURIComponent(href.split("/")[3] || "") : "";
-      const hide = (settings.videoRowsOnly && !isVideoRow(row, type)) || homeLayout.hides(row);
-      if (row.classList.contains("dx-row-off") !== hide) row.classList.toggle("dx-row-off", hide);
+    const host = hero.host();
+    if (!host) return;
+    const custom = homeLayout.active();
+    for (const row of host.children) {
+      if (typeof row.className !== "string" || !row.className.includes("board-row")) continue;
+      rowTitle(row);
+      let kept = rowLinks.get(row);
+      if (!kept || !kept.link.isConnected) {
+        const link = row.querySelector('[class*="header-container"] a[href^="#/discover/"]');
+        kept = link ? { link, href: null, type: "" } : null;
+        if (kept) rowLinks.set(row, kept);
+      }
+      const href = kept ? kept.link.getAttribute("href") : null;
+      if (kept && href !== kept.href) {
+        kept.href = href;
+        kept.type = href && href.startsWith("#/discover/") ? decodeURIComponent(href.split("/")[3] || "") : "";
+      }
+      const type = kept ? kept.type : "";
+      const hide = (settings.videoRowsOnly && !isVideoRow(row, type)) || (custom && homeLayout.hides(row));
+      if (row.classList.contains("dx-row-off") !== hide) {
+        row.classList.toggle("dx-row-off", hide);
+        rowOffScreen(row);
+      }
     }
   }
 
+  // TV: Stremio fetches the rows that are on screen, and works that out from where each row is. A
+  // row that isn't drawn is "at the top, with no height": with Home at its top that counted as on
+  // screen, so one hidden row far down had every row above it fetched as Home opened (two to three
+  // times the Home, on a TV that was to start with its first few rows). A row dx.bi hides (here, or
+  // a kids profile's row with nothing left to show, `restrict.rows`) says it is far above the screen
+  // instead. A computer's Home fetches its rows as it always has.
+  function rowOffScreen(row) {
+    if (!IN_TV) return;
+    if (row.classList.contains("dx-row-off") || row.hasAttribute("data-dx-off")) Object.defineProperty(row, "offsetTop", { configurable: true, get: () => -1e6 });
+    else delete row.offsetTop;
+  }
+
+  // Stremio's class names end in letters that change with each build of its app
+  // ("meta-item-container-Tj0Ib"), so dx.bi looks for part of a name, and the browser then reads
+  // every element's classes through to find the cards: on a TV that had become half of what a pass
+  // with nothing to do costs. There the full names cards go by are learnt from the page, and the
+  // cards found by them (some twenty times quicker). A look by part-name every ten seconds, when
+  // another page comes on show, and whenever no card turns up, keeps the names right.
+  const cardNames = { app: null, names: new Set(), classes: new Set(), lists: [], at: 0, route: "" };
   function allCards() {
-    return document.querySelectorAll('#app [class*="meta-item-container"]');
+    if (!IN_TV) return document.querySelectorAll('#app [class*="meta-item-container"]');
+    const known = cardNames;
+    const now = performance.now();
+    const route = currentRoute();
+    let found = null;
+    if (known.lists.length && known.app.isConnected && route === known.route && now - known.at < 10000) {
+      found = known.lists.length === 1 ? known.lists[0] : [...new Set(known.lists.flatMap((list) => [...list]))];
+      if (found.length) return found;
+    }
+    found = document.querySelectorAll('#app [class*="meta-item-container"]');
+    const names = known.names.size;
+    if (known.classes.size > 500) known.classes.clear();
+    for (let i = 0; i < found.length; i++) {
+      // (a few hundred cards share a handful of class lists: each list is taken apart once)
+      const classes = found[i].getAttribute("class");
+      if (known.classes.has(classes)) continue;
+      known.classes.add(classes);
+      for (const name of classes.split(/\s+/)) if (name.includes("meta-item-container")) known.names.add(name);
+    }
+    const app = document.getElementById("app");
+    if (app !== known.app || names !== known.names.size) {
+      known.app = app;
+      known.lists = app ? [...known.names].map((name) => app.getElementsByClassName(name)) : [];
+    }
+    known.at = now;
+    known.route = route;
+    return found;
   }
 
   function isWideRow(card) {
     return settings.wideContinue && !!card.closest('[class*="continue-watching-row"]');
   }
 
-  function decorate(card) {
+  // `since` (TV): when the card came onto the page, by Date.now()
+  function decorate(card, since) {
     const info = cardInfo(card);
     const poster = card.querySelector('[class*="poster-container"]');
     if (!info || !poster) return;
@@ -1689,6 +2057,9 @@
       }
     } else if (wide) {
       wide.remove();
+      // (the row's last wide card: it goes back to posters now, not at some later pass)
+      const row = card.closest('[class*="continue-watching-row"]');
+      if (row && row.hasAttribute("data-dx-wide-row") && !row.querySelector(".dx-wide-art")) row.removeAttribute("data-dx-wide-row");
     }
 
     newEpisodeBadge(card, info, poster);
@@ -1714,7 +2085,17 @@
       poster.append(b);
     };
     if (scoreOf(known)) place(scoreOf(known));
-    else getInfo(info.type, info.id, null, true).then((meta) => place(scoreOf(meta))); // no addon fetch per card for a badge
+    else if (IN_TV) {
+      // TV: a title Stremio's state had no word of is looked for in one fresh read of it first (the
+      // row it came in with is usually newer than the last read). Only a score Stremio doesn't have
+      // is looked up, and the badge then goes on without asking the main loop for another pass:
+      // nothing there waits on a badge. (A title an earlier read didn't have still waits for a read
+      // its row-mates have asked for: a row of Stremio's can bring one that was only in dx.bi's own.)
+      (coreMeta.unread(key) ? coreMeta.fresh(since || Date.now()) : coreMeta.next || Promise.resolve())
+        .then(() => scoreOf(coreMeta.get(info.type, info.id)) || getInfo(info.type, info.id, null, true).then(scoreOf))
+        .then((score) => { if (score) loop.quietly(() => place(score)); })
+        .catch(() => { /* no badge this time */ });
+    } else getInfo(info.type, info.id, null, true).then((meta) => place(scoreOf(meta))); // no addon fetch per card for a badge
   }
 
   // A series opens on its episodes. Stremio's Continue Watching cards go straight to the last episode's
@@ -1722,7 +2103,7 @@
   function seriesOpensOnEpisodes(card) {
     const link = card.querySelector('a[class*="meta-item-link"]');
     const m = link && /^#\/detail\/series\/([^/?]+)\/[^/?]/.exec(link.getAttribute("href") || "");
-    if (!m) return;
+    if (!m || link.hasAttribute("data-dx-next")) return; // (a card made for one episode, like Simkl's next to watch)
     link.setAttribute("href", `#/detail/series/${m[1]}`);
     link.setAttribute("data-dx-episodes", "");
   }
@@ -1736,63 +2117,151 @@
     navigate(link.getAttribute("href").slice(1));
   };
 
+  // Every card on the page used to be worked out afresh at every pass (which title it is, whether
+  // it is watched, hidden, wide, already decorated): a handful of lookups in the page for each of
+  // some two hundred cards, most of a TV's pass, to find that nothing had changed. What was found is
+  // kept here per card, and a card is looked at again only when its link points somewhere else,
+  // a setting it depends on changes, or something has wiped its marks (restrict.apply).
+  const cardsSeen = new WeakMap(); // card → { link, href, type, id, key, marks, wide, cwRow, at }
+  const cardsState = { marks: null, restricted: true };
+
   function syncCards() {
-    coreMeta.refresh();
-    // Plain marker attributes instead of CSS :has(): a :has() that looks inside rows makes the
-    // browser re-check the whole page on every change there (hover cards, trailers, progress)
+    if (!IN_TV) coreMeta.refresh();
     const markWatched = settings.watchedTitles !== "show";
-    for (const row of document.querySelectorAll('#app [class*="continue-watching-row"]')) {
-      const wide = !!row.querySelector(".dx-wide-art");
-      if (wide !== row.hasAttribute("data-dx-wide-row")) row.toggleAttribute("data-dx-wide-row", wide);
-    }
+    const wideOn = !!settings.wideContinue;
+    const marks = `${settings.ratings}|${settings.newEpisodes}|${settings.animeTitles}|${episodes.version}|${metadataSource.generation}`;
     // Switched off: every badge goes at once (titles out of view were only redone when scrolled to)
-    if (!settings.ratings) document.querySelectorAll('#app [class*="poster-container"] > .dx-badge').forEach((b) => b.remove());
-    if (!settings.newEpisodes) document.querySelectorAll("#app .dxe-new-ep").forEach((b) => b.remove());
-    if (!settings.animeTitles) document.querySelectorAll("#app .dx-anime-title").forEach((b) => b.remove());
-    for (const card of allCards()) {
-      seriesOpensOnEpisodes(card);
+    if (marks !== cardsState.marks) {
+      cardsState.marks = marks;
+      if (!settings.ratings) document.querySelectorAll('#app [class*="poster-container"] > .dx-badge').forEach((b) => b.remove());
+      if (!settings.newEpisodes) document.querySelectorAll("#app .dxe-new-ep").forEach((b) => b.remove());
+      if (!settings.animeTitles) document.querySelectorAll("#app .dx-anime-title").forEach((b) => b.remove());
+    }
+    // Titles are only kept out of sight on a kids profile or once something has been hidden: with
+    // neither, no card is asked about (and once more after the last of them goes, to clear up)
+    const restricted = !!(restrict.kidsAge() || restrict.hidden().length);
+    const sweep = restricted || cardsState.restricted;
+    cardsState.restricted = restricted;
+    const now = Date.now();
+    const cwRows = new Set();
+    let unread = null;
+    let unreadOn = null; // TV: the pages those cards are drawn on
+    // (restrict.apply wipes every card's mark at once: the first card met tells whether it has)
+    let wiped = null;
+    const cards = allCards();
+    for (let i = 0, n = cards.length; i < n; i++) {
+      const card = cards[i];
+      let seen = cardsSeen.get(card);
+      let changed = false; // (now showing another title, with the last one's picture and score still on it)
+      if (seen && !(seen.link.isConnected && seen.link.getAttribute("href") === seen.href)) seen = null;
+      if (seen && wiped === null) wiped = card.getAttribute("data-dx-key") !== seen.key;
+      if (!seen) {
+        seriesOpensOnEpisodes(card);
+        const info = cardInfo(card);
+        const prior = cardsSeen.get(card);
+        seen = {
+          link: info ? info.link : null,
+          href: info ? info.href : null,
+          type: info ? info.type : "",
+          id: info ? info.id : "",
+          key: info ? `${info.type}:${info.id}` : "",
+          marks: null,
+          wide: false,
+          // (a card stays in the row it was made in)
+          cwRow: prior ? prior.cwRow : card.closest('[class*="continue-watching-row"]'),
+          at: now,
+        };
+        changed = !!prior && !!prior.key && prior.key !== seen.key;
+        if (info) {
+          cardsSeen.set(card, seen);
+          // TV: a title Stremio's state hasn't been read for yet, and the page it is drawn on (not
+          // the one on show by now: a title opened, or Home left, while this pass waited its turn)
+          if (IN_TV && coreMeta.unread(seen.key)) {
+            (unread = unread || []).push(seen.key);
+            const page = card.closest('[class*="discover-container"], [class*="library-container"], [class*="search-container"]');
+            const cls = page ? page.getAttribute("class") || "" : "";
+            (unreadOn = unreadOn || new Set()).add(cls.includes("discover") ? "discover" : cls.includes("library") ? "library" : cls.includes("search") ? "search" : "board");
+          }
+        } else cardsSeen.delete(card);
+      }
+      if (seen.cwRow) cwRows.add(seen.cwRow);
       if (markWatched) {
         // Continue Watching is never dimmed or hidden
-        const watched = !card.closest('[class*="continue-watching-row"]') && !!card.querySelector('[class*="watched-icon-layer"]');
+        const watched = !seen.cwRow && !!card.querySelector('[class*="watched-icon-layer"]');
         if (watched !== card.hasAttribute("data-dx-watched")) card.toggleAttribute("data-dx-watched", watched);
       }
-      const info = cardInfo(card);
-      restrict.card(card, info);
-      const key = info ? `${info.type}:${info.id}` : "";
-      const marks = `${settings.ratings}|${settings.newEpisodes}|${settings.animeTitles}|${episodes.version}|${metadataSource.generation}`;
-      if (card.dataset.dxKey === key && card.dataset.dxWide === String(isWideRow(card)) && card.dataset.dxRatings === marks) continue;
-      card.dataset.dxKey = key;
-      card.dataset.dxWide = String(isWideRow(card));
+      if (sweep) restrict.card(card, seen.link ? seen : null);
+      const wide = wideOn && !!seen.cwRow;
+      if (seen.marks === marks && seen.wide === wide && !wiped) continue;
+      seen.marks = marks;
+      seen.wide = wide;
+      if (card.dataset.dxKey === seen.key && card.dataset.dxWide === String(wide) && card.dataset.dxRatings === marks) continue;
+      card.dataset.dxKey = seen.key;
+      card.dataset.dxWide = String(wide);
       card.dataset.dxRatings = marks;
       if (IN_TV) {
-        decorateLater.add(card);
+        decorateLater.add(card, seen.at, changed);
         continue;
       }
       io.unobserve(card);
       io.observe(card);
     }
-    restrict.rows();
+    // Plain marker attributes instead of CSS :has(): a :has() that looks inside rows makes the
+    // browser re-check the whole page on every change there (hover cards, trailers, progress)
+    for (const row of cwRows) {
+      const wide = !!row.querySelector(".dx-wide-art");
+      if (wide !== row.hasAttribute("data-dx-wide-row")) row.toggleAttribute("data-dx-wide-row", wide);
+    }
+    if (sweep) restrict.rows();
+    if (unread) coreMeta.fresh(now, unread, unreadOn);
   }
 
   // TV: cards are decorated a few at a time while the stick is idle, top rows first. Watching each
   // one come into view instead cost every frame about 9 ms (two checks of nearly 200 cards).
+  // What a slice puts on the page (badges, wide art, captions) asks the main loop for nothing: each
+  // slice used to bring on a whole pass of its own, a dozen cards at a time.
   const decorateLater = {
-    queue: new Set(),
+    queue: new Map(), // card → when it came onto the page
+    // Cards Stremio has handed to another title (it reuses Continue Watching's and Library's in place
+    // when they reorder): they showed one title's picture and score and opened another until done,
+    // so they don't wait for the remote
+    changed: new Set(),
     timer: null,
+    heldAt: 0,
 
-    add(card) {
-      this.queue.add(card);
+    add(card, at, changed) {
+      this.queue.set(card, at);
+      if (changed) this.changed.add(card);
       if (!this.timer) this.timer = setTimeout(() => this.run(), 50);
     },
 
     run() {
       this.timer = null;
-      let n = 0;
-      for (const card of this.queue) {
-        this.queue.delete(card);
-        if (card.isConnected) decorate(card);
-        if (++n === 12) break;
+      // The remote's move comes first, as in the main loop (though never for long: a row isn't left bare)
+      const now = performance.now();
+      if (!this.changed.size && now - keyNav.lastPress < 220) {
+        if (!this.heldAt) this.heldAt = now;
+        if (now - this.heldAt < 1500) {
+          this.timer = setTimeout(() => this.run(), 120);
+          return;
+        }
       }
+      this.heldAt = 0;
+      loop.quietly(() => {
+        let n = 0;
+        for (const card of this.changed) {
+          this.changed.delete(card);
+          const at = this.queue.get(card);
+          this.queue.delete(card);
+          if (card.isConnected) decorate(card, at);
+          if (++n === 12) return;
+        }
+        for (const [card, at] of this.queue) {
+          this.queue.delete(card);
+          if (card.isConnected) decorate(card, at);
+          if (++n === 12) break;
+        }
+      });
       if (this.queue.size) this.timer = (window.requestIdleCallback || setTimeout)(() => this.run(), { timeout: 300 });
     },
   };
@@ -2223,6 +2692,8 @@
     },
 
     unpush() {
+      // (titles are only pushed aside by a card that has opened)
+      if (!this.el) return;
       for (const n of document.querySelectorAll("[data-dx-pushed]")) this.release(n);
     },
 
@@ -2370,12 +2841,35 @@
     lastPress: -Infinity,
     shield: null,
     from: null,
+    // A press that came late, waiting for the queue behind it to empty (see late())
+    waiting: null,
+    lateTimer: 0,
+    // …and how often presses have come late, for a problem report
+    gate: { late: 0, repeats: 0, merged: 0, acted: 0, since: "" },
+    // Where things on screen are, measured once a press (see inView()); which of them the page has
+    // been found to show or not (see plain()); and what lies over the whole screen, once that has
+    // been looked for (see cover())
+    rects: new Map(),
+    known: new Map(),
+    over: undefined,
+    // What last had the selection (see back())
+    last: null,
+    // Watches the page for changes, so reach() goes over it only when there are some
+    watch: null,
+    stale: true,
 
     onKey: (e) => keyNav.key(e),
     onFocus: (e) => keyNav.focus(e),
 
     key(e) {
       this.lastPress = performance.now();
+      // (a press that acts came in behind an arrow still waiting: the arrow is let go, or it would
+      // move the selection afterwards, under whatever this one opens)
+      if (this.waiting && (e.key === "Enter" || e.key === " " || e.key === "Escape")) {
+        this.waiting = null;
+        this.gate.merged++;
+        this.gateNote();
+      }
       if (e.key === "Escape" && this.on && preview.el && preview.el.contains(document.activeElement)) {
         this.fromPreview(document.activeElement, e);
         return;
@@ -2390,11 +2884,22 @@
       // A held direction on a TV remote repeats faster than a stick can draw: the presses queued up
       // and the selection kept going after the button was let go. Repeats pass at a steady pace.
       // On a slow box presses can sit in a queue and all land at once, long after the button was
-      // pressed: a late press is dropped so the selection only moves when it's asked to
-      if (IN_TV && performance.now() - e.timeStamp > 350) {
+      // pressed. A late repeat of a held button is dropped, so the selection stops when the button
+      // is let go. A late press of its own is not: those were dropped too, and so every stall of the
+      // page became a press that did nothing (the remote seemed ignored). It acts once the queue has
+      // been gone through, and of several only the newest does (see late()). Keys the page keeps for
+      // itself (a text box's caret) aren't the selection's to hold back.
+      if (IN_TV && performance.now() - e.timeStamp > 350 && (e.repeat || !(e.key === "Tab" || this.keeps(e.target, e.key)))) {
         e.preventDefault();
         e.stopImmediatePropagation();
+        this.late(e);
         return;
+      }
+      // (a press in good time: one still waiting from before it has been overtaken)
+      if (this.waiting) {
+        this.waiting = null;
+        this.gate.merged++;
+        this.gateNote();
       }
       if (IN_TV && e.repeat) {
         const now = performance.now();
@@ -2448,7 +2953,7 @@
       // A row's See All (reached past its last title): Right stays, Left and Down go back to the
       // titles, Up to the row above
       const allRow = focused && focused.closest && focused.matches('[class*="see-all-container"]') && focused.closest('[class*="meta-row-container"]');
-      if (allRow && [...carouselRows()].includes(allRow) && this.DIRS[e.key]) {
+      if (allRow && isCarouselRow(allRow) && this.DIRS[e.key]) {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (e.key === "ArrowRight") return;
@@ -2473,6 +2978,19 @@
       const box0 = focused && focused !== document.body && focused.getBoundingClientRect();
       const lost = !focused || focused === document.body || (box0 && box0.width >= window.innerWidth * 0.8 && box0.height >= window.innerHeight * 0.6);
       if (lost) {
+        // TV: the selection was somewhere and the page took it away (Stremio draws a row or a list
+        // again as more of it arrives, and what was selected is replaced by a new copy; a page comes
+        // back from under another). It goes back where it was, if that can still be seen, rather
+        // than to the top of the page by way of checking every button on it.
+        const back = IN_TV && this.back();
+        if (back) {
+          back.focus({ preventScroll: true });
+          if (document.activeElement === back) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return;
+          }
+        }
         // Nothing selected yet: start on the page itself (the billboard, or its first title), or in
         // whatever dialog is showing over it. Only what can actually be seen counts.
         // TV: the billboard's first button when it's in sight and nothing covers it, without
@@ -2488,12 +3006,18 @@
             return;
           }
         }
-        const seen = this.onScreen(document.body);
-        const pick = seen.find((n) => n.matches(".dx-hero .dx-btn"))
-          || seen.find((n) => n.closest('[class*="meta-item-container"]'))
-          || seen.filter((n) => !n.closest('nav, [class*="horizontal-nav-bar"]'))
-            .sort((a, b) => { const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return (ra.top + ra.left / 4) - (rb.top + rb.left / 4); })[0]
-          || seen[0];
+        // (The same choice as ever: the billboard's button, else the first title, else whatever is
+        // nearest the top left outside the top bar, else anything. But whether a thing is covered is
+        // asked of the page only as far down that list as it takes: asking it of every button first
+        // was most of the half second.)
+        const view = this.inView(document.body);
+        const rects = this.rects;
+        const seen = (n) => this.plain(n);
+        const pick = view.find((n) => n.matches(".dx-hero .dx-btn") && seen(n))
+          || view.find((n) => n.closest('[class*="meta-item-container"]') && seen(n))
+          || view.filter((n) => !n.closest('nav, [class*="horizontal-nav-bar"]'))
+            .sort((a, b) => { const ra = rects.get(a), rb = rects.get(b); return (ra.top + ra.left / 4) - (rb.top + rb.left / 4); }).find(seen)
+          || view.find(seen);
         if (!pick) return;
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -2501,22 +3025,32 @@
         return;
       }
       // Left and right stay out of the top bar (Up reaches it), and stay in it once there
-      const bar = 'nav, [class*="horizontal-nav-bar"]';
+      // (Settings' menu of sections is a <nav> too since Stremio's redesign, down the page's left:
+      // taken for the top bar, Left never went into it from a section, nor Right out of it)
+      const bar = 'nav:not([class*="menu-"]), [class*="horizontal-nav-bar"]';
       const inBar = !!focused.closest(bar);
       const look = (within) => this.nearestSeen(focused, e, (n) => (!this.DIRS[e.key][0] || !!n.closest(bar) === inBar) && (!within || within.contains(n)));
-      let next = this.listStep(focused, e);
+      // TV, Left from a title's streams: its Trailer button, one press away whichever stream is
+      // selected. (The nearest thing on a row's left is whatever lies level with it: a cast name
+      // for one row, the Share button for the next.)
+      const trailer = IN_TV && e.key === "ArrowLeft" && this.streamRow(focused) ? titleStart.trailer() : null;
+      let next = trailer && trailer.getClientRects().length ? trailer : this.listStep(focused, e);
+      // (…and back to that stream when the trailer has been watched: titleStart.afterTrailer)
+      if (trailer && next === trailer) titleStart.from = focused;
       const listed = next !== undefined;
       if (!listed) next = look();
       // TV: the top bar is only for the top of the page. Lower rows can be off screen above, where
       // the search above can't see them
-      if (IN_TV && next && !inBar && next.closest(bar) && this.DIRS[e.key][1] && this.scroller(focused, e)) next = null;
+      // (the box that can scroll is looked for once a press)
+      let box;
+      if (IN_TV && next && !inBar && next.closest(bar) && this.DIRS[e.key][1] && (box = this.scroller(focused, e))) next = null;
       if (!next && IN_TV) {
         // TV: nothing that way on screen. Stremio's own navigation would search the whole page
         // first (over half a second on a stick, mostly to find nothing): what can scroll that way
         // does, and the nearest thing is looked for again; otherwise the selection stays put.
         e.preventDefault();
         e.stopImmediatePropagation();
-        const box = this.scroller(focused, e);
+        if (box === undefined) box = this.scroller(focused, e);
         if (!box) return;
         const [dx, dy] = this.DIRS[e.key];
         box.scrollBy({ left: dx * box.clientWidth * 0.6, top: dy * box.clientHeight * 0.6, behavior: "instant" });
@@ -2529,15 +3063,52 @@
       if (next.tabIndex < 0) next.tabIndex = 0;
       next.focus({ preventScroll: true });
       // the billboard stays put; anything else slides into view only as far as needed
-      // (a long list keeps its selection in the middle, so what comes next is always in sight)
-      if (next.closest(".dx-hero, nav")) return;
+      // (a long list keeps its selection in the middle, so what comes next is always in sight. The
+      // stream list steps in its own order, in sight or not, and its box scrolls only when it must)
+      if (next.closest('.dx-hero, nav:not([class*="menu-"])')) return;
       // TV, up or down into a row of titles: the whole row, its heading too, settles just under the
       // top bar (scroll-margin-top in the theme), so no heading is left half under the bar
       const row = IN_TV && this.DIRS[e.key][1] && !listed ? next.closest('[class*="board-row"], [class*="search-row"], .dxe-airing') : null;
       if (row) {
         row.scrollIntoView({ block: "start", behavior: SCROLL });
         next.scrollIntoView({ block: "nearest", inline: "nearest", behavior: SCROLL });
-      } else next.scrollIntoView({ block: listed && this.DIRS[e.key][1] ? "center" : "nearest", inline: "nearest", behavior: SCROLL });
+      } else next.scrollIntoView({ block: listed && this.DIRS[e.key][1] && !this.streamRow(next) ? "center" : "nearest", inline: "nearest", behavior: SCROLL });
+    },
+
+    // A press handled long after it was made, because the page was busy. More may be queued behind
+    // it, and the browser hands a queue over in one go, before any timer gets its turn. So the press
+    // waits for a timer, a later press of the queue takes its place, and when the timer comes round
+    // the one left (the newest) is pressed again, as if just made: one stall, one move, however often
+    // the button was pressed meanwhile. A held button's repeats are dropped, as they always were.
+    late(e) {
+      const gate = this.gate;
+      if (!gate.late++) gate.since = new Date().toISOString().slice(11, 19);
+      if (e.repeat) gate.repeats++;
+      else {
+        if (this.waiting) gate.merged++;
+        this.waiting = { key: e.key, code: e.code, keyCode: e.keyCode, location: e.location };
+        if (!this.lateTimer) this.lateTimer = setTimeout(() => this.replay(), 0);
+      }
+      this.gateNote();
+    },
+
+    replay() {
+      this.lateTimer = 0;
+      const press = this.waiting;
+      this.waiting = null;
+      if (!press || destroyed) return;
+      this.gate.acted++;
+      this.gateNote();
+      (document.activeElement || document.body).dispatchEvent(new KeyboardEvent("keydown", { ...press, which: press.keyCode, bubbles: true, cancelable: true, composed: true, view: window }));
+    },
+
+    // How often presses came late, for a problem report: one line in its log, kept up to date
+    // (a line each time would push everything else out of it on a slow TV)
+    gateNote() {
+      const g = this.gate;
+      const old = recent.logs.findIndex((line) => line.includes("remote: late presses"));
+      if (old >= 0) recent.logs.splice(old, 1);
+      remember(recent.logs, `remote: late presses ${g.late} since ${g.since} (a held button's repeats, dropped: ${g.repeats}; passed over for a newer press: ${g.merged}; acted on once the page was free: ${g.acted})`);
     },
 
     // The nearest box around `from` that can still scroll the key's way (the page itself last)
@@ -2558,6 +3129,7 @@
     listStep(focused, e) {
       const [dx, dy] = this.DIRS[e.key];
       const parent = focused.parentElement;
+      if (dy && this.streamRow(focused)) return this.streamStep(focused, parent, dy) || (dy < 0 ? this.barAbove(focused, e) : undefined);
       const kind = (n) => (String(n.className).split(" ")[0] || "").replace(/-[A-Za-z0-9_]{5}$/, "");
       const k = kind(focused);
       if (!parent || !k) return undefined;
@@ -2572,27 +3144,172 @@
       return undefined;
     },
 
-    // Everything that can take focus and can be seen right now (a dialog covers what's behind it)
-    onScreen(focused) {
-      return this.inView(focused).filter((n) => this.seen(n));
+    // Up from a title's first stream: the bar over the list (sort and filters), in sight or not.
+    // On the redesigned page the bar scrolls away with the list. Out of sight it isn't something
+    // the search for the nearest thing on screen can find, so Up went past it to Stremio's addon
+    // tabs, and Down from those came back to the streams: once the list had moved, the filters
+    // couldn't be reached again without leaving the title. undefined when there is no bar.
+    barAbove(focused, e) {
+      const bar = streamTools.bar;
+      if (!bar || !bar.isConnected) return undefined;
+      const rects = new Map();
+      for (const n of bar.querySelectorAll(".dx-sb-btn, .dx-sb-reset")) {
+        const r = n.getBoundingClientRect();
+        if (r.width >= 2 && r.height >= 2) rects.set(n, r);
+      }
+      return this.nearest([...rects.keys()], focused, e, rects) || undefined;
     },
 
-    // What can take focus and lies within the screen (covered or not)
+    // One of a title's streams (the row itself takes the selection: dx.bi's row and Stremio's own
+    // parts are inside it)
+    streamRow: (n) => !!n.parentElement && n.matches('[class*="streams-container"] > [class*="stream-container"], section[class*="streams-"] [class*="group-"] > a[class*="stream-"]'),
+
+    // A title's streams, Up and Down: the row before or after in the order they show, in sight or
+    // not. The list scrolls in a box of its own, sorted with CSS `order` (the page's order is
+    // Stremio's), with Stremio's Install addons button among its rows, so it was never a list to
+    // listStep(), and the nearest thing on screen was taken instead: a row scrolled out of the
+    // box's top isn't one, and Up went from the middle of the list to the bar above it. Each row's
+    // place is read from its own style, and nothing is measured but the row stepped to. Rows the
+    // filters leave out, and rows still waiting to be drawn, are passed over. undefined at either
+    // end: Up from the first leaves the list, Down from the last finds what is below it, as before.
+    streamStep(focused, box, dy) {
+      // The rows the filters keep, in the order they show, are streamTools' own list while nothing
+      // has changed since it was made: the row before or after is read off it. (Every row of the
+      // page was looked at and sorted at each press: 430 of them on a busy title.)
+      const tools = streamTools;
+      const kept = tools.inOrder && tools.inOrderAt === tools.seen && tools.list && tools.list.contains(focused) ? tools.inOrder : null;
+      const from = kept ? kept.indexOf(focused) : -1;
+      if (from >= 0) {
+        for (let at = from + dy; at >= 0 && at < kept.length; at += dy) {
+          const n = kept[at];
+          if (n.hasAttribute("data-dx-hide") || n.style.display === "none" || !n.isConnected) continue;
+          const r = n.getBoundingClientRect();
+          if (r.width && r.height) return n;
+        }
+        return undefined;
+      }
+      // (the redesign's rows are in a group for each addon: the groups are gone through in turn, and
+      // run as one list while dx.bi sorts them)
+      const grouped = !box.matches('[class*="streams-container"]');
+      const list = grouped ? box.parentElement : box;
+      if (!list) return undefined;
+      const isRow = grouped ? (n) => n.tagName === "A" : (n) => n.matches('[class*="stream-container"]');
+      const rows = [];
+      let i = 0;
+      const take = (n) => {
+        if (n === focused || (isRow(n) && !n.hasAttribute("data-dx-hide") && n.style.display !== "none")) rows.push([n, Number(n.style.order) || 0, i]);
+        i++;
+      };
+      // (Stremio's Install addons button sits in the list after the groups, a link like the rows are:
+      // only what is in a group is a row there)
+      for (const c of list.children) {
+        if (grouped && c.tagName === "SECTION") for (const n of c.children) take(n);
+        else if (!grouped || c === focused) take(c);
+      }
+      rows.sort((a, b) => a[1] - b[1] || a[2] - b[2]);
+      for (let at = rows.findIndex((r) => r[0] === focused) + dy; at >= 0 && at < rows.length; at += dy) {
+        const r = rows[at][0].getBoundingClientRect();
+        if (r.width && r.height) return rows[at][0];
+      }
+      return undefined;
+    },
+
+    // Everything that can take focus and can be seen right now (a dialog covers what's behind it)
+    onScreen(focused) {
+      return this.inView(focused).filter((n) => this.plain(n));
+    },
+
+    // One of Stremio's pages, and a page or a row of Home's: what is inside one can be on screen
+    // only where it is itself (a page is cut off at its edges and drawn as one layer, and a row cuts
+    // its titles off at its own)
+    PAGE: '[class*="route-content"]',
+    BOXES: '[class*="route-content"], [class*="meta-row-container"]',
+
+    // What can take focus and lies within the screen (covered or not). Where each one is goes in
+    // `this.rects`: measured once, and good until the page next moves.
+    // Everything on the page that can take focus used to be measured, at each press off the titles:
+    // on Home that is every title of every row, and a TV then laid out all the rows it had put off
+    // drawing (a seventh of a second, for one press). A row out of sight and a page under the one
+    // showing are each measured as one thing now, and nothing inside them is looked at.
     inView(focused) {
       const sel = 'a[href], button:not([disabled]), input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])';
+      const W = window.innerWidth, H = window.innerHeight;
+      const rects = this.rects = new Map();
+      this.known = new Map();
+      this.over = undefined;
+      const boxes = new Map();
+      const shows = (box) => {
+        let is = boxes.get(box);
+        if (is === undefined) {
+          const outer = box.parentElement && box.parentElement.closest(this.BOXES);
+          if (outer && !shows(outer)) is = false;
+          else {
+            // (out of sight by a good way: a title's edge may reach a little past its row. With no
+            // size at all, it's the browser that says whether it is drawn)
+            const r = box.getBoundingClientRect();
+            is = r.width || r.height ? r.bottom > -100 && r.right > -100 && r.top < H + 100 && r.left < W + 100 : box.checkVisibility();
+          }
+          boxes.set(box, is);
+        }
+        return is;
+      };
       const out = [];
+      let gone = null;
       for (const n of document.querySelectorAll(sel)) {
+        if (gone && gone.contains(n)) continue;
+        const box = n.closest(this.BOXES);
+        if (box && !shows(box)) {
+          gone = box;
+          continue;
+        }
         if (n === focused || n.contains(focused) || n.closest(".dx-keyshield, .dx-arrow")) continue;
         const r = n.getBoundingClientRect();
-        if (r.width < 2 || r.height < 2 || r.bottom <= 0 || r.right <= 0 || r.top >= window.innerHeight || r.left >= window.innerWidth) continue;
+        if (r.width < 2 || r.height < 2 || r.bottom <= 0 || r.right <= 0 || r.top >= H || r.left >= W) continue;
+        rects.set(n, r);
         out.push(n);
       }
       return out;
     },
 
+    // Whether the page shows one of the things inView() found (see seen()). Asked of as few as
+    // can be, as each asking is a search of the screen at a point or three. The first one found
+    // covered asks what covers it: when that is a dialog over the whole screen, everything on the
+    // page under it is covered too, and is known to be without asking (each was asked in turn, at
+    // every press that found nothing more to move to in the dialog).
+    plain(n) {
+      const known = this.known;
+      let is = known.get(n);
+      if (is !== undefined) return is;
+      is = this.seen(n, this.rects.get(n));
+      if (!is && this.over === undefined) {
+        const over = this.over = this.cover();
+        if (over) {
+          for (const other of this.rects.keys()) {
+            const page = known.has(other) ? null : other.closest(this.PAGE);
+            if (page && !page.contains(over)) known.set(other, false);
+          }
+        }
+      }
+      known.set(n, is);
+      return is;
+    },
+
+    // What lies over the whole screen, when something does: a dialog of Stremio's, dx.bi's or the
+    // TV's. The page under it can't be reached.
+    cover() {
+      const hit = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+      if (!hit || hit.closest(this.PAGE)) return null;
+      for (let n = hit; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
+        // (as far up as the pages themselves: nothing lies over them)
+        if (n.querySelector(this.PAGE)) return null;
+        const r = n.getBoundingClientRect();
+        if (r.left <= 0 && r.top <= 0 && r.right >= window.innerWidth && r.bottom >= window.innerHeight) return n;
+      }
+      return null;
+    },
+
     // Not covered by anything: the page shows it at its middle or a corner
-    seen(n) {
-      const r = n.getBoundingClientRect();
+    seen(n, r = n.getBoundingClientRect()) {
       const points = [[r.left + r.width / 2, r.top + r.height / 2], [r.left + 3, r.top + 3], [r.right - 3, r.bottom - 3]];
       return points.some(([x, y]) => { const hit = document.elementFromPoint(x, y); return hit && (hit === n || n.contains(hit)); });
     },
@@ -2601,20 +3318,60 @@
     // every button on the page took a TV stick a fifth of a second per press.
     nearestSeen(focused, e, keep) {
       const pool = this.inView(focused).filter(keep);
+      const rects = this.rects;
       for (;;) {
-        const best = this.nearest(pool, focused, e);
-        if (!best || this.seen(best)) return best;
+        const best = this.nearest(pool, focused, e, rects);
+        if (!best || this.plain(best)) return best;
         pool.splice(pool.indexOf(best), 1);
       }
+    },
+
+    // TV: what last had the selection, or the same thing drawn afresh (a title or a stream is found
+    // again by where it leads), if it is in sight and nothing covers it
+    back() {
+      const last = this.last;
+      if (!last) return null;
+      const there = (n) => {
+        const r = n.getBoundingClientRect();
+        return r.width >= 2 && r.height >= 2 && r.bottom > 0 && r.right > 0 && r.top < window.innerHeight && r.left < window.innerWidth && this.seen(n, r);
+      };
+      const el = last.el.deref();
+      if (el && el.isConnected) return there(el) ? el : null;
+      if (!last.href) return null;
+      // (in the row it was in first, while that row is still there: the first copy on the page can
+      // be the same title in another row, and the selection then went up a row)
+      const row = last.row && last.row.deref();
+      if (row && row.isConnected) {
+        for (const a of row.querySelectorAll("a[href]")) {
+          if (a.getAttribute("href") === last.href && there(a)) return a;
+        }
+      }
+      for (const a of document.links) {
+        if (a.getAttribute("href") === last.href && there(a)) return a;
+      }
+      return null;
     },
 
     // Stremio leaves much out of keyboard reach: its top bar (Home, Discover…, fullscreen,
     // profile), settings toggles and choices, and more. Anything that isn't part of something
     // reachable already (a title's inner buttons, say) is let in.
+    // The app was gone through at every press. It is watched instead, and gone through again only
+    // once something in it has changed.
     reach() {
+      if (!this.watch) {
+        this.watch = new MutationObserver(() => { this.stale = true; });
+        this.watch.observe(document.getElementById("app") || document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["tabindex"] });
+        this.stale = true;
+      }
+      // (changes made earlier in this same press have not been reported yet)
+      if (this.watch.takeRecords().length) this.stale = true;
+      if (!this.stale) return;
+      this.stale = false;
       for (const n of document.querySelectorAll('#app [tabindex="-1"]')) {
         if (n.parentElement && !n.matches(".dx-arrow") && !n.parentElement.closest('a[href], [tabindex="0"], [class*="player-container"]')) n.tabIndex = 0;
       }
+      // what it changed itself is not news
+      this.watch.takeRecords();
     },
 
     // Fields keep the arrows they use: text boxes their caret (left/right), text areas everything,
@@ -2643,6 +3400,15 @@
       return [...track.children].filter((n) => n.matches('[class*="meta-item-container"]') && n.offsetWidth > 0);
     },
 
+    // The title beside `card` in its row or grid, in the order they're written (hidden ones don't
+    // count): what cards() would give, without going through all of them
+    beside(card, step) {
+      for (let n = card; (n = step > 0 ? n.nextElementSibling : n.previousElementSibling);) {
+        if (n.matches('[class*="meta-item-container"]') && n.offsetWidth > 0) return n;
+      }
+      return null;
+    },
+
     // Where a title rests: a neighbour's open hover card pushes it aside for a moment
     rest(card) {
       const r = card.getBoundingClientRect();
@@ -2661,7 +3427,10 @@
     rows() {
       const rows = [...carouselRows()].filter((row) => row.offsetParent && row.querySelector(':scope > [class*="meta-items-container"] > [class*="meta-item-container"]'));
       // Customise Home moves rows on screen only: their page order is still Stremio's
-      return homeLayout.active() ? rows.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top) : rows;
+      if (!homeLayout.active()) return rows;
+      // (each row measured once, not twice at every comparison)
+      const top = new Map(rows.map((row) => [row, row.getBoundingClientRect().top]));
+      return rows.sort((a, b) => top.get(a) - top.get(b));
     },
 
     // The hover card's buttons (play, My List, more info, trailer sound and full screen)
@@ -2671,15 +3440,16 @@
       return [...el.querySelectorAll("button")].filter((b) => b.checkVisibility({ opacityProperty: true, visibilityProperty: true }));
     },
 
-    // The nearest of `items` from `here` in the key's direction
-    nearest(items, here, e) {
+    // The nearest of `items` from `here` in the key's direction (`rects`: where they are, when that
+    // has been measured already)
+    nearest(items, here, e, rects) {
       const [dx, dy] = this.DIRS[e.key];
       const a = here.getBoundingClientRect();
       let best = null;
       let bestScore = Infinity;
       for (const n of items) {
         if (n === here) continue;
-        const r = n.getBoundingClientRect();
+        const r = (rects && rects.get(n)) || n.getBoundingClientRect();
         // wholly that way (a hair of overlap allowed), then how far: the gap between the two, and
         // how far off to the side it sits (nothing when they overlap side-on)
         if (dx > 0 ? r.left < a.right - 4 : dx < 0 ? r.right > a.left + 4 : dy > 0 ? r.top < a.bottom - 4 : r.bottom > a.top + 4) continue;
@@ -2799,11 +3569,10 @@
         }
       }
       const row = track && track.parentElement && track.parentElement.closest('[class*="meta-row-container"]');
-      const carousel = row && [...carouselRows()].includes(row);
+      const carousel = row && isCarouselRow(row);
       if (carousel) {
         if (dx) {
-          const list = this.cards(track);
-          const next = list[list.indexOf(card) + dx];
+          const next = this.beside(card, dx);
           if (!next) {
             // the end of the row: its See All (the whole catalog), otherwise stay put rather than
             // wander off to something else
@@ -2813,21 +3582,34 @@
             if (all) all.focus({ preventScroll: true });
             return;
           }
-          this.go(next, e);
-          // Past the edge, the row turns to its next page, the same as its arrows
+          // Past the edge, the row turns to its next page, the same as its arrows. (Where things
+          // are is read before the selection moves: read after, the page is laid out twice a press.)
           const v = this.view(track);
           const r = this.rest(next);
-          if (r.right > v.right + 2 || r.left < v.left - 2) page(row, dx);
+          const turn = (r.right > v.right + 2 || r.left < v.left - 2) && pageTurn(row);
+          // TV: …and no further than keeps the title just selected in sight. A row comes to rest a
+          // few pixels off, so the last title it shows can be a hair past its edge: the row then
+          // turned a whole page for it, which carried it off the other side, and the selection was
+          // nowhere to be seen until the next press.
+          if (turn && IN_TV) {
+            const room = dx > 0 ? r.left - v.left : v.right - r.right;
+            if (turn.by - room > r.width / 4) turn.by = Math.max(0, room);
+          }
+          this.go(next, e);
+          // (only once the selection is there: a title a kids profile is still checking is kept out
+          // of sight and refuses it, and the row turned away from the one that kept it)
+          if (turn && next.contains(document.activeElement)) page(row, dx, turn);
           return;
         }
         const rows = this.rows();
-        const target = rows[rows.indexOf(row) + dy];
-        if (dy > 0) homeRows.ahead(rows.indexOf(row) + 1);
+        const at = rows.indexOf(row);
+        const target = rows[at + dy];
+        if (dy > 0) homeRows.ahead(at + 1);
         if (target) {
           this.toRow(target, this.rest(card).x, e);
           return;
         }
-        if (dy < 0 && rows.indexOf(row) === 0) {
+        if (dy < 0 && at === 0) {
           const btn = heroButton();
           if (btn) {
             e.preventDefault();
@@ -2844,29 +3626,56 @@
       const here = this.rest(card);
       let best = null;
       let bestScore = Infinity;
-      for (const n of this.cards(track)) {
-        if (n === card) continue;
+      // (plainly the nearest: right beside this one, or right over or under it)
+      let plain = false;
+      const weigh = (n) => {
         const r = this.rest(n);
         const along = dx ? (r.x - here.x) * dx : (r.y - here.y) * dy;
         const across = dx ? Math.abs(r.y - here.y) : Math.abs(r.x - here.x);
-        if (along < (dx ? here.width : here.height) / 2) continue;
-        if (dx && across > here.height / 2) continue;
-        const score = along + across * 2;
-        if (score < bestScore) { bestScore = score; best = n; }
+        if (along >= (dx ? here.width : here.height) / 2 && !(dx && across > here.height / 2)) {
+          const score = along + across * 2;
+          if (score < bestScore) {
+            bestScore = score;
+            best = n;
+            plain = across * 4 < here.width && along < (dx ? here.width : here.height) * 1.5;
+          }
+        }
+        return r;
+      };
+      // Every title of the grid was measured at each press: hundreds, in a Library scrolled a
+      // while. The one wanted is nearly always written right beside this one (left, right) or in the
+      // next line of them (up, down), so those are measured first, and the rest only when they don't
+      // give a title that is plainly the nearest (the end of a line, a Library in another order).
+      if (dx) {
+        const n = this.beside(card, dx);
+        if (n) weigh(n);
+      } else {
+        let line = null;
+        for (let n = card; (n = this.beside(n, dy));) {
+          const r = weigh(n);
+          if ((r.y - here.y) * dy < here.height / 2) continue;
+          if (line === null) line = r.y;
+          else if (Math.abs(r.y - line) > here.height / 2) break;
+        }
+      }
+      if (!plain) {
+        best = null;
+        bestScore = Infinity;
+        for (const n of this.cards(track)) if (n !== card) weigh(n);
       }
       if (best && this.go(best, e)) {
-        best.scrollIntoView({ block: "nearest", inline: "nearest", behavior: SCROLL });
+        if (best.contains(document.activeElement)) best.scrollIntoView({ block: "nearest", inline: "nearest", behavior: SCROLL });
         return;
       }
-      if (!best && dy < 0 && this.filterRows(track).length) {
+      const filters = !best && dy < 0 ? this.filterRows(track) : [];
+      if (filters.length) {
         // Up off the grid's first row: its filters. A held Up stops at the first row (it used to run
         // on into the filters and the top bar); the column is kept for the way back down.
         e.preventDefault();
         e.stopImmediatePropagation();
         if (e.repeat) return;
         this.gridColumn = { track, x: here.x };
-        const rows = this.filterRows(track);
-        this.toFilter(rows[rows.length - 1], here.x);
+        this.toFilter(filters[filters.length - 1], here.x);
         return;
       }
       if (!best && IN_TV) {
@@ -2892,9 +3701,11 @@
     },
 
     filterItems(row) {
+      // (each measured once, not again at every comparison of the sort)
+      const at = new Map();
       return [...row.querySelectorAll('a[href], button:not([disabled]), select, input:not([type="hidden"]), [tabindex]:not([tabindex="-1"])')]
-        .filter((n) => !n.closest(".dx-keyshield, [role=\"listbox\"]") && n.checkVisibility() && n.getBoundingClientRect().width > 1 && !n.parentElement.closest('[tabindex]:not([tabindex="-1"]), button, a[href]'))
-        .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+        .filter((n) => !n.closest(".dx-keyshield, [role=\"listbox\"]") && n.checkVisibility() && at.set(n, n.getBoundingClientRect()).get(n).width > 1 && !n.parentElement.closest('[tabindex]:not([tabindex="-1"]), button, a[href]'))
+        .sort((a, b) => at.get(a).left - at.get(b).left);
     },
 
     toFilter(row, x) {
@@ -2983,11 +3794,13 @@
       if (rows[i + dy]) return this.toFilter(rows[i + dy], x) || true;
       const cards = this.cards(track);
       if (!cards.length) return true;
-      const top = Math.min(...cards.map((n) => this.rest(n).top));
-      const first = cards.filter((n) => Math.abs(this.rest(n).top - top) < 4);
+      // (each title measured once)
+      const at = new Map(cards.map((n) => [n, this.rest(n)]));
+      const top = Math.min(...cards.map((n) => at.get(n).top));
+      const first = cards.filter((n) => Math.abs(at.get(n).top - top) < 4);
       const want = this.gridColumn && this.gridColumn.track === track ? this.gridColumn.x : x;
       let pick = first[0];
-      for (const n of first) if (Math.abs(this.rest(n).x - want) < Math.abs(this.rest(pick).x - want)) pick = n;
+      for (const n of first) if (Math.abs(at.get(n).x - want) < Math.abs(at.get(pick).x - want)) pick = n;
       if (this.go(pick, e)) pick.scrollIntoView({ block: "nearest", inline: "nearest", behavior: SCROLL });
       return true;
     },
@@ -2997,21 +3810,32 @@
       const track = row.querySelector(':scope > [class*="meta-items-container"]');
       const list = this.cards(track);
       const v = this.view(track);
-      const shown = list.filter((n) => { const r = this.rest(n); return r.left >= v.left - 2 && r.right <= v.right + 2; });
-      const pool = shown.length ? shown : list;
+      // (each title measured once)
+      const at = new Map(list.map((n) => [n, this.rest(n)]));
+      const shown = list.filter((n) => { const r = at.get(n); return r.left >= v.left - 2 && r.right <= v.right + 2; });
+      // (not a title a kids profile is still checking: kept out of sight, it refuses the selection)
+      const ready = (shown.length ? shown : list).filter((n) => !n.hasAttribute("data-dx-pending"));
+      const pool = ready.length ? ready : shown.length ? shown : list;
       let pick = pool[0];
       if (x != null) {
-        for (const n of pool) if (Math.abs(this.rest(n).x - x) < Math.abs(this.rest(pick).x - x)) pick = n;
+        for (const n of pool) if (Math.abs(at.get(n).x - x) < Math.abs(at.get(pick).x - x)) pick = n;
       }
       if (!this.go(pick, e)) return false;
       // TV: the row settles just under the top bar, its heading in sight (scroll-margin-top in the
       // theme); centred, the row above was left half under the bar
-      row.scrollIntoView({ block: IN_TV ? "start" : "center", behavior: SCROLL });
+      if (pick.contains(document.activeElement)) row.scrollIntoView({ block: IN_TV ? "start" : "center", behavior: SCROLL });
       return true;
     },
 
     focus(e) {
       if (!this.on || !(e.target instanceof Element)) return;
+      // TV: what has the selection is kept in mind, for when the page takes it away (see back()).
+      // Not held on to: a page that has gone must be free to go. (Its row too: the same title can be
+      // in two rows on screen.)
+      if (IN_TV) {
+        const row = e.target.closest('[class*="meta-row-container"]');
+        this.last = { el: new WeakRef(e.target), href: e.target.getAttribute("href"), row: row ? new WeakRef(row) : null };
+      }
       if (preview.el && preview.el.contains(e.target)) return;
       preview.onFocus(e.target.closest('[class*="meta-item-container"]'));
     },
@@ -3027,15 +3851,19 @@
     // Whatever lights up under the mouse lights up the same way when the keyboard selects it:
     // every hover style of Stremio's (and any theme's) gets a :focus-visible twin. dx.bi's own
     // styles already have theirs. Built once, the first time the keyboard is used.
+    // Reading every rule of Stremio's styles takes a TV the best part of a tenth of a second, and a
+    // style sheet coming or going had all of them read again, at the next press. Each sheet's twins
+    // are kept with it now, so a sheet is read once; and they're written out only when they have
+    // changed, as writing them restyles the whole page.
     looks() {
       const sheets = [...document.styleSheets].filter((sh) => !(sh.ownerNode && /^dx-/.test(sh.ownerNode.id || "")));
       if (this.looked === sheets.length) return;
       this.looked = sheets.length;
-      const out = [];
-      const twin = (rules, wrap) => {
+      const kept = this.twins || (this.twins = new WeakMap());
+      const twin = (rules, wrap, out) => {
         for (const rule of rules) {
           if (rule.cssRules && rule.media) {
-            twin(rule.cssRules, (css) => wrap(`@media ${rule.media.mediaText} { ${css} }`));
+            twin(rule.cssRules, (css) => wrap(`@media ${rule.media.mediaText} { ${css} }`), out);
             continue;
           }
           const sel = rule.selectorText;
@@ -3052,16 +3880,26 @@
           if (twins.length) out.push(wrap(`${twins.join(", ")} { ${rule.style.cssText} }`));
         }
       };
+      const all = [];
       for (const sh of sheets) {
-        try { twin(sh.cssRules, (css) => css); } catch (_) { /* a sheet from another origin: skip it */ }
+        let count = -1;
+        try { count = sh.cssRules.length; } catch (_) { /* a sheet from another origin */ }
+        let mine = kept.get(sh);
+        if (!mine || mine.count !== count) {
+          mine = { count, out: [] };
+          try { twin(sh.cssRules, (css) => css, mine.out); } catch (_) { /* a sheet from another origin: skip it */ }
+          kept.set(sh, mine);
+        }
+        for (const css of mine.out) all.push(css);
       }
+      const css = all.join("\n");
       let el = document.getElementById("dx-focus-style");
       if (!el) {
         el = document.createElement("style");
         el.id = "dx-focus-style";
         document.head.append(el);
       }
-      el.textContent = out.join("\n");
+      if (el.textContent !== css) el.textContent = css;
     },
 
     clear() {
@@ -3114,7 +3952,22 @@
       this.shield = el;
     },
 
+    // What a press measured is the page as it was at that press. Kept once that page had gone
+    // (Discover left for Home, one title for the next), it kept the whole of the page in memory
+    // until the next press: a thousand elements and their listeners, on a TV left on Home.
+    forget() {
+      this.rects = new Map();
+      this.known = new Map();
+      this.over = undefined;
+    },
+
     exit() {
+      // (the page is no longer watched for reach(), and a late press waiting its turn is let go)
+      if (this.watch) this.watch.disconnect();
+      this.watch = null;
+      clearTimeout(this.lateTimer);
+      this.lateTimer = 0;
+      this.waiting = null;
       if (!this.on) return;
       this.on = false;
       if (this.shield) this.shield.remove();
@@ -3175,21 +4028,53 @@
       return { type, id, key: `${type}:${id}` };
     },
 
+    // The title's box on its page, and what dx.bi has put on a page (the button, the scores). Every
+    // pass used to look through the whole page for them, twice, on every screen: a millisecond or
+    // two of a TV's time each, for nothing anywhere but on a title's page. They're remembered instead.
+    box: null,
+    made: new Set(),
+    asked: "",
+    settled: null, // { key, button, scores }: this title's page has all it will get
+
+    clear() {
+      this.settled = null;
+      if (!this.made.size) return;
+      for (const n of this.made) n.remove();
+      this.made.clear();
+    },
+
     ensure() {
       const t = settings.reviews && currentRoute() === "detail" ? this.current() : null;
-      const box = dpage.hero();
-      if (!t || !box) {
-        document.querySelectorAll(".dx-scores, .dx-reviews-btn").forEach((n) => n.remove());
-        if (!t) this.close();
+      if (!t) {
+        this.box = null;
+        this.clear();
+        this.close();
         return;
       }
+      if (!this.box || !this.box.isConnected) this.box = dpage.hero();
+      const box = this.box;
+      if (!box) {
+        this.clear();
+        return;
+      }
+      // The button and the scores are there, and Stremio hasn't redrawn the part they sit in
+      const s = this.settled;
+      if (s && s.key === t.key && s.button.isConnected && (!s.scores || s.scores.isConnected)) return;
+      this.settled = null;
       ensureExtrasStyle();
-      this.ensureButton(box, t);
+      const button = this.ensureButton(box, t);
       const data = this.data.get(t.key);
       if (data) {
-        this.paintScores(box, t, data);
+        const scores = this.paintScores(box, t, data);
         this.animeLinks(box, t, data);
-      } else this.load(t).then(() => scheduleSync());
+        // (the newer page: settled once the button wears Stremio's own look, which it takes from a
+        // button of Stremio's that may only arrive with the title's details)
+        if (button && scores !== undefined && (button.hasAttribute("data-dx-native") || dpage.old())) this.settled = { key: t.key, button, scores };
+      } else if (this.asked !== t.key) {
+        // (asked once: every pass used to add itself to the same answer)
+        this.asked = t.key;
+        this.load(t).then(() => scheduleSync()).finally(() => { if (this.asked === t.key) this.asked = ""; });
+      }
     },
 
     // Anime: "MyAnimeList" and "AniList" buttons that open the title there, to set its status,
@@ -3228,7 +4113,7 @@
 
     ensureButton(box, t) {
       const row = dpage.actions(box);
-      if (!row) return;
+      if (!row) return null;
       let b = row.querySelector(":scope > .dx-reviews-btn:not(.dx-anime-link)");
       if (!b) {
         b = document.createElement("div");
@@ -3250,22 +4135,31 @@
         // right after Play / Trailer, the page's main buttons
         const first = row.querySelector(':scope > [class*="action-button-container"][class*="wide"]') || row.querySelector(':scope > a[class*="button-"]');
         row.insertBefore(b, first ? first.nextSibling : row.firstChild);
+        this.keep(b);
       }
-      b.dataset.key = t.key;
+      if (b.dataset.key !== t.key) b.dataset.key = t.key;
       dpage.native(b, row);
+      return b;
     },
 
-    // Critics' scores next to the IMDb rating
+    // (what Stremio has since taken off the page with its own parts is forgotten)
+    keep(el) {
+      for (const n of this.made) if (!n.isConnected) this.made.delete(n);
+      this.made.add(el);
+    },
+
+    // Critics' scores next to the IMDb rating (what it leaves there: null when the title has none;
+    // nothing while the page has no place for them yet)
     paintScores(box, t, data) {
       const info = dpage.facts(box);
-      if (!info) return;
+      if (!info) return undefined;
       const chips = this.chips(data);
       let el = info.querySelector(":scope > .dx-scores");
       if (!chips.length) {
         if (el) el.remove();
-        return;
+        return null;
       }
-      if (el && el.dataset.key === t.key) return;
+      if (el && el.dataset.key === t.key) return el;
       if (!el) {
         el = document.createElement("span");
         el.className = "dx-scores";
@@ -3275,9 +4169,11 @@
           if (now) this.open(now);
         });
         info.append(el);
+        this.keep(el);
       }
       el.dataset.key = t.key;
       el.innerHTML = chips.map((c) => `<span class="dx-score is-${c.cls}" title="${esc(c.title)}"><b>${esc(c.value)}</b><i>${esc(c.tag)}</i></span>`).join("");
+      return el;
     },
 
     chips(data) {
@@ -4073,11 +4969,27 @@
     [/\brussian\b/i, "Russian"], [/\bhindi\b/i, "Hindi"], [/\bjapanese\b/i, "Japanese"], [/\bkorean\b/i, "Korean"],
     [/\bportugu[eê]se?\b/i, "Portuguese"], [/\bpolish\b/i, "Polish"], [/\bturkish\b/i, "Turkish"], [/\barabic\b/i, "Arabic"],
   ];
+  // A language said only in words gets the first flag above that stands for it (English 🇬🇧, Spanish 🇪🇸,
+  // Latino 🇲🇽, Portuguese (Brazil) 🇧🇷, Hindi 🇮🇳…). "Dual audio", "Multi audio" and "Not listed" get none.
+  const LANG_FLAG = {};
+  for (const [code, lang] of Object.entries(FLAG_LANG)) if (!LANG_FLAG[lang]) LANG_FLAG[lang] = code;
+  // a language's flag (a code an addon used that names no language is its own flag)
+  const langFlag = (lang) => LANG_FLAG[lang] || (/^[A-Z]{2}$/.test(lang) ? lang : "");
+  // A flag as written: two regional letters, which the theme's flag font draws as the flag on every
+  // system (without it, a TV draws it with its own emoji and Windows as the two letters)
+  const flagEmoji = (code) => (code ? String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)) : "");
+  // …in a stream row or the Language menu, in front of the language's name (the theme sizes it to the words)
+  const flagTag = (code) => (code ? `<span class="dx-flag" aria-hidden="true">${flagEmoji(code)}</span>` : "");
+  // (for the English dub on a title not in English: a release's words about its subtitles, which
+  // don't say what it sounds like, joined ones too ("EngSub", "Hardsub"), and other languages it names as its sound)
+  const SUBTITLES = /(?:\beng(?:lish)?[ ._-]*|\b)(?:hard|soft)?(?:e?subs?|subtitle[sd]?|subbed|subtitulad[ao]|vost\w*)\b[^\n\]|]{0,24}/gi;
+  const OTHER_TONGUE = /\b(?:korean|coreano|kor|japanese|jap|jpn|italian[oa]?|ita|french|truefrench|fr|fra|fre|vf[fqi2]?|german|deutsch|ger|deu|spanish|castellano|espa[nñ]ol|esp|spa|latino|doblad[ao]|russian|rus|ukr|hindi|hin|tamil|telugu|chinese|mandarin|cantonese|portugu[eê]se?|polish|turkish|arabic|thai)\b|\p{Script=Cyrillic}/iu;
   const QUALITY_LABEL = { 2160: "4K", 1440: "1440p", 1080: "1080p", 720: "720p", 480: "SD", 0: "Unknown" };
   const SOURCE_RANK = { Remux: 4, BluRay: 3, WEB: 2, HDTV: 1, Other: 0, CAM: -10 };
   const SORTS = [
     ["default", "Addon order"],
     ["quality", "Best quality"],
+    ["quality-size", "Best quality, smallest first"],
     ["seeds", "Most seeds"],
     ["size-desc", "Largest first"],
     ["size-asc", "Smallest first"],
@@ -4118,20 +5030,50 @@
     else if (/\b(?:cam|hdcam|camrip|telesync|hdts|ts|tc)\b/i.test(all)) source = "CAM";
 
     const langs = new Set();
+    const flagged = new Map(); // a language → the flag it was listed with first
     for (const m of all.matchAll(/([\u{1F1E6}-\u{1F1FF}])([\u{1F1E6}-\u{1F1FF}])/gu)) {
       const code = String.fromCharCode(m[1].codePointAt(0) - 0x1f1e6 + 65, m[2].codePointAt(0) - 0x1f1e6 + 65);
-      langs.add(FLAG_LANG[code] || code);
+      const lang = FLAG_LANG[code] || code;
+      langs.add(lang);
+      if (!flagged.has(lang)) flagged.set(lang, code);
     }
     for (const [re, label] of LANG_WORDS) if (re.test(all)) langs.add(label);
     if (!langs.size) langs.add(NOT_LISTED);
+    const langList = [...langs];
+    // each language's flag, in the same order ("" for none)
+    const flags = langList.map((l) => flagged.get(l) || langFlag(l));
 
     // Stretched or smoothed copies claim a quality they don't have; 3D needs glasses
     const lesser = /\b(?:ai[ ._-]?upscal\w*|upscal\w*|\d{2,3}fps|hfr|3d|h?sbs)\b/i.test(all);
 
     const site = (/(?:⚙\uFE0F?|🔎)\s*([^\s\n]+)/u.exec(all) || [])[1] || "";
     const codec = /\b(?:x265|h\.?265|hevc)\b/i.test(all) ? "HEVC" : /\bav1\b/i.test(all) ? "AV1" : /\b(?:x264|h\.?264|avc)\b/i.test(all) ? "H.264" : "";
+    // An English dub (for "English dub first"): said outright, or a second audio track beside Japanese.
+    // English beside another language is that language's dub of an English film, not an English dub.
+    // A second track with no language listed at all is an English dub on an anime (how anime releases
+    // tend to be tagged) and anyone's guess elsewhere: `dual` says so, and the preference decides by the
+    // page. YTS/YIFY releases name themselves in the file.
+    const spoken = langList.filter((l) => l !== NOT_LISTED && l !== "Dual audio" && l !== "Multi audio");
+    const second = /\b(?:dual(?:[ .-]?audio)?|multi[ .-]?audio)\b/i.test(all);
+    const dub = /\b(?:eng(?:lish)?[ .-]?dub(?:bed)?|dub(?:bed)?[ .-]?(?:eng|english))\b/i.test(all)
+      || /(?<!\b(?:hindi|tamil|telugu|latino|spanish|castellano|french|german|italian|portuguese|russian|korean|arabic|turkish|polish)[ .-])\bdub(?:bed|s)?\b/i.test(all)
+      || (second && spoken.includes("Japanese"));
+    const dual = second && !spoken.length;
+    // English audio, which on a title not in English is its English dub. Addons list a release's
+    // subtitles among its languages too ("Sub Ita Eng", "Subs][ES-EN]", "EngSub" all come with 🇬🇧), so
+    // English counts when the release's own words leave room for it: they say English outside its
+    // subtitles ("Ita Eng", "KOR-ENG", "+ Eng +"), or name no other language as its sound and either say
+    // nothing of subtitles or say it has more than one track ("Multi-Audio Multi-Subs": a Crunchyroll
+    // release's flags are its dubs). "KOREAN", "Ita Kor", "Castellano" and a Russian tracker's words say
+    // what it sounds like, and it isn't English; "English subs", "Eng.Subbed", "SUBS: FR EN ES" say the
+    // English is only words on screen.
+    const said = langs.has("English") ? all.replace(SUBTITLES, " ") : "";
+    const english = !!said && (/\beng(?:lish)?\b/i.test(said) || ((second || !/sub(?:s|bed)?\b|subtit|vost/i.test(all)) && !OTHER_TONGUE.test(said)));
+    // A Russian tracker's release (its words are in Cyrillic): its "Dub" is the Russian one
+    const ru = /\p{Script=Cyrillic}/u.test(all);
+    const yts = /\b(?:yts|yify)\b/i.test(all);
 
-    return { provider, site, codec, instant, pending, lesser, res, hdr, dv, size, seeds, source, langs: [...langs] };
+    return { provider, site, codec, instant, pending, lesser, res, hdr, dv, size, seeds, source, langs: langList, flags, dub, dual, second, english, ru, yts };
   }
 
   // ---------------------------------------------------------------------------
@@ -4237,6 +5179,102 @@
     return describeStream(name, `${name}\n${text(dpage.DESC)}`);
   }
 
+  // A title's own language, from what its addon says of it: a language (a name, or a code of two letters
+  // or three, "ko", "kor", "en-US"), else the first country it is from (Cinemeta gives only the countries,
+  // "South Korea", "France, United States")
+  const TONGUE_CODE = {
+    en: "English", eng: "English", ko: "Korean", ja: "Japanese", zh: "Chinese", cn: "Chinese", mandarin: "Chinese", cantonese: "Chinese",
+    fr: "French", de: "German", es: "Spanish", it: "Italian", ru: "Russian", hi: "Hindi", ta: "Tamil", te: "Telugu", pt: "Portuguese",
+    pl: "Polish", tr: "Turkish", sv: "Swedish", no: "Norwegian", nb: "Norwegian", da: "Danish", fi: "Finnish", nl: "Dutch", th: "Thai",
+    ar: "Arabic", he: "Hebrew", fa: "Persian", uk: "Ukrainian", cs: "Czech", hu: "Hungarian", el: "Greek", ro: "Romanian",
+    id: "Indonesian", vi: "Vietnamese", tl: "Filipino", kn: "Kannada", ml: "Malayalam",
+    kor: "Korean", jpn: "Japanese", zho: "Chinese", chi: "Chinese", fra: "French", fre: "French", deu: "German", ger: "German",
+    spa: "Spanish", ita: "Italian", rus: "Russian", hin: "Hindi", tam: "Tamil", tel: "Telugu", kan: "Kannada", mal: "Malayalam",
+    por: "Portuguese", pol: "Polish", tur: "Turkish", swe: "Swedish", nor: "Norwegian", nob: "Norwegian", dan: "Danish",
+    fin: "Finnish", nld: "Dutch", dut: "Dutch", tha: "Thai", ara: "Arabic", heb: "Hebrew", fas: "Persian", per: "Persian",
+    ukr: "Ukrainian", ces: "Czech", cze: "Czech", hun: "Hungarian", ell: "Greek", gre: "Greek", ron: "Romanian", rum: "Romanian",
+    ind: "Indonesian", vie: "Vietnamese", fil: "Filipino", tgl: "Filipino",
+  };
+  // (India and Hong Kong aren't here: their films come in several of their own languages, Hindi, Telugu,
+  // Tamil, Kannada, or Cantonese and Mandarin, which a release lists under one flag, 🇮🇳 or 🇨🇳 / 🇭🇰. So
+  // "DUAL (Hindi Telugu)" would look like the title's own language and a second track. From them a title
+  // is only foreign, its language unknown.)
+  const COUNTRY_TONGUE = {
+    "united states": "English", "united states of america": "English", usa: "English", us: "English", "united kingdom": "English",
+    uk: "English", "great britain": "English", england: "English", canada: "English", australia: "English", ireland: "English",
+    "new zealand": "English", "south korea": "Korean", korea: "Korean", japan: "Japanese", china: "Chinese",
+    taiwan: "Chinese", france: "French", belgium: "French", germany: "German", "west germany": "German", austria: "German",
+    spain: "Spanish", mexico: "Spanish", argentina: "Spanish", colombia: "Spanish", chile: "Spanish", italy: "Italian",
+    russia: "Russian", "soviet union": "Russian", brazil: "Portuguese", portugal: "Portuguese", poland: "Polish",
+    turkey: "Turkish", sweden: "Swedish", norway: "Norwegian", denmark: "Danish", finland: "Finnish", netherlands: "Dutch",
+    thailand: "Thai", iran: "Persian", israel: "Hebrew", ukraine: "Ukrainian", "czech republic": "Czech", czechia: "Czech",
+    hungary: "Hungarian", greece: "Greek", romania: "Romanian", indonesia: "Indonesian", vietnam: "Vietnamese",
+    philippines: "Filipino", egypt: "Arabic",
+  };
+
+  // What goes first whatever the order: a release site and dubs (dx.bi settings, Browsing & library).
+  // Kept here, apart from the settings, so tools/quick-play-test.mjs can set them.
+  const streamPrefs = {
+    site: "none",
+    dubbed: false,
+    anime: false, // the title on screen is an anime…
+    foreign: false, // …or isn't in English: the places a dub is looked for
+    tongue: "", // the language a foreign title is in, when its addon says ("Korean")
+    // `title`: what is known of the title on screen ({ foreign, tongue }, see titleOf), if anything
+    set(site, dubbed, anime, title) {
+      this.site = site || "none";
+      this.dubbed = !!dubbed;
+      this.anime = !!anime;
+      this.foreign = !!(title && title.foreign);
+      this.tongue = (this.foreign && title.tongue) || "";
+    },
+    on() { return this.site !== "none" || this.dubbed; },
+    fromSite(d) {
+      if (this.site === "none") return false;
+      return (this.site === "yts" && d.yts) || String(d.site || "").replace(/[^a-z0-9]/gi, "").toLowerCase() === this.site;
+    },
+    // On an anime, a dub said outright or any second audio track (how its releases are tagged). On a
+    // title not in English: a dub said outright beside no language but English and the title's own
+    // (Torrentio writes "Dubbed" for a dub in any language: a French "VF", a "pt-BR" or "Dubbed In Hindi"
+    // is that language's, as is a Russian tracker's "Dub"), an unnamed second track, English audio (see
+    // describeStream), and a second track beside nothing but English and the title's own language
+    // (Netflix's "DUAL" releases list only that one).
+    englishDub(d) {
+      if (this.anime) return !!(d.dub || d.dual);
+      if (!this.foreign) return false;
+      const other = d.langs.some((l) => l !== NOT_LISTED && l !== "Dual audio" && l !== "Multi audio" && l !== "English" && l.replace(/ \(.*\)$/, "") !== this.tongue);
+      if ((d.dub && !d.ru && !other) || d.dual || d.english) return true;
+      return d.second && !!this.tongue && !other;
+    },
+    // The leading sort key: the site, then an anime's dub. On a title not in English its English dub
+    // goes first and the site's releases next: the dub is what was asked to be at the top.
+    weight(d) {
+      const dub = this.dubbed && this.englishDub(d);
+      if (this.foreign && !this.anime) return (dub ? 2 : 0) + (this.fromSite(d) ? 1 : 0);
+      return (this.fromSite(d) ? 2 : 0) + (dub ? 1 : 0);
+    },
+
+    // What a title's details (its addon's meta) say of its language: { foreign, tongue }, or null
+    // when they give neither a language nor a country. A language given wins; else the first country
+    // listed decides, foreign unless it is an English-speaking one.
+    titleOf(meta) {
+      if (!meta || typeof meta !== "object") return null;
+      const first = (v) => String((Array.isArray(v) ? v[0] : v) || "").split(/[,/|;]/)[0].trim();
+      let tongue = first(meta.original_language || meta.originalLanguage || meta.language || meta.languages);
+      // (a code is read without its region: "en-US", "pt_BR", "ko-KR")
+      const code = tongue.toLowerCase().replace(/^([a-z]{2,3})[-_][a-z0-9]{2,8}$/, "$1");
+      if (/^(?:xx|zxx|und|mul)$/.test(code)) tongue = ""; // (no language, or many)
+      if (tongue) tongue = TONGUE_CODE[code] || tongue.charAt(0).toUpperCase() + tongue.slice(1).toLowerCase();
+      else {
+        const country = first(meta.country || meta.countries).toLowerCase();
+        if (!country) return null;
+        tongue = COUNTRY_TONGUE[country];
+        if (!tongue) return { foreign: true, tongue: "" };
+      }
+      return tongue === "English" ? { foreign: false, tongue: "" } : { foreign: true, tongue };
+    },
+  };
+
   // Picks a stream without asking. Pure, so tools/quick-play-test.mjs can check every rule.
   const NOT_LISTED = "Not listed (usually English)";
   const streamChoice = {
@@ -4246,7 +5284,8 @@
     // Ready-to-play first. HDR beats Dolby Vision, which stalls on some decoders, and an encode
     // beats a huge remux: the pick has to start and keep playing.
     rank(d) {
-      return (d.instant ? 1e5 : 0) + d.res * 10 + (d.dv ? 1 : d.hdr ? 2 : 0) + (this.SOURCE[d.source] || 0) - (d.lesser ? 15000 : 0);
+      // (a preferred site or a dub outranks any resolution, never a ready-to-play stream)
+      return (d.instant ? 1e5 : 0) + streamPrefs.weight(d) * 2e4 + d.res * 10 + (d.dv ? 1 : d.hdr ? 2 : 0) + (this.SOURCE[d.source] || 0) - (d.lesser ? 15000 : 0);
     },
 
     best(list) {
@@ -4296,6 +5335,77 @@
     },
   };
 
+  // The order a list of streams is shown in, and what its filters have to offer. Pure, like
+  // streamChoice, so tools/quick-play-test.mjs can hold both to the way they were first written.
+  const streamList = {
+    score(d) {
+      return d.res * 10 + (d.dv ? 3 : d.hdr ? 2 : 0) + (SOURCE_RANK[d.source] || 0);
+    },
+
+    // rows: [{ d, i }], `i` being a stream's place in the addon's own order. `clean`: the clean
+    // stream list is on, and `isLink` is its test for a link out. Returns the rows in the order
+    // they show, or null when that is the addon's own. (What a stream is weighed by is worked out
+    // once a stream, not once a comparison: a long list is compared thousands of times.)
+    order(rows, mode, clean, isLink) {
+      const by = {
+        quality: (a, b) => b.s - a.s || (b.d.instant - a.d.instant) || b.d.seeds - a.d.seeds || b.d.size - a.d.size,
+        seeds: (a, b) => b.d.seeds - a.d.seeds || b.s - a.s,
+        "size-desc": (a, b) => b.d.size - a.d.size,
+        "size-asc": (a, b) => (a.d.size || Infinity) - (b.d.size || Infinity),
+        // the sharpest picture in the smallest file: real copies first, then resolution, then ready, then size
+        "quality-size": (a, b) => (a.d.source === "CAM") - (b.d.source === "CAM") || a.d.lesser - b.d.lesser || b.d.res - a.d.res || (b.d.instant - a.d.instant) || (a.d.size || Infinity) - (b.d.size || Infinity) || b.d.seeds - a.d.seeds,
+      }[mode];
+      // A preferred site and dubs come first whatever the order
+      const pref = streamPrefs.on();
+      // The clean list leads with the best match and ends with links out to rent or buy
+      const lead = !by && clean;
+      if (!by && !lead && !pref) return null;
+      let top = null;
+      let topRank = 0;
+      for (const r of rows) {
+        r.s = this.score(r.d);
+        r.w = pref ? streamPrefs.weight(r.d) : 0;
+        if (!lead) continue;
+        r.link = isLink(r.d);
+        if (r.d.source === "CAM" || r.d.pending || r.link) continue;
+        const rank = streamChoice.rank(r.d);
+        if (!top || rank > topRank) {
+          top = r;
+          topRank = rank;
+        }
+      }
+      const led = (a, b) => a.link - b.link || (b === top) - (a === top);
+      return [...rows].sort((a, b) => (pref ? b.w - a.w : 0) || (by ? by(a, b) : lead ? led(a, b) : 0) || a.i - b.i);
+    },
+
+    // What filter values exist in a list (with counts), in one walk of it. rows: [[el, d]]
+    facets(rows) {
+      const quality = new Map();
+      const langs = new Map();
+      const source = new Map();
+      const provider = new Map();
+      const add = (map, v) => map.set(v, (map.get(v) || 0) + 1);
+      let instant = 0;
+      let hdr = 0;
+      for (const [, d] of rows) {
+        add(quality, d.res);
+        for (const l of d.langs) add(langs, l);
+        add(source, d.source);
+        add(provider, d.provider);
+        if (d.instant) instant++;
+        if (d.hdr) hdr++;
+      }
+      return {
+        quality: [2160, 1440, 1080, 720, 480, 0].filter((q) => quality.has(q)).map((q) => [String(q), QUALITY_LABEL[q], quality.get(q)]),
+        lang: [...langs].sort((a, b) => (a[0] === NOT_LISTED) - (b[0] === NOT_LISTED) || b[1] - a[1]).map(([v, n]) => [v, v, n]),
+        source: Object.keys(SOURCE_RANK).map((s) => [s, s === "WEB" ? "WEB-DL / WEBRip" : s, source.get(s)]).filter((x) => x[2]),
+        provider: [...provider].sort((a, b) => b[1] - a[1]).map(([v, n]) => [v, v, n]),
+        instant,
+        hdr,
+      };
+    },
+  };
+
   const streamTools = {
     cache: new WeakMap(),
     state: (() => {
@@ -4303,54 +5413,254 @@
       try { return { ...base, ...JSON.parse(localStorage.getItem("dxbi.streams") || "{}") }; } catch (_) { return base; }
     })(),
     open: null,
-    sig: "",
+
+    // The stream list in hand, and how often Stremio has changed it. Every pass used to find the
+    // list again and read every row of it again, only to learn that nothing had changed: on a TV
+    // that was 20 ms a pass on a page standing still, and the same again before each paint while
+    // streams arrived. Now the list is kept while it is in the page, an observer of its own counts
+    // what Stremio changes in it (`seen`), and streamTools and streamRows each do their work once
+    // for each count.
+    page: null,
+    list: null,
+    watcher: null,
+    seen: 0,
+    gen: 0, // rows read under an earlier one are read again (a new list)
+    missed: null, // the pass that has already looked for a list and found none
+    rows: null, // the list's stream rows as of `rowsAt`
+    rowsAt: -1,
+    key: "", // what the order, the filters and the bar were last worked out from
+    few: false, // …when there were too few streams for a bar
+    bar: null,
+    barDue: null, // what the bar has yet to be told (see apply)
+    empty: null,
+    inOrder: null, // the rows the filters keep, in the order they show, as of `inOrderAt` (for streamRows)
+    inOrderAt: -1,
 
     save() {
       try { localStorage.setItem("dxbi.streams", JSON.stringify(this.state)); } catch (_) { /* ignore */ }
     },
 
+    // One of the bar's controls: a <button> in a computer's browser. A TV's browser is Android's,
+    // and there a form control taking the selection (a <button> is one) has the browser look for the
+    // form field before and after it, for the keyboard's Next and Previous keys: it asks every
+    // element of the page whether it can take focus. On a title with 300 streams that is 9,000
+    // askings, half a second each time the remote landed on the bar (and seconds, with rows the
+    // browser had put off laying out). A plain element that says it is a button is asked nothing.
+    CTL: 'button, [role="button"]',
+    ctl: IN_TV
+      ? (attrs, inner) => `<div role="button" tabindex="0" ${attrs}>${inner}</div>`
+      : (attrs, inner) => `<button type="button" ${attrs}>${inner}</button>`,
+    // (…which OK and Enter press: a <button> does that by itself)
+    onKey(e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const t = e.target instanceof Element ? e.target.closest('[role="button"]') : null;
+      if (!t || t.tagName === "BUTTON") return;
+      e.preventDefault();
+      e.stopPropagation();
+      t.click();
+    },
+
+    // (the row's entry also keeps what streamRows has drawn of it)
     data(el) {
-      // (cheap: a 500-stream list is re-checked as Stremio adds each batch. dx.bi's own row text,
-      // appended last, is left out so it doesn't count as a change)
-      const all = el.textContent;
-      const own = el.lastElementChild && el.lastElementChild.classList.contains("dxv-row") ? el.lastElementChild.textContent.length : 0;
-      const sig = own ? all.slice(0, all.length - own) : all;
       const hit = this.cache.get(el);
-      if (hit && hit.sig === sig) return hit.data;
+      // Stremio hasn't touched this row since it was read
+      if (hit && hit.gen === this.gen) return hit.data;
+      const sig = [...el.querySelectorAll(`${dpage.NAME}, ${dpage.DESC}`)].map((n) => (n.closest(".dxv-row") ? "" : n.textContent)).join("\n");
+      if (hit && hit.sig === sig) {
+        hit.gen = this.gen;
+        return hit.data;
+      }
       const data = parseStream(el);
-      this.cache.set(el, { sig, data });
+      this.cache.set(el, { sig, data, gen: this.gen });
       return data;
     },
 
-    ensure() {
-      const panel = dpage.streamPanel();
-      const list = dpage.streamList(panel);
-      let bar = panel && panel.querySelector(":scope > .dx-streambar");
-      // (isConnected, not offsetParent: that forced a full layout on every pass while streams load)
-      if (!settings.streamTools || !list || !list.isConnected || list.closest("[hidden]")) {
-        if (bar) bar.remove();
-        if (list) this.reset(list);
+    // The stream list on the page: the one in hand while it is still there, else looked for (once
+    // a pass: the pages under a title's stay in the document, and each search walks them first).
+    // `near`: only where Stremio puts it, straight under the page's content. Before a paint that
+    // is as far as the search goes; a pass looks the whole page over, should Stremio ever move it.
+    find(near) {
+      if (this.list && this.list.isConnected) return this.list;
+      if (!near && loop.pass && this.missed === loop.pass) return null;
+      // (the page's content: the older page's, or the redesign's, where the streams have a panel)
+      if (!(this.page && this.page.isConnected)) this.page = document.querySelector('[class*="metadetails-content"]') || document.querySelector('[class*="details-"] > [class*="content-"]');
+      const panel = (this.page && (this.page.querySelector(':scope > [class*="streams-list-container"]') || this.page.querySelector(':scope > section[class*="streams-"][class*="panel-"] > [class*="body-"]')))
+        || (near ? null : dpage.streamPanel());
+      const list = dpage.streamList(panel) || null;
+      if (!near) this.missed = list ? null : loop.pass;
+      if (list !== this.list) this.hold(list);
+      return list;
+    },
+
+    // A new list (or none): its rows are read afresh, and what Stremio changes in it is counted
+    hold(list) {
+      if (this.watcher) this.watcher.disconnect();
+      this.list = list;
+      // (the redesign's list holds a group of rows for each addon; the older one holds the rows)
+      this.grouped = !!list && list.matches('[class*="groups-"]');
+      this.gen++;
+      this.seen++;
+      this.rows = null;
+      this.inOrder = null;
+      if (!list) return;
+      if (!this.watcher) this.watcher = new MutationObserver((records) => this.told(records));
+      this.watcher.observe(list, { childList: true, subtree: true, characterData: true });
+    },
+
+    // The observer's own turn. What Stremio adds or removes reaches streamRows.prepaint first, by
+    // way of the page's observer, and is taken in there; what is left for here is a row's words
+    // rewritten in place, which that observer doesn't report: the rows are put right before the
+    // paint all the same, and the pass is asked for.
+    told(records) {
+      const seen = this.seen;
+      this.note(records);
+      if (this.seen === seen || destroyed) return;
+      if (currentRoute() === "detail") {
+        try { streamRows.prepaint(); } catch (_) { /* next sync */ }
+      }
+      scheduleSync();
+    },
+
+    // What Stremio has changed in the list: rows added, removed or moved, or a row's own words.
+    // (dx.bi's own rows inside it are not news.)
+    note(records) {
+      const list = this.list;
+      let changed = false;
+      for (const r of records) {
+        const t = r.target;
+        if (t === list) {
+          changed = true;
+          continue;
+        }
+        const el = t.nodeType === 1 ? t : t.parentNode;
+        if (el && el.closest(".dxv-row")) continue;
+        const row = this.rowOf(t, list);
+        if (row === undefined) {
+          // (changed and then taken out of the list: every row is read again)
+          this.gen++;
+          changed = true;
+          continue;
+        }
+        if (row === null) {
+          // (a group of the redesign's list, or its heading: rows have come or gone)
+          changed = true;
+          continue;
+        }
+        if (t === row && r.type === "childList" && [...r.addedNodes, ...r.removedNodes].every((n) => n.nodeType === 1 && n.classList.contains("dxv-row"))) continue;
+        const hit = this.cache.get(row);
+        if (hit) hit.gen = -1;
+        changed = true;
+      }
+      if (changed) this.seen++;
+    },
+
+    // The stream row a part of the list belongs to (or is). null: a part of the list that is no
+    // row (a group of the redesign's, a group's heading, the Install addons button). undefined: it
+    // has left the list.
+    rowOf(node, list) {
+      for (let n = node; n; n = n.parentNode) {
+        if (n === list) return null;
+        const p = n.parentNode;
+        if (p === list) return this.grouped || n.nodeType !== 1 ? null : n;
+        if (this.grouped && p && p.parentNode === list) return n.nodeType === 1 && n.tagName === "A" ? n : null;
+      }
+      return undefined;
+    },
+
+    // The list, with what Stremio has just changed in it taken in
+    look(near) {
+      const list = this.find(near);
+      if (list) {
+        const records = this.watcher.takeRecords();
+        if (records.length) this.note(records);
+      }
+      return list;
+    },
+
+    // Off a title's page, what was kept in hand of it is let go: held on to, a page Stremio has
+    // taken down could not leave memory. (Called by hideButton, which every pass reaches.)
+    // The bar and the Play button are let go only once they have left the document: the title's
+    // page stays there under the player and under Settings, and one of them switched off meanwhile
+    // has to be found again to be taken away on the way back. Forgotten, it stayed on the page.
+    letGo() {
+      if (this.list) this.hold(null);
+      if (this.bar && !this.bar.isConnected) this.bar = null;
+      this.page = this.barDue = this.empty = null;
+      this.key = "";
+      if (streamRows.queue.length) {
+        streamRows.queue = [];
+        streamRows.key = "";
+      }
+      quickPlay.row = null;
+      if (quickPlay.btn && !quickPlay.btn.isConnected) quickPlay.btn = null;
+    },
+
+    // The list's stream rows (asked of the page again only after a change)
+    items(list) {
+      if (!this.rows || this.rowsAt !== this.seen) {
+        this.rows = dpage.streamItems(list);
+        this.rowsAt = this.seen;
+      }
+      return this.rows;
+    },
+
+    // force: a button on the bar was pressed. early: Stremio has just changed the list and the
+    // browser has not painted yet (see streamRows.prepaint).
+    ensure(force, early) {
+      const list = this.look();
+      // Is the list on show? Not asked of the page by measuring it (offsetParent made the browser lay
+      // the whole page out there and then, a fifth of a second on a TV, in the very task that had
+      // just built the rows): a page Stremio has put away is marked hidden.
+      if (!settings.streamTools || !list || list.closest("[hidden]")) {
+        if (this.bar) this.bar.remove();
+        this.bar = null;
+        this.barDue = null;
+        if (list) this.plain(list);
+        this.key = "";
         return;
       }
-      const items = dpage.streamItems(list);
+      const panel = list.parentElement;
+      const key = [this.seen, this.sortMode(), settings.streamRows ? 1 : 0, streamPrefs.site, streamPrefs.dubbed, streamPrefs.anime, streamPrefs.foreign, streamPrefs.tongue, this.open].join("|");
+      // Nothing it works from has changed: the list's rows, the order asked for, the bar's menu
+      if (!force && key === this.key && (this.few || (this.bar && this.bar.parentNode === panel && list.classList.contains("dx-sortable")))) {
+        if (this.barDue && !early) {
+          this.renderBar(this.bar, ...this.barDue);
+          this.barDue = null;
+        }
+        return;
+      }
+      const items = this.items(list);
+      let bar = this.bar && this.bar.parentNode === panel ? this.bar : panel.querySelector(":scope > .dx-streambar");
       if (items.length < 3) {
-        if (bar) bar.hidden = true;
-        this.reset(list);
+        if (bar && !bar.hidden) bar.hidden = true;
+        this.bar = bar;
+        this.barDue = null;
+        this.plain(list);
+        this.key = key;
+        this.few = true;
         return;
       }
       if (!bar) {
         bar = this.build();
         panel.insertBefore(bar, list);
       }
-      bar.hidden = false;
-      list.classList.add("dx-sortable");
-      // Nothing new since the last pass (same rows, same choices): the order and filters already hold
-      // (the open menu counts: opening one changes nothing else, and was skipped here in 2.38.0-2.38.1)
-      const key = `${items.length}|${JSON.stringify(this.state)}|${settings.streamRows}|${bar.firstChild ? 1 : 0}|${this.open || ""}`;
-      if (this.lastList === list && this.lastKey === key && this.lastFirst === items[0] && this.lastLast === items[items.length - 1]) return;
+      this.bar = bar;
+      this.key = "";
+      this.few = false;
+      if (bar.hidden) bar.hidden = false;
+      if (!list.classList.contains("dx-sortable")) list.classList.add("dx-sortable");
       const rows = items.map((el) => [el, this.data(el)]);
-      this.apply(list, rows, bar);
-      this.lastList = list; this.lastKey = key; this.lastFirst = items[0]; this.lastLast = items[items.length - 1];
+      this.apply(list, rows, bar, early);
+      this.key = key;
+    },
+
+    // The list as Stremio has it
+    plain(list) {
+      if (list.classList.contains("dx-sortable")) this.reset(list);
+      else if (this.empty) {
+        this.empty.remove();
+        this.empty = null;
+      }
     },
 
     reset(list) {
@@ -4360,24 +5670,11 @@
         el.removeAttribute("data-dx-hide");
       }
       list.parentElement?.querySelector(":scope > .dx-stream-empty")?.remove();
-    },
-
-    // What filter values exist in this list (with counts)
-    facets(rows) {
-      const count = (key) => {
-        const map = new Map();
-        for (const [, d] of rows) for (const v of [].concat(d[key])) map.set(v, (map.get(v) || 0) + 1);
-        return map;
-      };
-      const quality = count("res");
-      return {
-        quality: [2160, 1440, 1080, 720, 480, 0].filter((q) => quality.has(q)).map((q) => [String(q), QUALITY_LABEL[q], quality.get(q)]),
-        lang: [...count("langs")].sort((a, b) => (a[0] === "Not listed (usually English)") - (b[0] === "Not listed (usually English)") || b[1] - a[1]).map(([v, n]) => [v, v, n]),
-        source: Object.keys(SOURCE_RANK).map((s) => [s, s === "WEB" ? "WEB-DL / WEBRip" : s, count("source").get(s)]).filter((x) => x[2]),
-        provider: [...count("provider")].sort((a, b) => b[1] - a[1]).map(([v, n]) => [v, v, n]),
-        instant: rows.filter(([, d]) => d.instant).length,
-        hdr: rows.filter(([, d]) => d.hdr).length,
-      };
+      this.empty = null;
+      this.inOrder = null;
+      this.key = "";
+      // (dx.bi is being switched off)
+      if (destroyed && this.watcher) this.watcher.disconnect();
     },
 
     matches(d) {
@@ -4391,14 +5688,17 @@
       return true;
     },
 
-    score(d) {
-      return d.res * 10 + (d.dv ? 3 : d.hdr ? 2 : 0) + (SOURCE_RANK[d.source] || 0);
+    // The order in use: the menu's choice for this browser, else the setting
+    sortMode() {
+      const s = this.state.sort;
+      return s && s !== "default" ? s : settings.streamSort || "default";
     },
 
-    apply(list, rows, bar) {
+    apply(list, rows, bar, early) {
       const s = this.state;
+      const mode = this.sortMode();
       // Ignore saved choices that don't exist in this title's streams (keeps old preferences from hiding everything)
-      const f = this.facets(rows);
+      const f = streamList.facets(rows);
       const present = (key, values) => values.filter((v) => f[key].some(([x]) => x === v));
       const active = {
         quality: present("quality", s.quality), lang: present("lang", s.lang),
@@ -4410,37 +5710,41 @@
       s.hdr = saved.hdr && f.hdr > 0;
 
       const ranked = rows.map(([el, d], i) => ({ el, d, i, keep: this.matches(d) }));
-      const by = {
-        quality: (a, b) => this.score(b.d) - this.score(a.d) || (b.d.instant - a.d.instant) || b.d.seeds - a.d.seeds || b.d.size - a.d.size,
-        seeds: (a, b) => b.d.seeds - a.d.seeds || this.score(b.d) - this.score(a.d),
-        "size-desc": (a, b) => b.d.size - a.d.size,
-        "size-asc": (a, b) => (a.d.size || Infinity) - (b.d.size || Infinity),
-      }[s.sort];
-      // The clean list leads with the best match and ends with links out to rent or buy
-      const lead = !by && settings.streamRows;
-      const top = lead ? ranked.filter((r) => r.d.source !== "CAM" && !r.d.pending && !streamRows.isLink(r.d))
-        .reduce((a, r) => (!a || streamChoice.rank(r.d) > streamChoice.rank(a.d) ? r : a), null) : null;
-      const led = (a, b) => streamRows.isLink(a.d) - streamRows.isLink(b.d) || (b === top) - (a === top);
-      const sorted = by || lead;
-      const order = sorted ? [...ranked].sort((a, b) => (by ? by(a, b) : led(a, b)) || a.i - b.i) : ranked;
-      // (the newer page groups streams by addon: sorted, they run as one list without the headings)
-      list.classList.toggle("dx-sorted", !!sorted);
+      const order = streamList.order(ranked, mode, !!settings.streamRows, streamRows.isLink) || ranked;
+      const sorted = order !== ranked;
+      // (the redesign groups streams by addon: sorted, they run as one list without the headings)
+      if (list.classList.contains("dx-sorted") !== sorted) list.classList.toggle("dx-sorted", sorted);
+      // TV: a row whose dx.bi version isn't drawn yet waits out of the page, where it costs the
+      // browser nothing (streamRows draws the rows in sight first, then the rest a few at a time).
+      // Never the row the remote is on: out of the page, it would lose the selection. And a row
+      // that already carries its dx.bi row is not taken out of the page: an addon that answers late
+      // has Stremio rewrite every row in place, and with all of those out until drawn again the
+      // list fell to a screen of rows and lost its place. (Such a row shows its old words for the
+      // few frames that takes.)
+      const wait = IN_TV && !!settings.streamRows;
+      const focused = wait ? document.activeElement : null;
+      const inOrder = [];
       order.forEach((r, pos) => {
         const o = sorted ? String(pos) : "";
         if (r.el.style.order !== o) r.el.style.order = o;
-        // only touch what changes (each write restyles the row)
-        const hidden = r.el.hasAttribute("data-dx-hide");
-        if (r.keep && hidden) r.el.removeAttribute("data-dx-hide");
-        else if (!r.keep && !hidden) r.el.setAttribute("data-dx-hide", "");
+        const hit = this.cache.get(r.el);
+        hit.keep = r.keep;
+        const hide = !r.keep || (wait && r.el !== focused && !streamRows.drawn(r.el, hit) && !r.el.hasAttribute("data-dxv"));
+        if (hide !== r.el.hasAttribute("data-dx-hide")) r.el.toggleAttribute("data-dx-hide", hide);
+        if (r.keep) inOrder.push(r.el);
       });
-      const shown = ranked.filter((r) => r.keep).length;
+      this.inOrder = inOrder;
+      this.inOrderAt = this.seen;
+      const shown = inOrder.length;
 
       // restore the user's full saved preferences (we only narrowed them for this title)
       Object.assign(this.state, saved);
 
-      const sig = JSON.stringify([f, active, s.sort, s.instant, s.hdr, shown, rows.length, this.open]);
-      if (sig !== this.sig || !bar.firstChild) {
-        this.sig = sig;
+      // Before a paint only a bar with nothing in it yet is filled (so the list doesn't jump down
+      // when it is); what a bar already there has to say next waits for the pass
+      if (early && bar.firstChild) this.barDue = [f, active, shown, rows.length];
+      else {
+        this.barDue = null;
         this.renderBar(bar, f, active, shown, rows.length);
       }
 
@@ -4449,57 +5753,102 @@
         if (!empty) {
           empty = document.createElement("div");
           empty.className = "dx-stream-empty";
-          empty.innerHTML = 'No streams match these filters.<button type="button" data-act="reset">Clear filters</button>';
+          empty.innerHTML = `No streams match these filters.${this.ctl('data-act="reset"', "Clear filters")}`;
+          empty.addEventListener("keydown", (e) => this.onKey(e));
           list.parentElement.insertBefore(empty, list);
         }
       } else if (empty) {
         empty.remove();
+        empty = null;
       }
+      this.empty = empty;
     },
 
     build() {
       const bar = document.createElement("div");
       bar.className = "dx-streambar";
       bar.addEventListener("click", (e) => this.onClick(e));
+      bar.addEventListener("keydown", (e) => this.onKey(e));
       return bar;
     },
 
     renderBar(bar, f, active, shown, total) {
       const s = this.state;
+      const mode = this.sortMode();
       const chip = (key, label, values, count) => {
         const on = values.length > 0;
         const text = on ? (values.length === 1 ? values[0] : `${label} · ${values.length}`) : label;
-        return `<button type="button" class="dx-sb-btn${on ? " is-on" : ""}${this.open === key ? " is-open" : ""}" data-menu="${key}">${esc(text)}${ICONS.chevronDown}</button>`;
+        return this.ctl(`class="dx-sb-btn${on ? " is-on" : ""}${this.open === key ? " is-open" : ""}" data-menu="${key}"`, `${esc(text)}${ICONS.chevronDown}`);
       };
       const label = (key, v) => (f[key].find(([x]) => x === v) || [, v])[1];
-      const sortLabel = (SORTS.find(([k]) => k === s.sort) || SORTS[0])[1];
+      const sortLabel = (SORTS.find(([k]) => k === mode) || SORTS[0])[1];
       let html = `<div class="dx-sb-row">`;
-      html += `<button type="button" class="dx-sb-btn dx-sb-sort${this.open === "sort" ? " is-open" : ""}" data-menu="sort">${ICONS.sort}${esc(sortLabel)}${ICONS.chevronDown}</button>`;
+      html += this.ctl(`class="dx-sb-btn dx-sb-sort${this.open === "sort" ? " is-open" : ""}" data-menu="sort"`, `${ICONS.sort}${esc(sortLabel)}${ICONS.chevronDown}`);
       html += `<span class="dx-sb-div"></span>`;
       if (f.quality.length > 1) html += chip("quality", "Quality", active.quality.map((v) => label("quality", v)));
       if (f.lang.length > 1) html += chip("lang", "Language", active.lang);
       if (f.source.length > 1) html += chip("source", "Source", active.source.map((v) => label("source", v)));
       if (f.provider.length > 1) html += chip("provider", "Provider", active.provider);
-      if (f.instant && f.instant < total) html += `<button type="button" class="dx-sb-btn dx-sb-toggle${s.instant ? " is-on" : ""}" data-toggle="instant">⚡ Instant</button>`;
-      if (f.hdr && f.hdr < total) html += `<button type="button" class="dx-sb-btn dx-sb-toggle${s.hdr ? " is-on" : ""}" data-toggle="hdr">HDR / DV</button>`;
+      if (f.instant && f.instant < total) html += this.ctl(`class="dx-sb-btn dx-sb-toggle${s.instant ? " is-on" : ""}" data-toggle="instant"`, "⚡ Instant");
+      if (f.hdr && f.hdr < total) html += this.ctl(`class="dx-sb-btn dx-sb-toggle${s.hdr ? " is-on" : ""}" data-toggle="hdr"`, "HDR / DV");
       const filtered = active.quality.length || active.lang.length || active.source.length || active.provider.length || s.instant || s.hdr;
       html += `<span class="dx-sb-count">${shown === total ? `${total} streams` : `${shown} of ${total}`}</span>`;
-      if (filtered || s.sort !== "default") html += `<button type="button" class="dx-sb-reset" data-act="reset">Reset</button>`;
+      if (filtered || s.sort !== "default") html += this.ctl('class="dx-sb-reset" data-act="reset"', "Reset");
       html += `</div>`;
 
       if (this.open) {
         const opts = this.open === "sort"
-          ? SORTS.map(([k, l]) => ({ v: k, l, on: s.sort === k }))
+          ? SORTS.map(([k, l]) => ({ v: k, l, on: mode === k }))
           : f[this.open].map(([v, l, n]) => ({ v, l, n, on: (active[this.open] || []).includes(v) }));
+        // (a language goes with its flag, as in the rows)
+        const flag = (o) => (this.open === "lang" ? flagTag(langFlag(o.v)) : "");
         html += `<div class="dx-sb-menu" data-for="${this.open}">` + opts.map((o) =>
-          `<button type="button" class="dx-sb-opt${o.on ? " is-on" : ""}" data-val="${esc(o.v)}"><span class="dx-sb-check">${o.on ? ICONS.check : ""}</span><span class="dx-sb-label">${esc(o.l)}</span>${o.n ? `<span class="dx-sb-n">${o.n}</span>` : ""}</button>`
+          this.ctl(`class="dx-sb-opt${o.on ? " is-on" : ""}" data-val="${esc(o.v)}"`, `<span class="dx-sb-check">${o.on ? ICONS.check : ""}</span><span class="dx-sb-label">${flag(o)}${esc(o.l)}</span>${o.n ? `<span class="dx-sb-n">${o.n}</span>` : ""}`)
         ).join("") + `</div>`;
       }
-      bar.innerHTML = html;
+      if (html === bar.dxHtml && bar.firstChild) return;
+      bar.dxHtml = html;
+      this.fill(bar, html);
+    },
+
+    // Puts the bar's new words in without building it again: a button that is still there stays
+    // the same element. Built again whole, as it was each time an addon answered and each time one
+    // of its buttons was pressed, the bar dropped the remote's selection (and every button was
+    // parsed again for a count that had gone from 54 to 55).
+    fill(bar, html) {
+      if (!bar.firstChild) {
+        bar.innerHTML = html;
+        return;
+      }
+      const next = document.createElement("div");
+      next.innerHTML = html;
+      // which button or part this is: what it does, not what it says
+      const name = (n) => `${n.tagName}|${["data-menu", "data-toggle", "data-act", "data-val", "data-for"].map((a) => n.getAttribute(a) ?? "").join("|")}|${n.classList[0] || ""}`;
+      const settle = (live, want, deep) => {
+        const old = new Map([...live.children].map((n) => [name(n), n]));
+        let prev = null;
+        for (const w of [...want.children]) {
+          const k = name(w);
+          let n = old.get(k);
+          if (n) {
+            old.delete(k);
+            if (n.className !== w.className) n.className = w.className;
+            if (deep) settle(n, w, false);
+            else if (n.innerHTML !== w.innerHTML) n.innerHTML = w.innerHTML;
+          } else {
+            n = w;
+          }
+          const place = prev ? prev.nextSibling : live.firstChild;
+          if (place !== n) live.insertBefore(n, place);
+          prev = n;
+        }
+        for (const n of old.values()) n.remove();
+      };
+      settle(bar, next, true);
     },
 
     onClick(e) {
-      const t = e.target.closest("button");
+      const t = e.target.closest(this.CTL);
       if (!t) return;
       e.preventDefault();
       e.stopPropagation();
@@ -4527,16 +5876,21 @@
         sfx.play("tick", 1.2);
       }
       this.save();
-      this.sig = "";
-      this.ensure();
+      this.ensure(true);
+      // TV: the button pressed has gone, with its menu (an order chosen) or with the filters it
+      // cleared (Reset, Clear filters), and the remote's selection with it: the next press started
+      // again from the top of the page. It goes to the bar's first button instead.
+      if (IN_TV && keyNav.on && !t.isConnected && this.bar && this.bar.isConnected) {
+        const to = this.bar.querySelector('[data-menu="sort"]') || this.bar.querySelector(this.CTL);
+        if (to) to.focus({ preventScroll: true });
+      }
     },
 
     closeMenu(e) {
       if (!this.open) return;
       if (e && e.target instanceof Element && e.target.closest(".dx-streambar")) return;
       this.open = null;
-      this.sig = "";
-      this.ensure();
+      this.ensure(true);
     },
   };
 
@@ -4546,6 +5900,92 @@
     if (reset) streamTools.onClick({ target: reset, preventDefault() {}, stopPropagation() {} });
     else streamTools.closeMenu(e);
   }
+
+  // "English dub first" on a title that isn't in English: what the title on this page is in. Stremio's
+  // core keeps neither a title's languages nor its countries, only which addon sent its details, so
+  // they are read from those details: the very address Stremio asked for them, which the browser has
+  // kept. Once a title, and only with the setting on (see the streamPrefs step).
+  const titleTongue = {
+    known: new Map(), // title id → { foreign, tongue } (streamPrefs.titleOf)
+    busy: false,
+    tried: { id: "", n: 0, at: 0 },
+
+    // What is known of the title on this page, or null (not a title's page, or not known yet: then it is
+    // looked up, and the pass asked for again if it turns out foreign)
+    of() {
+      // (off a title's page its tries start over: a title that couldn't be looked up, the network down,
+      // is asked about again when it is opened again)
+      if (currentRoute() !== "detail") {
+        if (this.tried.id) this.tried = { id: "", n: 0, at: 0 };
+        return null;
+      }
+      const parts = (location.hash || "").split("?")[0].split("/");
+      const type = decodeURIComponent(parts[2] || "");
+      const id = decodeURIComponent(parts[3] || "");
+      if (!id) return null;
+      const known = this.known.get(id);
+      if (known) return known;
+      // (one question at a time; a title whose details hadn't come yet is asked again a second later, a few times)
+      const t = this.tried;
+      if (!this.busy && (t.id !== id || (t.n < 6 && performance.now() - t.at > 1000))) this.ask(type, id).catch(() => { /* asked again */ });
+      return null;
+    },
+
+    async ask(type, id) {
+      this.busy = true;
+      this.tried = { id, n: this.tried.id === id ? this.tried.n + 1 : 1, at: performance.now() };
+      try {
+        const { getState } = core();
+        const state = getState ? await getState("meta_details").catch(() => null) : null;
+        const item = state && state.metaItem;
+        const path = state && state.selected && state.selected.metaPath;
+        if (!item || !item.content || item.content.type !== "Ready" || !path || path.id !== id) {
+          this.again(); // (not in yet)
+          return;
+        }
+        // (should Stremio ever keep them, they are taken from its own copy)
+        let title = streamPrefs.titleOf(item.content.content);
+        let unanswered = false; // (its addon gave no answer: Cinemeta may, else it is asked again)
+        if (!title && item.addon) {
+          const meta = await this.details(item.addon, type, id);
+          if (meta === undefined) unanswered = true;
+          else title = streamPrefs.titleOf(meta);
+        }
+        // (an addon that says nothing of either, or didn't answer: Cinemeta, for a title it knows)
+        if (!title && isImdb(id) && !(item.addon && metadataSource.isDefault(item.addon))) {
+          const meta = await this.details({ transportUrl: "https://v3-cinemeta.strem.io/manifest.json" }, type, id);
+          if (meta === undefined) { this.again(); return; }
+          title = streamPrefs.titleOf(meta);
+        }
+        if (!title && unanswered) { this.again(); return; }
+        this.known.set(id, title || { foreign: false, tongue: "" });
+        if (this.known.size > 300) this.known.delete(this.known.keys().next().value);
+        if (title && title.foreign) scheduleSync();
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    // No answer yet: a pass a second from now asks again, should the page be quiet by then (six tries a visit)
+    again() {
+      if (this.tried.n < 6) setTimeout(() => { if (!destroyed) scheduleSync(); }, 1100);
+    },
+
+    // A title's details from an addon: its meta, null when it has none, undefined when it didn't answer
+    // (a server error or too many requests is no answer either: asked again, not taken for "none")
+    async details(addon, type, id) {
+      const url = metadataSource.url(addon, "meta", type, id);
+      if (!url) return null;
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!r.ok) return r.status >= 500 || r.status === 429 ? undefined : null;
+        const j = await r.json();
+        return (j && j.meta) || null;
+      } catch (_) {
+        return undefined;
+      }
+    },
+  };
 
   // ---------------------------------------------------------------------------
   // Seek bar: Netflix-style hover preview (thumbnail + time), hover fill, time remaining
@@ -7322,12 +8762,18 @@
         this.back.classList.add("is-on");
       },
 
-      // Header button (browse pages) + control bar button (player)
+      // Header button (browse pages) + control bar button (player). Called on every pass of the main
+      // loop: the buttons dx.bi has made are remembered rather than looked for through the whole page
+      // each time (a few milliseconds a pass on a TV), and so is the route last written on the body.
+      buttons: new Set(),
+      route: null,
       ensureButtons() {
         this.ensureBack();
-        document.body.dataset.dxpRoute = currentRoute();
+        const route = currentRoute();
+        const inPlayer = route === "player";
+        if (route !== this.route) document.body.dataset.dxpRoute = this.route = route;
         const count = party.active ? party.peers.size + 1 : 0;
-        const header = !local.inPlayer() && document.querySelector('[class*="horizontal-nav-bar"] [class*="buttons-container"]');
+        const header = !inPlayer && document.querySelector('[class*="horizontal-nav-bar"] [class*="buttons-container"]');
         if (header && !header.querySelector(".dxp-nav-btn")) {
           const b = document.createElement("div");
           b.className = "dxp-nav-btn";
@@ -7337,8 +8783,9 @@
           b.innerHTML = PARTY_ICONS.party;
           b.addEventListener("click", (e) => { e.stopPropagation(); this.toggle(); });
           header.prepend(b);
+          this.buttons.add(b);
         }
-        const bar = local.inPlayer() && document.querySelector('[class*="player-container"] [class*="control-bar-buttons-container"]');
+        const bar = inPlayer && document.querySelector('[class*="player-container"] [class*="control-bar-buttons-container"]');
         if (bar && !bar.querySelector(".dxp-player-btn")) {
           const b = document.createElement("div");
           b.className = "dxp-player-btn";
@@ -7349,8 +8796,14 @@
           const anchor = [...bar.children].find((c) => /control-bar-button-/.test(c.className) && /subtitles|audio|info|cast|picture|enhance/i.test(c.title + c.className));
           if (anchor) bar.insertBefore(b, anchor);
           else bar.append(b);
+          this.buttons.add(b);
         }
-        for (const b of document.querySelectorAll(".dxp-nav-btn, .dxp-player-btn")) {
+        for (const b of this.buttons) {
+          // (gone with the bar Stremio took off the page)
+          if (!b.isConnected) {
+            this.buttons.delete(b);
+            continue;
+          }
           b.classList.toggle("is-on", party.active);
           let badge = b.querySelector(".dxp-badge");
           if (count > 1) {
@@ -7680,7 +9133,8 @@
   // Main loop
   // ---------------------------------------------------------------------------
 
-  let syncQueued = false;
+  let destroyed = false;
+
   // ---------------------------------------------------------------------------
   // dx.bi's settings in a web browser. The apps have their own settings screens; in a browser they're
   // a section at the top of Settings, saved in this browser.
@@ -7767,31 +9221,323 @@
     },
   };
 
-  function scheduleSync() {
-    if (syncQueued) return;
-    syncQueued = true;
-    setTimeout(() => {
-      syncQueued = false;
-      sync();
-    }, 90);
+  // What dx.bi keeps in step with the page, in the order it has always run. Each step looks at the
+  // page and puts right what dx.bi adds to it. On a TV a pass is split across several turns of the
+  // page (see `loop`), so no step may count on the one before it having run in the same turn.
+  const step = (name, run, when) => ({ name, run, when });
+  const onDetail = () => currentRoute() === "detail";
+  const offPlayer = () => currentRoute() !== "player";
+  // ---- A title's page: its Trailer button marked (the theme colours it, and on a TV Left from the
+  // streams goes to it), and on a TV the best match selected as the streams come up, so that OK
+  // plays it with no press before. The best match can change while addons are still answering:
+  // the selection follows it until a button of the remote is pressed, and is the viewer's from
+  // then on. Nothing is selected while something else has the selection (a dialog, a menu).
+  const titleStart = {
+    hash: "",
+    row: null,
+    touched: false,
+    listening: false,
+    // The stream the remote left for the Trailer button (keyNav)
+    from: null,
+    // The stream the selection was last on, and whether the page has just come back from the player
+    last: null,
+    played: false,
+
+    // The trailer has closed: the selection goes back to the stream it left for the Trailer
+    // button, so the film is one press away again. (Not when the viewer has moved on meanwhile.)
+    afterTrailer() {
+      const row = this.from;
+      this.from = null;
+      if (!IN_TV || !row) return;
+      // (the trailer's own layer is taken off the page a moment after it closes)
+      setTimeout(() => {
+        if (!row.isConnected || row.hasAttribute("data-dx-hide")) return;
+        const at = document.activeElement;
+        if (at && at !== document.body && at.isConnected && !at.hasAttribute("data-dx-trailer")) return;
+        this.select(row);
+      }, 320);
+    },
+
+    // The selection, put on a stream by the page itself. It is marked until it moves on, so the
+    // theme draws the remote's ring whether or not the browser counts it as the keyboard's.
+    select(row) {
+      if (row.tabIndex < 0) row.tabIndex = 0;
+      row.focus({ preventScroll: true });
+      if (document.activeElement !== row) return false;
+      row.setAttribute("data-dx-picked", "");
+      row.addEventListener("blur", () => row.removeAttribute("data-dx-picked"), { once: true });
+      row.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
+      return true;
+    },
+
+    trailer() {
+      const row = dpage.actions();
+      const t = row && row.querySelector(':scope > a[class*="button-"][href*="/player/"]:not([data-dx-native])');
+      if (t && !t.hasAttribute("data-dx-trailer")) t.setAttribute("data-dx-trailer", "");
+      return t || null;
+    },
+
+    ensure() {
+      this.trailer();
+      // (a TV has only the remote: there is no waiting for a first press to know it by)
+      if (!IN_TV) return;
+      if (!this.listening) {
+        this.listening = true;
+        window.addEventListener("keydown", () => { this.touched = true; }, true);
+        window.addEventListener("focusin", (e) => { if (e.target instanceof Element && keyNav.streamRow(e.target)) this.last = e.target; }, true);
+        window.addEventListener("hashchange", (e) => { this.played = String(e.oldURL || "").includes("#/player/") && !location.hash.startsWith("#/player/"); });
+      }
+      if (this.hash !== location.hash) {
+        this.hash = location.hash;
+        this.row = null;
+        this.from = null;
+        this.last = null;
+        this.touched = false;
+      }
+      // Back from the player: the stream that was played is selected again. (Nothing was, until a
+      // button was pressed, and that press was spent on finding the place again.)
+      if (this.played) {
+        this.played = false;
+        const at = document.activeElement;
+        const row = this.last;
+        if ((!at || at === document.body || !at.isConnected) && row && row.isConnected && !row.hasAttribute("data-dx-hide") && row.style.display !== "none") {
+          this.select(row);
+          return;
+        }
+      }
+      if (this.touched) return;
+      const list = streamTools.list;
+      const best = list && list.isConnected ? list.querySelector("[data-dx-best]") : null;
+      if (!best || best.hasAttribute("data-dx-hide") || best.style.display === "none") return;
+      const at = document.activeElement;
+      if (at === best) {
+        this.row = best;
+        return;
+      }
+      if (at && at !== document.body && at !== this.row && at.isConnected) return;
+      if (this.select(best)) this.row = best;
+    },
+  };
+
+  const STEPS = [
+    step("updateRoute", () => updateRoute()),
+    step("brandTitle", () => brandTitle()),
+    // (dx.bi TV plays in its own player: the page's player gets none of this there)
+    ...(IN_TV ? [
+      step("addonTools", () => addonTools.ensure()),
+      step("watchParty", () => watchParty.ensure()),
+    ] : [
+      step("player", () => player.ensure()),
+      step("playerClock", () => playerClock.ensure()),
+      step("convert", () => { convert.ensure().catch(() => { /* player state not ready */ }); }),
+      step("convert.confirmHevc", () => convert.confirmHevc()),
+      step("externalDefault", () => externalDefault.ensure()),
+      step("placeholder", () => placeholder.ensure()),
+      step("playbackHelp", () => playbackHelp.ensure()),
+      step("scrub", () => scrub.ensure()),
+      step("enhance", () => enhance.ensure()),
+      step("watchParty", () => watchParty.ensure()),
+      step("skip", () => skip.ensure()),
+      step("tune", () => tune.ensure()),
+      step("streamInfo", () => streamInfo.ensure()),
+      step("addonTools", () => addonTools.ensure()),
+    ]),
+    step("communitySync", () => communitySync()),
+    step("titleColour", () => { titleColour.ensure().catch(() => { /* next sync */ }); }),
+    // (dx.bi's settings on Stremio's Settings page: a web browser only)
+    ...(webSettings.on ? [step("webSettings", () => webSettings.ensure())] : []),
+    step("simklScrobble", () => simklScrobble.ensure()),
+    step("streamPrefs", () => {
+      const anime = /^#\/(?:detail|player)\/(?:anime\/|[^/]+\/(?:kitsu|mal|anilist|anidb):)/i.test(location.hash);
+      // (whether a title is in English is only looked up for English dubs, and an anime has its own rule)
+      streamPrefs.set(settings.streamSite, settings.streamDubbed, anime, settings.streamDubbed && !anime ? titleTongue.of() : null);
+    }),
+    step("streamTools", () => streamTools.ensure(), onDetail),
+    step("streamRows", () => streamRows.ensure(), onDetail),
+    step("titleStart", () => titleStart.ensure(), onDetail),
+    step("quickPlay", () => quickPlay.ensure(), onDetail),
+    step("webTorrents", () => webTorrents.ensure(), onDetail),
+    ...(IN_TV ? [] : [step("downloads", () => downloads.ensure())]),
+    step("quickPlay.note", () => { quickPlay.note().catch(() => { /* next sync */ }); }),
+    step("reviews", () => reviews.ensure()),
+    step("hideButton", () => hideButton.ensure()),
+    step("endsAt", () => { endsAt.ensure().catch(() => { /* next sync */ }); }),
+    step("calendarFill", () => { calendarFill.ensure().catch(() => { /* next sync */ }); }),
+    step("restrict.guard", () => { restrict.guard().catch(() => { /* next sync */ }); }),
+    step("cloudSync.watch", () => cloudSync.watch(), offPlayer),
+    step("hero", () => hero.ensure(), offPlayer),
+    step("filterRows", () => filterRows(), offPlayer),
+    step("homeLayout", () => homeLayout.ensure(), offPlayer),
+    step("myList", () => myList.ensure(), offPlayer),
+    step("forYou", () => forYou.ensure(), offPlayer),
+    step("simklRows", () => simklRows.ensure(), offPlayer),
+    step("updateAllArrows", () => updateAllArrows(), offPlayer),
+    step("syncCards", () => syncCards(), offPlayer),
+    step("myList.unhideAll", () => myList.unhideAll(), offPlayer),
+    step("librarySort", () => librarySort.ensure(), offPlayer),
+    step("libraryWatched", () => libraryWatched.ensure(), offPlayer),
+    step("applyWatchedTitles", () => applyWatchedTitles(), offPlayer),
+  ];
+
+  // Stremio redraws in bursts, and a TV's processor is a tenth of a computer's. The steps used to run
+  // all at once, 90 ms after any change, as often as the page changed, and what they added to the page
+  // themselves (a badge, a row, a button) counted as a change too: on a TV the remote waited behind
+  // pass after pass, and presses that waited too long were lost. Now, on a TV:
+  //  - a pass waits for the page to go quiet (`quiet`), though never long (`late`), and lets the
+  //    remote finish moving first (`held`);
+  //  - it runs a few milliseconds at a time (`slice`), and steps aside at once when a press is waiting;
+  //  - what its own steps changed on the page asks for no pass; one more look once things have
+  //    settled (`settleAfter`) covers a step that counted on a later one's work.
+  // On a computer a pass still comes 90 ms after a change and runs all at once, but the last of these
+  // holds there too: what a pass's own steps change on the page asks for no new pass, and one more
+  // look follows 250 ms later. A new address (`soon`) is looked at after 40 ms there as well.
+  const loop = {
+    quiet: IN_TV ? 120 : 90,
+    late: IN_TV ? 500 : 90,
+    held: 1000,
+    slice: IN_TV ? 6 : Infinity,
+    settleAfter: IN_TV ? 600 : 250,
+    timer: 0,
+    settleTimer: 0,
+    first: 0, // when the pass now waiting was first asked for
+    limit: 0, // the latest it may start
+    at: 0, // when the timer is set for
+    pass: null, // the pass under way: { i: its next step, ms, turns, settling, wrote }
+    again: false, // asked for while a pass was under way
+    soon: false,
+    pressWaiting: navigator.scheduling && typeof navigator.scheduling.isInputPending === "function"
+      ? () => navigator.scheduling.isInputPending()
+      : () => false,
+
+    // `soon`: the screen has changed (a new page, a setting), so don't wait for quiet
+    ask(soon) {
+      if (destroyed) return;
+      if (this.pass) {
+        this.again = true;
+        this.soon = this.soon || !!soon;
+        return;
+      }
+      const now = performance.now();
+      if (!this.first) {
+        this.first = now;
+        this.limit = now + this.late;
+      }
+      if (soon) this.limit = Math.min(this.limit, now + 40);
+      const at = Math.min(now + this.quiet, this.limit);
+      // (already due about then: a page that changes a hundred times in a row sets a handful of timers)
+      if (this.timer && Math.abs(at - this.at) < 16) return;
+      clearTimeout(this.timer);
+      this.at = at;
+      this.timer = setTimeout(() => this.begin(), Math.max(0, at - now));
+    },
+
+    begin() {
+      this.timer = 0;
+      if (destroyed || this.pass) return;
+      const now = performance.now();
+      // TV: the remote is being pressed, and its move comes first
+      if (IN_TV && now - keyNav.lastPress < 220 && now - this.first < this.held) {
+        this.at = now + 120;
+        this.timer = setTimeout(() => this.begin(), 120);
+        return;
+      }
+      this.start(false);
+    },
+
+    start(settling) {
+      clearTimeout(this.settleTimer);
+      this.settleTimer = 0;
+      this.first = 0;
+      this.limit = 0;
+      this.pass = { i: 0, ms: 0, turns: 0, settling, wrote: false };
+      this.run(false);
+    },
+
+    // `whole`: every step now, in this turn
+    run(whole) {
+      const pass = this.pass;
+      if (!pass) return;
+      const lab = window.__dxbiLab; // tools/tv-lab.mjs
+      const began = performance.now();
+      let now = began;
+      pass.turns++;
+      while (pass.i < STEPS.length && !destroyed) {
+        const s = STEPS[pass.i++];
+        if (s.when && !s.when()) continue;
+        try { s.run(); } catch (err) { log("sync step failed", err); }
+        if (lab || !whole) {
+          const then = performance.now();
+          if (lab) lab.step(s.name, then - now);
+          now = then;
+        }
+        if (!whole && (now - began >= this.slice || (IN_TV && this.pressWaiting()))) break;
+      }
+      // What the steps changed on the page themselves is not news
+      if (mo.takeRecords().length) pass.wrote = true;
+      pass.ms += performance.now() - began;
+      if (pass.i < STEPS.length && !destroyed) {
+        setTimeout(() => { if (this.pass === pass) this.run(false); }, 0);
+        return;
+      }
+      this.pass = null;
+      if (lab) lab.loop(pass.ms, pass.turns);
+      if (this.again) {
+        const soon = this.soon;
+        this.again = false;
+        this.soon = false;
+        this.ask(soon);
+      } else if ((pass.wrote && !pass.settling) || pass.outside) {
+        this.settle();
+      }
+    },
+
+    settle() {
+      clearTimeout(this.settleTimer);
+      this.settleTimer = setTimeout(() => {
+        this.settleTimer = 0;
+        if (!destroyed && !this.pass && !this.timer) this.start(true);
+      }, this.settleAfter);
+    },
+
+    // Every step, now (dx.bi starting; a pass waiting or under way is taken over)
+    flush() {
+      if (destroyed) return;
+      clearTimeout(this.timer);
+      this.timer = 0;
+      clearTimeout(this.settleTimer);
+      this.settleTimer = 0;
+      this.first = 0;
+      this.limit = 0;
+      this.again = false;
+      this.soon = false;
+      this.pass = { i: 0, ms: 0, turns: 0, settling: false, wrote: false };
+      this.run(true);
+    },
+
+    // For what dx.bi changes on the page outside a pass (a badge whose score has just arrived, a row
+    // built from a list that has just loaded): changed through here, it asks for no pass either, so a
+    // change that needs the steps to look again says so with scheduleSync(). Only from dx.bi's own
+    // timers and answers, never from inside one of the page's events (a key, a click), where a change
+    // of the page's own could be waiting to be seen. (Between the turns of a pass under way, the
+    // steps already run haven't seen the change: the pass is followed by one more look.)
+    quietly(fn) {
+      try {
+        return fn();
+      } finally {
+        if (mo.takeRecords().length) {
+          if (this.pass) this.pass.outside = true;
+          else if (!this.timer) this.settle();
+        }
+      }
+    },
+  };
+
+  function scheduleSync(soon) {
+    loop.ask(soon === true);
   }
 
   function sync() {
-    const steps = IN_TV
-      ? [updateRoute, brandTitle, () => addonTools.ensure(), () => watchParty.ensure(), communitySync]
-      : [updateRoute, brandTitle, () => player.ensure(), () => playerClock.ensure(), () => { convert.ensure().catch(() => { /* player state not ready */ }); }, () => convert.confirmHevc(), () => externalDefault.ensure(), () => placeholder.ensure(), () => playbackHelp.ensure(), () => scrub.ensure(), () => enhance.ensure(), () => watchParty.ensure(), () => skip.ensure(), () => tune.ensure(), () => streamInfo.ensure(), () => addonTools.ensure(), communitySync];
-    steps.push(() => { titleColour.ensure().catch(() => { /* next sync */ }); }, () => webSettings.ensure());
-    if (currentRoute() === "detail") steps.push(() => streamTools.ensure(), () => streamRows.ensure(), () => quickPlay.ensure(), () => webTorrents.ensure());
-    if (!IN_TV) steps.push(() => downloads.ensure());
-    steps.push(() => { quickPlay.note().catch(() => { /* next sync */ }); });
-    steps.push(() => reviews.ensure(), () => hideButton.ensure(), () => { endsAt.ensure().catch(() => { /* next sync */ }); }, () => { calendarFill.ensure().catch(() => { /* next sync */ }); }, () => { restrict.guard().catch(() => { /* next sync */ }); });
-    if (currentRoute() !== "player") {
-      steps.push(() => cloudSync.watch(), () => hero.ensure(), filterRows, () => homeLayout.ensure(), () => myList.ensure(), () => forYou.ensure(), updateAllArrows, syncCards, () => librarySort.ensure(), () => libraryWatched.ensure(), applyWatchedTitles);
-    }
-    // One failing step must never stop the others
-    for (const step of steps) {
-      try { step(); } catch (err) { log("sync step failed", err); }
-    }
+    loop.flush();
   }
 
   const mo = new MutationObserver((records) => {
@@ -7803,8 +9549,13 @@
       // later, the wrong titles were on screen for a moment)
       if (currentRoute() === "library") { try { libraryWatched.ensure(); } catch (_) { /* next sync */ } }
       // Streams get their dx.bi rows before the browser paints, so Stremio's own never show
-      if (currentRoute() === "detail" && streamRows.waiting()) {
-        try { streamTools.ensure(); streamRows.ensure(); } catch (_) { /* next sync */ }
+      if (currentRoute() === "detail") {
+        try { streamRows.prepaint(); } catch (_) { /* next sync */ }
+      }
+      // TV, a kids profile or hidden titles: titles that mustn't show are kept out of sight before
+      // the browser paints them too (restrict.early). With neither, nothing more is done here.
+      if (IN_TV && cardsState.restricted && currentRoute() !== "player") {
+        try { restrict.early(records); } catch (_) { /* next sync */ }
       }
       // The profile menu gets dx.bi's entries in the frame it opens (a sync later, Stremio's short
       // menu showed first and then grew)
@@ -7847,7 +9598,7 @@
     preview.onOver(e);
   };
   const onOut = (e) => preview.onOut(e);
-  const onHash = () => { document.body.classList.remove("dx-discover-picked"); updateRoute(); scheduleSync(); };
+  const onHash = () => { document.body.classList.remove("dx-discover-picked"); keyNav.forget(); updateRoute(); scheduleSync(true); };
 
   // Discover selects its first title by itself (for its side panel): it only shows as selected once
   // you've picked one
@@ -9396,14 +11147,17 @@
   ];
 
   const addonTools = {
+    // (the button, once made: away from the Addons page there is then nothing to look for)
+    button: null,
+
     ensure() {
       const want = settings.addonTools && currentRoute() === "addons";
-      const existing = document.querySelector(".dxe-addon-btn");
       if (!want) {
-        if (existing) existing.remove();
+        if (this.button) this.button.remove();
+        this.button = null;
         return;
       }
-      if (existing && existing.isConnected) return;
+      if (this.button && this.button.isConnected) return;
       // Sits next to Stremio's own "Add addon" button
       const anchor = document.querySelector('[class*="addons-container"] [class*="add-button-container"]');
       if (!anchor || !anchor.parentElement) return;
@@ -9414,6 +11168,7 @@
       b.innerHTML = `${ICONS.sort}<span>Order & backup</span>`;
       b.addEventListener("click", () => this.open());
       anchor.insertAdjacentElement("afterend", b);
+      this.button = b;
     },
 
     async profile() {
@@ -9964,11 +11719,20 @@
       return settings.profileSync !== false && (v.list.length > 1 || !!(v.removed && v.removed.length));
     },
 
+    // (Stremio's saved profile carries every installed addon: it's read through again only when it
+    // has changed, not at each look)
+    authFrom: null,
+    authIs: null,
     auth() {
       try {
-        const profile = JSON.parse(localStorage.getItem("profile") || "null");
-        const a = profile && profile.auth;
-        return a && a.key && a.user && a.user._id ? { key: a.key, id: a.user._id } : null;
+        const raw = localStorage.getItem("profile");
+        if (raw !== this.authFrom) {
+          const profile = JSON.parse(raw || "null");
+          const a = profile && profile.auth;
+          this.authIs = a && a.key && a.user && a.user._id ? { key: a.key, id: a.user._id } : null;
+          this.authFrom = raw;
+        }
+        return this.authIs;
       } catch (_) { return null; }
     },
 
@@ -9995,11 +11759,37 @@
       this.timer = setTimeout(() => this.run(), Math.max(0, Math.min(20000, this.firstDirty + 60000 - now)));
     },
 
+    // What a merge keeps goes into the store in one go. store.put writes the whole store out each
+    // time it's called, and a merge can bring a dozen entries: on a TV that was a dozen such writes
+    // in a row, a few seconds after starting or just as you come back from the player.
+    held: null, // { keys, save } while entries are being gathered
+    put(key, entry) {
+      if (!this.held) return store.put(key, entry);
+      store.data[key] = entry;
+      this.held.keys.add(key);
+    },
+    // Does `work`, then writes the store once for everything it put (as store.put does for one entry)
+    gathered(work) {
+      if (this.held) return work();
+      this.held = { keys: new Set(), save: false };
+      try {
+        return work();
+      } finally {
+        const { keys, save } = this.held;
+        this.held = null;
+        for (const k of keys) store.dirty.add(k);
+        if (keys.size || save) store.saveLocal();
+        if (keys.size) store.schedule();
+      }
+    },
+
     // Another account on this device: its viewers replace the last one's, never the other way round
     switchAccount() {
-      for (const k of Object.keys(store.data)) {
-        if (SYNCED.test(k)) store.put(k, { t: 1 });
-      }
+      this.gathered(() => {
+        for (const k of Object.keys(store.data)) {
+          if (SYNCED.test(k)) this.put(k, { t: 1 });
+        }
+      });
       this.dirty.clear();
     },
 
@@ -10080,12 +11870,13 @@
           const i = k.lastIndexOf(":");
           if (i < 0 || k.slice(i + 1) !== from) continue;
           const target = `${k.slice(0, i)}:${to}`;
-          if (!store.data[target] || store.data[target].t < store.data[k].t) store.put(target, store.data[k]);
+          if (!store.data[target] || store.data[target].t < store.data[k].t) this.put(target, store.data[k]);
           if (SYNCED.test(target)) this.dirty.add(target);
           delete store.data[k];
         }
       }
-      store.saveLocal();
+      if (this.held) this.held.save = true;
+      else store.saveLocal();
     },
 
     // The merged copy is kept. If it isn't what came, it goes back out with a new time (even when it's
@@ -10094,7 +11885,7 @@
       const ours = !syncMerge.same(shared(merged), shared(entry.v));
       const same = syncMerge.same(merged, before);
       if (same && !ours) return this.dirty.delete(key), false;
-      store.put(key, { t: ours ? Date.now() : entry.t, v: merged });
+      this.put(key, { t: ours ? Date.now() : entry.t, v: merged });
       if (ours) this.dirty.add(key);
       else this.dirty.delete(key);
       return !same;
@@ -10104,40 +11895,43 @@
       if (!list.length) return;
       const changed = new Set();
       let aliases = {};
-      const incoming = [...list].filter((e) => e && SYNCED.test(e.k) && Number(e.t)).sort((a, b) => (b.k === "viewers") - (a.k === "viewers"));
-      for (const e of incoming) {
-        const i = e.k.lastIndexOf(":");
-        const key = i > 0 && aliases[e.k.slice(i + 1)] ? `${e.k.slice(0, i)}:${aliases[e.k.slice(i + 1)]}` : e.k;
-        const mine = store.data[key];
-        const before = mine && mine.v;
-        const newer = !mine || e.t > mine.t;
-        if (key === "viewers" && e.v && Array.isArray(e.v.list)) {
-          const merged = syncMerge.viewers(before, e.v, newer);
-          aliases = merged.aliases;
-          this.rekey(aliases);
-          if (!this.keep(key, e, before, merged.value, syncMerge.shared)) continue;
-        } else if (key === "libraryOwners" && e.v && typeof e.v === "object") {
-          const merged = syncMerge.owners(before, e.v, newer, aliases);
-          if (!this.keep(key, e, before, merged)) continue;
-        } else if (/^cwDismissed:/.test(key) && e.v && typeof e.v === "object") {
-          if (!this.keep(key, e, before, syncMerge.latest(before, e.v))) continue;
-        } else if (/^progress:/.test(key) && e.v && typeof e.v === "object") {
-          if (!this.keep(key, e, before, syncMerge.progress(before, e.v))) continue;
-        } else {
-          if (!newer) continue;
-          store.put(key, { t: e.t, v: e.v });
-          this.dirty.delete(key);
+      let renamed = false;
+      this.gathered(() => {
+        const incoming = [...list].filter((e) => e && SYNCED.test(e.k) && Number(e.t)).sort((a, b) => (b.k === "viewers") - (a.k === "viewers"));
+        for (const e of incoming) {
+          const i = e.k.lastIndexOf(":");
+          const key = i > 0 && aliases[e.k.slice(i + 1)] ? `${e.k.slice(0, i)}:${aliases[e.k.slice(i + 1)]}` : e.k;
+          const mine = store.data[key];
+          const before = mine && mine.v;
+          const newer = !mine || e.t > mine.t;
+          if (key === "viewers" && e.v && Array.isArray(e.v.list)) {
+            const merged = syncMerge.viewers(before, e.v, newer);
+            aliases = merged.aliases;
+            this.rekey(aliases);
+            if (!this.keep(key, e, before, merged.value, syncMerge.shared)) continue;
+          } else if (key === "libraryOwners" && e.v && typeof e.v === "object") {
+            const merged = syncMerge.owners(before, e.v, newer, aliases);
+            if (!this.keep(key, e, before, merged)) continue;
+          } else if (/^cwDismissed:/.test(key) && e.v && typeof e.v === "object") {
+            if (!this.keep(key, e, before, syncMerge.latest(before, e.v))) continue;
+          } else if (/^progress:/.test(key) && e.v && typeof e.v === "object") {
+            if (!this.keep(key, e, before, syncMerge.progress(before, e.v))) continue;
+          } else {
+            if (!newer) continue;
+            this.put(key, { t: e.t, v: e.v });
+            this.dirty.delete(key);
+          }
+          changed.add(key);
         }
-        changed.add(key);
-      }
-      const renamed = Object.keys(aliases).length > 0;
-      if (renamed && store.data.libraryOwners) {
-        const owners = syncMerge.owners(store.data.libraryOwners.v, {}, false, aliases);
-        if (!syncMerge.same(owners, store.data.libraryOwners.v)) {
-          store.put("libraryOwners", { t: Date.now(), v: owners });
-          this.dirty.add("libraryOwners");
+        renamed = Object.keys(aliases).length > 0;
+        if (renamed && store.data.libraryOwners) {
+          const owners = syncMerge.owners(store.data.libraryOwners.v, {}, false, aliases);
+          if (!syncMerge.same(owners, store.data.libraryOwners.v)) {
+            this.put("libraryOwners", { t: Date.now(), v: owners });
+            this.dirty.add("libraryOwners");
+          }
         }
-      }
+      });
       if (!changed.size && !renamed) return;
       stats.load();
       restrict.apply();
@@ -10151,8 +11945,12 @@
     seenKey: "",
     nextLook: 0,
     watch() {
-      if (this.busy || Date.now() < this.nextLook || !this.on()) return;
-      this.nextLook = Date.now() + 5000;
+      const now = Date.now();
+      if (this.busy || now < this.nextLook) return;
+      // (every five seconds, whether or not there's more than one viewer: asking that on every
+      // pass meant reading the viewer list each time)
+      this.nextLook = now + 5000;
+      if (!this.on()) return;
       const auth = this.auth();
       const key = auth ? auth.key : "";
       if (key === this.seenKey) return;
@@ -10202,12 +12000,20 @@
   const VIEWER_COLOURS = ["#e50914", "#2f80ff", "#1db954", "#f5a524", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
 
   const viewers = {
+    // The one viewer of a set that has never saved a list. Every part of dx.bi asks who is watching,
+    // for every card at every pass at one time, and each ask read the name back from storage and
+    // made the viewer anew: made once per turn of the page now (the watch party, which keeps that
+    // name, never asks here in the turn it changes it).
+    alone: null,
     list() {
       const saved = store.get("viewers", null);
       if (saved && Array.isArray(saved.list) && saved.list.length) return saved;
+      if (this.alone) return this.alone;
       let name = "";
       try { name = localStorage.getItem("dxParty.name") || ""; } catch (_) { /* ignore */ }
-      return { list: [{ id: "main", name: name.trim().slice(0, 20) || "Me", colour: VIEWER_COLOURS[0] }], current: "main" };
+      this.alone = { list: [{ id: "main", name: name.trim().slice(0, 20) || "Me", colour: VIEWER_COLOURS[0] }], current: "main" };
+      Promise.resolve().then(() => { this.alone = null; });
+      return this.alone;
     },
     current() {
       const v = this.list();
@@ -10217,6 +12023,7 @@
       return `${section}:${this.current().id}`;
     },
     save(v) {
+      this.alone = null;
       store.set("viewers", v);
     },
     add(name) {
@@ -10229,9 +12036,18 @@
       return viewer;
     },
     remove(id) {
-      const v = this.list();
+      let v = this.list();
       if (v.list.length < 2) return;
+      // (before the switch below: while they are still the one watching, every title that was theirs
+      // alone leaves the account's library; once someone else was, all but the first stayed in it)
       viewerLibrary.forget(id);
+      // The one watching goes: the next one takes over as if picked, so the stats, the kids filter
+      // and the library on show are theirs. Nothing was switched: the leaving viewer's stats were
+      // later saved over the next one's, and a kids filter stayed on.
+      if (this.current().id === id) {
+        this.select(v.list.find((x) => x.id !== id).id);
+        v = this.list();
+      }
       v.list = v.list.filter((x) => x.id !== id);
       if (v.current === id) v.current = v.list[0].id;
       v.removed = [...(v.removed || []), id].slice(-50); // so another device doesn't bring them back
@@ -10390,8 +12206,19 @@
   const viewerLibrary = {
     paged: {},
 
+    // More than one viewer? Asked at every read of Stremio's core and for every title on the page,
+    // so the answer is kept until the saved viewers change (the store makes a new entry each time
+    // they do; a list that was never saved is one viewer).
+    countedFor: null,
+    many: false,
     on() {
-      return viewers.list().list.length > 1;
+      const saved = store.data.viewers;
+      if (saved !== this.countedFor) {
+        this.countedFor = saved;
+        this.many = viewers.list().list.length > 1;
+        if (this.many) this.wrap();
+      }
+      return this.many;
     },
     owners() {
       return store.get("libraryOwners", null) || {};
@@ -10405,23 +12232,47 @@
       return this.owners()[id] || [this.base()];
     },
     mine(id) {
-      return !this.on() || this.ownersOf(id).includes(viewers.current().id);
+      return !this.on() || this.who().mine(id);
     },
     shared(id) {
       const me = viewers.current().id;
       return this.ownersOf(id).some((x) => x !== me);
     },
 
-    // The whole account library as Stremio keeps it (recent items, then the rest)
+    // Who's watching and what's theirs, worked out once for each change of the viewers or of who
+    // has what, not once for each title Stremio's core hands over: { me, mine(id), others }
+    // (`others`: something in the account's library isn't this viewer's)
+    whoFor: null,
+    who() {
+      const v = store.data.viewers;
+      const o = store.data.libraryOwners;
+      if (!this.whoFor || this.whoFor.v !== v || this.whoFor.o !== o) {
+        const me = viewers.current().id;
+        const first = me === this.base();
+        const owners = this.owners();
+        const mine = (id) => { const list = owners[id]; return list ? list.includes(me) : first; };
+        this.whoFor = { v, o, me, mine, others: !first || Object.keys(owners).some((id) => !mine(id)) };
+      }
+      return this.whoFor;
+    },
+
+    // The whole account library as Stremio keeps it (recent items, then the rest). Read through
+    // again only when Stremio has saved it anew: it was parsed whole, twice, for every dismissed
+    // title at every read of Continue Watching.
+    rawFrom: null,
+    rawItems: null,
     raw() {
+      const from = ["library", "library_recent"].map((key) => { try { return localStorage.getItem(key); } catch (_) { return null; } });
+      if (this.rawItems && from[0] === this.rawFrom[0] && from[1] === this.rawFrom[1]) return this.rawItems;
       const out = new Map();
-      for (const key of ["library", "library_recent"]) {
+      for (const text of from) {
         try {
-          const saved = JSON.parse(localStorage.getItem(key) || "null");
+          const saved = JSON.parse(text || "null");
           for (const item of Object.values((saved && saved.items) || {})) if (item && item._id) out.set(item._id, item);
         } catch (_) { /* not there */ }
       }
-      return out;
+      this.rawFrom = from;
+      return (this.rawItems = out);
     },
 
     // Always written down, even for the viewer who gets unclaimed titles anyway: another device
@@ -10451,10 +12302,20 @@
 
     // Dismissed from Continue Watching by this viewer only (the title is shared): until played again
     dismissed(id) {
-      const at = (store.get(viewers.key("cwDismissed"), null) || {})[id];
-      if (!at) return false;
-      const item = this.raw().get(id);
-      return !item || Date.parse((item.state && item.state.lastWatched) || 0) <= at;
+      return this.dismissals()(id);
+    },
+    // …asked about a whole list of titles: this viewer's dismissals are read once for the list, and
+    // the account's library only when one of its titles was dismissed
+    dismissals() {
+      const times = store.get(viewers.key("cwDismissed"), null) || {};
+      let raw = null;
+      return (id) => {
+        const at = times[id];
+        if (!at) return false;
+        if (!raw) raw = this.raw();
+        const item = raw.get(id);
+        return !item || Date.parse((item.state && item.state.lastWatched) || 0) <= at;
+      };
     },
     dismiss(id) {
       const key = viewers.key("cwDismissed");
@@ -10480,23 +12341,45 @@
       store.set("libraryOwners", owners);
     },
 
-    // Wrap Stremio's core (the same object its UI reads through) once
+    // Stremio's core (the same object its UI reads through), with each viewer's library in between.
+    // dx.bi's own reads and actions always go through `read` and `act`. Stremio's go through them
+    // only while there is more than one viewer: with one there is nothing to keep apart, and every
+    // read and action of Stremio's then passes straight to its core as if dx.bi weren't there (they
+    // used to take a turn through here first, hundreds of times as Home loads).
+    cores: [], // { live, read, act }
     patch(live) {
       live.__dxViewers = true;
       const getState = live.getState.bind(live);
       const dispatch = live.dispatch.bind(live);
       this.dispatchRaw = dispatch;
-      live.getState = async (model) => {
+      const read = async (model) => {
         const state = await getState(model);
         try { if (this.on() && state && typeof state === "object") this.filter(model, state); } catch (err) { log("viewer library filter failed", err); }
         return state;
       };
-      live.dispatch = (action, ...rest) => {
+      const act = (action, ...rest) => {
         try { if (this.on()) viewerProgress.observe(action); } catch (err) { log("viewer progress failed", err); }
         try { if (this.on() && this.intercept(action) === false) return Promise.resolve(); } catch (err) { log("viewer library action failed", err); }
         return dispatch(action, ...rest);
       };
-      setTimeout(() => this.refresh(), 0);
+      // (core() keeps the first pair it sees, for the screens where Stremio drops its own)
+      if (!keptCore.getState) keptCore.getState = read;
+      if (!keptCore.dispatch) keptCore.dispatch = act;
+      this.cores.push({ live, read, act });
+      if (this.on()) this.wrap();
+    },
+
+    // More than one viewer (from the start, or since a moment ago): Stremio reads through here too
+    wrap() {
+      let fresh = false;
+      for (const c of this.cores) {
+        if (c.live.getState === c.read && c.live.dispatch === c.act) continue;
+        c.live.getState = c.read;
+        c.live.dispatch = c.act;
+        fresh = true;
+      }
+      // (what it has read so far was the whole account's)
+      if (fresh) setTimeout(() => this.refresh(), 0);
     },
 
     intercept(a) {
@@ -10518,11 +12401,13 @@
       }
     },
 
+    // (only ever with more than one viewer)
     filter(model, s) {
-      const mine = (id) => this.mine(id);
+      const { mine, others } = this.who();
+      const dismissed = this.dismissals();
       if ((model === "library" || model === "continue_watching") && Array.isArray(s.catalog)) {
         const all = s.catalog.length;
-        s.catalog = s.catalog.filter((i) => mine(i._id) && (model === "library" || !this.dismissed(i._id)));
+        s.catalog = s.catalog.filter((i) => mine(i._id) && (model === "library" || !dismissed(i._id)));
         // each viewer's own place: theirs on shared titles, and Continue Watching leaves out shared
         // titles they haven't watched, newest first
         if (model === "continue_watching") {
@@ -10537,7 +12422,7 @@
       } else if (model === "continue_watching_preview" && Array.isArray(s.items)) {
         s.items = s.items.filter((i) => {
           const id = (i.libraryItem && i.libraryItem._id) || i._id || i.id;
-          return mine(id) && !this.dismissed(id);
+          return mine(id) && !dismissed(id);
         });
         viewerProgress.seed(s.items.map((i) => i.libraryItem || i));
         s.items = s.items.filter((i) => viewerProgress.apply(i.libraryItem || i))
@@ -10545,7 +12430,7 @@
       } else if (model === "meta_details" || model === "player") {
         if (model === "meta_details" && s.libraryItem && !mine(s.libraryItem._id)) {
           s.libraryItem = null;
-          this.unmark(s.metaItem, 0, true);
+          this.unmark(s.metaItem, 0, true, mine);
         }
         // this viewer's own resume point (from the start on a shared title they haven't watched)
         if (s.libraryItem && s.libraryItem.state && !viewerProgress.apply(s.libraryItem)) {
@@ -10565,20 +12450,26 @@
           });
         }
       } else if (model === "ctx" && s.notifications && s.notifications.items) {
-        for (const id of Object.keys(s.notifications.items)) if (!mine(id) || this.dismissed(id)) delete s.notifications.items[id];
+        for (const id of Object.keys(s.notifications.items)) if (!mine(id) || dismissed(id)) delete s.notifications.items[id];
       } else if (model === "board" || model === "discover" || model === "search" || model === "local_search") {
-        this.unmark(s, 0, false);
+        // (the whole of Home, Discover or a search is gone through for this, at each of the many
+        // reads Stremio makes of them as rows arrive: not at all when every title is this viewer's)
+        if (others) this.unmark(s, 0, false, mine);
       }
     },
 
-    // Titles in someone else's library don't show as in yours (or as watched by you)
-    unmark(node, depth, all) {
+    // Titles in someone else's library don't show as in yours (or as watched by you). A title that
+    // carries neither mark has nothing to lose, and isn't looked up.
+    unmark(node, depth, all, mine) {
       if (!node || typeof node !== "object" || depth > 8) return;
       if (Array.isArray(node)) {
-        for (const x of node) this.unmark(x, depth + 1, all);
+        for (let i = 0; i < node.length; i++) {
+          const x = node[i];
+          if (x && typeof x === "object") this.unmark(x, depth + 1, all, mine);
+        }
         return;
       }
-      if (typeof node.inLibrary === "boolean" && typeof node.id === "string" && (all || !this.mine(node.id))) {
+      if (typeof node.inLibrary === "boolean" && typeof node.id === "string" && (all || ((node.inLibrary || node.watched === true) && !mine(node.id)))) {
         node.inLibrary = false;
         if (node.watched === true) node.watched = false;
       }
@@ -10586,7 +12477,10 @@
         node.watched = false;
         if ("progress" in node) node.progress = null;
       }
-      for (const v of Object.values(node)) if (v && typeof v === "object") this.unmark(v, depth + 1, all);
+      for (const k in node) {
+        const v = node[k];
+        if (v && typeof v === "object") this.unmark(v, depth + 1, all, mine);
+      }
     },
 
     // Have Stremio's UI read its library models again
@@ -10596,6 +12490,8 @@
     },
 
     switched() {
+      // (a second viewer may have just arrived: Stremio reads through here from now on)
+      this.on();
       this.paged = {};
       preview.library.at = 0;
       libraryWatched.at = 0;
@@ -10767,6 +12663,7 @@
             store.set(`stats:${id}`, null);
             store.set(`playback:${id}`, null);
             store.set(`hidden:${id}`, null);
+            store.set(`simkl:${id}`, null); // their Simkl sign-in goes too
             this.confirming = null;
           } else {
             this.confirming = id;
@@ -11050,12 +12947,29 @@
       }
     },
 
+    // TV: the cards Stremio has just drawn (the main loop's observer's records), before the browser
+    // paints them. The pass that marks them can be a second away while the remote is in use, and a
+    // title the profile mustn't see showed, and could be picked, until then. The pass still does the
+    // rest: a card handed to another title (its link changes, no card is added), and the rows.
+    early(records) {
+      for (const r of records) {
+        for (const n of r.addedNodes) {
+          if (n.nodeType !== 1) continue;
+          if (n.matches('[class*="meta-item-container"]')) this.card(n, cardInfo(n));
+          else for (const c of n.querySelectorAll('[class*="meta-item-container"]')) this.card(c, cardInfo(c));
+        }
+      }
+    },
+
     // A row with nothing left to show goes too
     rows() {
       for (const row of carouselRows()) {
         const cards = [...row.querySelectorAll('[class*="meta-item-container"]')];
         const empty = cards.length > 0 && cards.every((c) => c.hasAttribute("data-dx-off"));
-        if (empty !== row.hasAttribute("data-dx-off")) row.toggleAttribute("data-dx-off", empty);
+        if (empty !== row.hasAttribute("data-dx-off")) {
+          row.toggleAttribute("data-dx-off", empty);
+          rowOffScreen(row);
+        }
       }
     },
 
@@ -11066,17 +12980,24 @@
         if (kids) document.body.dataset.dxKids = String(kids);
         else delete document.body.dataset.dxKids;
       }
-      document.querySelectorAll("#app [data-dx-off], #app [data-dx-pending]").forEach((n) => { n.removeAttribute("data-dx-off"); n.removeAttribute("data-dx-pending"); });
+      document.querySelectorAll("#app [data-dx-off], #app [data-dx-pending]").forEach((n) => { n.removeAttribute("data-dx-off"); n.removeAttribute("data-dx-pending"); rowOffScreen(n); });
       document.querySelectorAll("#app [class*='meta-item-container']").forEach((c) => { delete c.dataset.dxKey; });
       scheduleSync();
     },
 
     // Kids profiles: Settings, Addons and anything not for them stay closed
+    noticeUp: false, // a "Not for …" notice has been shown, and may still be on the page
     async guard() {
+      const limit = this.kidsAge();
+      // No kids profile on (the usual case) and no notice left up from one: nothing to look for
+      if ((!limit || this.unlocked) && !this.noticeUp) return;
       const route = currentRoute();
       const block = document.querySelector(".dxe-kids-block");
-      const limit = this.kidsAge();
-      if (!limit || this.unlocked) { if (block) block.remove(); return; }
+      if (!limit || this.unlocked) {
+        if (block) block.remove();
+        else this.noticeUp = false;
+        return;
+      }
       if (route === "settings" || route === "addons") {
         if (block) block.remove();
         navigate("/");
@@ -11091,9 +13012,13 @@
       const ok = await this.decide(t.type, t.id);
       const still = this.titleOnScreen();
       if (!still || still.key !== t.key) return;
-      if (ok) { if (block) block.remove(); return; }
-      if (block && block.dataset.key === t.key) return;
-      if (block) block.remove();
+      // (looked for again: every pass while the answer was on its way waited for it too, and the
+      // first of them back may have put the notice up already; each put up its own before)
+      const up = document.querySelector(".dxe-kids-block");
+      if (ok) { if (up) up.remove(); return; }
+      if (up && up.dataset.key === t.key) return;
+      if (up) up.remove();
+      this.noticeUp = true;
       this.showBlock(t);
     },
 
@@ -11130,28 +13055,57 @@
   // Hide (any viewer) and Allow for kids (grown-ups, when there's a kids profile) on a title's page,
   // and the note that comes up after hiding one from its hover card
   const hideButton = {
+    // Where the buttons were last put, and what they said. Every pass used to look the page over
+    // for the row they go in and write both buttons out again (on a TV, 5 ms a pass on a title's
+    // page with nothing changed); now a pass that finds them as it left them stops there.
+    row: null,
+    key: "",
+    hide: null,
+    kids: null,
+    swept: false, // buttons an earlier dx.bi left on the page have been looked for
+    native: false, // the buttons wear the look of Stremio's own (the redesign), or need none (the older page)
+
+    dress(row) {
+      for (const b of [this.hide, this.kids]) if (b) dpage.native(b, row);
+      this.native = !!dpage.old() || !!(this.hide && this.hide.hasAttribute("data-dx-native"));
+    },
+
     ensure() {
-      const box = currentRoute() === "detail" ? dpage.hero() : null;
-      const row = box && dpage.actions(box);
-      const t = row && restrict.titleOnScreen();
-      if (!t) {
-        document.querySelectorAll(".dx-hide-btn").forEach((n) => n.remove());
+      const t = currentRoute() === "detail" ? restrict.titleOnScreen() : null;
+      // (off a title's page, its stream list is let go of too)
+      if (!t) streamTools.letGo();
+      let row = t ? this.row : null;
+      if (t && !(row && row.isConnected)) row = dpage.actions() || null;
+      if (!row) {
+        if (this.row || !this.swept) document.querySelectorAll(".dx-hide-btn").forEach((n) => n.remove());
+        this.swept = true;
+        this.row = this.hide = this.kids = null;
         return;
       }
-      ensureExtrasStyle();
       const hidden = restrict.isHidden(t.type, t.id);
-      this.button(row, "hide", hidden ? "Hidden" : "Hide", hidden ? "Show it again everywhere" : "Never show this title to this viewer", () => {
-        const name = dpage.logoName(box) || (coreMeta.get(t.type, t.id) || {}).name || "";
+      const kids = viewers.anyKids() && !restrict.kidsAge();
+      const allowed = kids && restrict.isAllowed(t.type, t.id);
+      const key = `${t.key}|${hidden}|${kids}|${allowed}`;
+      const there = (b) => !!b && b.parentNode === row;
+      if (row === this.row && key === this.key && there(this.hide) && (!kids || there(this.kids))) {
+        // (the redesign: the buttons take the look of Stremio's own once one of those is there to copy)
+        if (!this.native) this.dress(row);
+        return;
+      }
+      this.row = row;
+      this.key = key;
+      ensureExtrasStyle();
+      this.hide = this.button(row, "hide", hidden ? "Hidden" : "Hide", hidden ? "Show it again everywhere" : "Never show this title to this viewer", () => {
+        const name = dpage.logoName() || (coreMeta.get(t.type, t.id) || {}).name || "";
         restrict.toggleHidden({ ...t, name });
       });
-      row.querySelectorAll(":scope > .dx-hide-btn").forEach((b) => dpage.native(b, row));
-      if (viewers.anyKids() && !restrict.kidsAge()) {
-        const allowed = restrict.isAllowed(t.type, t.id);
-        this.button(row, "kids", allowed ? "Allowed for kids" : "Allow for kids", allowed ? "Kids profiles can watch this whatever its rating" : "Let kids profiles watch this whatever its rating", () => restrict.toggleAllowed(t.type, t.id));
+      if (kids) {
+        this.kids = this.button(row, "kids", allowed ? "Allowed for kids" : "Allow for kids", allowed ? "Kids profiles can watch this whatever its rating" : "Let kids profiles watch this whatever its rating", () => restrict.toggleAllowed(t.type, t.id));
       } else {
         row.querySelector(':scope > .dx-hide-btn[data-kind="kids"]')?.remove();
+        this.kids = null;
       }
-      row.querySelectorAll(":scope > .dx-hide-btn").forEach((b) => dpage.native(b, row));
+      this.dress(row);
     },
 
     button(row, kind, label, tip, act) {
@@ -11176,10 +13130,15 @@
         row.append(b);
       }
       b.dxAct = act;
-      const html = `${kind === "hide" ? ICONS.eyeOff : ICONS.people}<span>${esc(label)}</span>`;
-      if (b.innerHTML !== html) b.innerHTML = html;
-      b.title = tip;
+      // (told apart by its words: the page hands the icon back written differently from how it was
+      // given, so comparing the two had the button built again on every pass)
+      if (b.dxLabel !== label) {
+        b.dxLabel = label;
+        b.innerHTML = `${kind === "hide" ? ICONS.eyeOff : ICONS.people}<span>${esc(label)}</span>`;
+      }
+      if (b.title !== tip) b.title = tip;
       b.classList.toggle("is-on", /^(Hidden|Allowed)/.test(label));
+      return b;
     },
 
     toast(info) {
@@ -11287,6 +13246,7 @@
         for (const k of ["tmdbKey", "mdblistKey"]) copy[k] = settings[k] && String(settings[k]).trim() ? "set" : "not set";
         return copy;
       });
+      await safe("simkl", () => simkl.summary());
       await safe("viewers", () => {
         const v = viewers.list();
         return {
@@ -11765,8 +13725,43 @@
 
   // Entries in Stremio's profile menu (top right)
   const navMenu = {
+    // The menu is in the page only while it's open, inside the button that opens it. Looking for
+    // it meant going through the whole page on every pass, for a menu that is nearly always shut
+    // (a millisecond or two each time on a TV). Each of Stremio's screens has at most one such
+    // button, at its top: the button is found once for a screen and remembered, and only the
+    // buttons are looked into. The first open menu in the page, as before.
+    name: "", // the buttons' real class name
+    screens: null, // the element Stremio's screens sit in, one on top of the other
+    seen: new WeakMap(), // a screen → { root, button, at }
+    menu() {
+      if (!this.name) {
+        const first = document.querySelector('[class*="nav-menu-popup-label"]');
+        this.name = (first && [...first.classList].find((c) => c.includes("nav-menu-popup-label"))) || "";
+      }
+      if (this.name && (!this.screens || !this.screens.isConnected)) this.screens = document.querySelector("#app .routes-container");
+      let any = false;
+      if (this.name && this.screens) {
+        const now = performance.now();
+        for (const screen of this.screens.children) {
+          let s = this.seen.get(screen);
+          // (looked at again when the screen's content is new or its button has gone; a screen
+          // that had no button, every couple of seconds)
+          if (!s || s.root !== screen.firstElementChild || (s.button ? !s.button.isConnected : now - s.at > 2000)) {
+            s = { root: screen.firstElementChild, button: screen.querySelector(`.${CSS.escape(this.name)}`), at: now };
+            this.seen.set(screen, s);
+          }
+          if (!s.button) continue;
+          any = true;
+          const menu = s.button.querySelector('[class*="nav-menu-container"]');
+          if (menu) return menu;
+        }
+      }
+      // (no such button anywhere, or a Stremio laid out another way: the whole page, as before)
+      return any ? null : document.querySelector('[class*="nav-menu-container"]');
+    },
+
     ensure() {
-      const menu = document.querySelector('[class*="nav-menu-container"]');
+      const menu = this.menu();
       if (!menu || menu.querySelector(".dxe-menu-item")) return;
       const template = menu.querySelector('[class*="nav-menu-option-container"]');
       if (!template) return;
@@ -11803,6 +13798,7 @@
       const items = [];
       if (settings.watchStats) items.push(make("Your stats", ICONS.chart, () => statsPanel.open()));
       if (settings.whoIsWatching) items.push(make("Who's watching?", ICONS.people, () => whoIsWatching.open()));
+      items.push(make("Simkl", ICONS.simkl, () => simkl.open()));
       if (downloads.api) items.push(make("Downloads", DL_ICONS.down, () => downloads.open()));
       items.push(make("Customise Home", ICONS.sliders, () => homeLayout.open()));
       items.push(make("Report a problem", ICONS.bug, () => report.open()));
@@ -12036,6 +14032,11 @@
     version: 0,
     loading: null,
     at: 0,
+    rounds: 0, // refreshes finished (the Calendar looks at the episodes again after each)
+    kept: new Map(), // id → { t, e }: what was read or downloaded this session, as localStorage keeps it
+    asked: 0, // shows asked for over the network
+    told: "", // what the badges and the airing row were last told of (see digest), and at which version
+    toldAt: 0,
 
     bases: null,
 
@@ -12069,40 +14070,108 @@
       return stremioLibrary()
         // (TMDB shows count even with no TMDB addon left: fetchMeta finds them on Cinemeta)
         .filter((i) => i.type === "series" && !i.removed && !i.temp && (this.metaUrl(i._id, bases) || /^tmdb:\d+$/.test(i._id)))
-        .sort((a, b) => Date.parse(b.state.lastWatched || 0) - Date.parse(a.state.lastWatched || 0))
-        .slice(0, 80);
+        // (each date read once, not at every comparison)
+        .map((i) => [Date.parse(i.state.lastWatched || 0), i])
+        .sort((a, b) => b[0] - a[0])
+        .slice(0, 80)
+        .map((x) => x[1]);
     },
 
+    // Every ten minutes, each show's episodes are looked at again. On a TV that used to be done in one
+    // go (the library and up to 80 lists of episodes read back from storage, or as many downloads,
+    // three at a time), and it ended by having every card and the airing row redone whether or not
+    // anything had changed: a freeze every ten minutes, and a long one on the day's first start. Now
+    // a TV does a few milliseconds of it per turn and none while the remote is in use, downloads one
+    // show at a time, keeps what it has read (`kept`), and only says so when a badge or the airing
+    // row would change (`tell`). A computer still downloads three at a time.
     refresh(force) {
       if (!force && !(settings.newEpisodes || settings.airingRow)) return;
       if (this.loading || Date.now() - this.at < 10 * 60 * 1000) return;
-      this.at = Date.now();
+      const at = (this.at = Date.now());
       this.loading = (async () => {
-        const bases = await this.metaBases();
-        const list = this.librarySeries(bases);
-        let i = 0;
-        const worker = async () => {
-          while (i < list.length) {
-            const item = list[i++];
-            const entry = await this.get(item._id, bases).catch(() => null);
-            if (entry) this.index.set(item._id, { ...entry, lastWatched: item.state.lastWatched, name: item.name, poster: item.poster });
+        try {
+          const bases = await this.metaBases();
+          const list = this.librarySeries(bases);
+          let i = 0;
+          let turn = 0;
+          const worker = async () => {
+            // (`at` is set back when the library changes hands: this round is over then)
+            while (i < list.length && this.at === at && !destroyed) {
+              if (IN_TV && (performance.now() - turn > 4 || performance.now() - keyNav.lastPress < 1500)) {
+                await this.rest();
+                turn = performance.now();
+                continue;
+              }
+              const item = list[i++];
+              const asked = this.asked;
+              const entry = await this.get(item._id, bases).catch(() => null);
+              // (a show of the viewer who was on when it was asked for stays out of the next one's index)
+              if (entry && this.at === at) this.index.set(item._id, { ...entry, lastWatched: item.state.lastWatched, name: item.name, poster: item.poster });
+              // (downloaded: the next show waits for another turn)
+              if (this.asked !== asked) turn = 0;
+            }
+          };
+          await Promise.all(IN_TV ? [worker()] : [worker(), worker(), worker()]);
+          if (destroyed) return;
+          if (this.at !== at) {
+            scheduleSync();
+            return;
           }
-        };
-        await Promise.all([worker(), worker(), worker()]);
-        this.version++;
-        this.loading = null;
-        scheduleSync();
+          // shows that have left the library (or its 80 latest) leave the index too
+          const ids = new Set(list.map((item) => item._id));
+          for (const id of [...this.index.keys()]) if (!ids.has(id)) this.index.delete(id);
+          for (const id of [...this.kept.keys()]) if (!ids.has(id)) this.kept.delete(id);
+          this.rounds++;
+          if (!this.tell() && currentRoute() === "calendar") scheduleSync();
+        } finally {
+          this.loading = null;
+        }
       })();
     },
 
+    // TV: the remote comes first. Waits for the page's next turn, and for the remote to have rested.
+    async rest() {
+      do {
+        await new Promise((r) => setTimeout(r, performance.now() - keyNav.lastPress < 1500 ? 500 : 0));
+      } while (!destroyed && performance.now() - keyNav.lastPress < 1500);
+    },
+
+    // What the "New episode" badges and the airing row are made from
+    digest() {
+      let out = "";
+      for (const [id, e] of this.index) {
+        out += `${id}|${this.isNew(id) ? 1 : 0}|${e.name}|${e.poster}|${e.background}|${(e.upcoming || []).map((u) => `${u.id},${u.t},${u.s},${u.e},${u.n},${u.th}`).join(";")}\n`;
+      }
+      return out;
+    },
+
+    // Has the cards and the airing row looked at again, when what they show has changed (or was
+    // emptied by a change of viewer since). True when it did.
+    tell() {
+      const digest = this.digest();
+      if (digest === this.told && this.version === this.toldAt) return false;
+      this.told = digest;
+      this.toldAt = ++this.version;
+      scheduleSync();
+      return true;
+    },
+
     async get(id, bases) {
+      const had = this.kept.get(id);
+      if (had && Date.now() - had.t < EP_TTL) return had.e;
       try {
         const raw = JSON.parse(localStorage.getItem("dxbi.eps." + id) || "null");
         // (entries from before the calendar needed every episode are fetched again)
-        if (raw && Date.now() - raw.t < EP_TTL && raw.e && raw.e.all) return raw.e;
+        if (raw && Date.now() - raw.t < EP_TTL && raw.e && raw.e.all) {
+          this.kept.set(id, raw);
+          return raw.e;
+        }
       } catch (_) { /* refetch */ }
+      this.asked++;
       const meta = await this.fetchMeta(id, bases);
       if (!meta) return null;
+      // (TV: the show's details have just been read in one go: the remote gets a turn before they're gone through)
+      if (IN_TV) await new Promise((r) => setTimeout(r, 0));
       const now = Date.now();
       const vids = (meta.videos || [])
         .filter((v) => v && v.released && (v.season || 0) > 0)
@@ -12117,6 +14186,7 @@
         // every dated episode, for the Calendar
         all: vids.map(({ id: vid, t, s: se, e: ep }) => ({ id: vid, t, s: se, e: ep })),
       };
+      this.kept.set(id, { t: now, e: entry });
       try { localStorage.setItem("dxbi.eps." + id, JSON.stringify({ t: now, e: entry })); } catch (_) { /* full: memory copy still works */ }
       return entry;
     },
@@ -12223,10 +14293,36 @@
       return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate(), h: d.getUTCHours(), day: d.getUTCDay(), utc: d };
     },
 
+    // (The formats are made once and kept. toLocaleTimeString and toLocaleDateString make theirs again
+    // at every call, a millisecond a time on a TV: most of what the airing row cost to draw.)
+    formats: new Map(),
+    format(opts) {
+      const key = JSON.stringify(opts);
+      let f = this.formats.get(key);
+      if (!f) {
+        if (this.formats.size > 24) this.formats.clear();
+        this.formats.set(key, (f = new Intl.DateTimeFormat(undefined, opts)));
+      }
+      return f;
+    },
+
     time(date, opts) {
       const off = this.shift(date);
-      if (off === null) return date.toLocaleTimeString(undefined, opts);
-      return new Date(date.getTime() + off * 60000).toLocaleTimeString(undefined, { ...opts, timeZone: "UTC" });
+      // (only an hour and minute asked for by name: left to itself, a format with neither shows the date)
+      if (!opts || !(opts.hour && opts.minute)) {
+        if (off === null) return date.toLocaleTimeString(undefined, opts);
+        return new Date(date.getTime() + off * 60000).toLocaleTimeString(undefined, { ...opts, timeZone: "UTC" });
+      }
+      if (off === null) {
+        // (a format keeps the time zone it was made in: the browser's own are made again when that changes)
+        const zone = date.getTimezoneOffset();
+        if (zone !== this.zone) {
+          this.zone = zone;
+          this.formats.clear();
+        }
+        return this.format(opts).format(date);
+      }
+      return this.format({ ...opts, timeZone: "UTC" }).format(new Date(date.getTime() + off * 60000));
     },
   };
   deviceClock.refresh();
@@ -12236,7 +14332,7 @@
     const d = new Date(t);
     const a = deviceClock.wall(d), b = deviceClock.wall(new Date(Date.now()));
     const days = Math.round((Date.UTC(a.y, a.m, a.d) - Date.UTC(b.y, b.m, b.d)) / 86400000);
-    const dayName = days === 0 ? "Today" : days === 1 ? "Tomorrow" : days === -1 ? "Yesterday" : a.utc.toLocaleDateString(undefined, { weekday: "long", timeZone: "UTC" });
+    const dayName = days === 0 ? "Today" : days === 1 ? "Tomorrow" : days === -1 ? "Yesterday" : deviceClock.format({ weekday: "long", timeZone: "UTC" }).format(a.utc);
     // dates without a real time come through as midnight UTC: show the day only
     const hasTime = !(d.getUTCHours() === 0 && d.getUTCMinutes() === 0);
     return hasTime ? `${dayName} ${deviceClock.time(d, { hour: "2-digit", minute: "2-digit" })}` : dayName;
@@ -12256,53 +14352,82 @@
   // a library full of them left the Calendar empty. dx.bi puts their episodes in the month too.
   const calendarFill = {
     month: "",
+    grid: null,
+    seen: "", // what the last look at the Calendar found (see `look`)
+
+    // The month on show, the episodes known, and how many days and titles the page has: while none of
+    // it changes there is nothing to add. (Every pass used to ask Stremio for the whole month and go
+    // through every episode of every show, and what it then added set off the next pass.)
+    look(grid, hash) {
+      return `${hash}|${episodes.rounds}|${episodes.index.size}|${grid.querySelectorAll('[class*="cell-"]').length}|${grid.querySelectorAll('a[class*="item-"], a.dx-cal-item').length}`;
+    },
 
     async ensure() {
       const grid = currentRoute() === "calendar" ? document.querySelector('#app [class*="calendar"] [class*="grid"]') : null;
-      if (!grid) return;
+      if (!grid) {
+        this.grid = null;
+        return;
+      }
       const { getState } = core();
       if (!getState) return;
+      episodes.refresh(true);
+      const hash = location.hash;
+      if (grid === this.grid && this.look(grid, hash) === this.seen) return;
       let state;
       try { state = await getState("calendar"); } catch (_) { return; }
       const sel = state && state.selected;
       if (!sel || !sel.year || !sel.month) return;
-      const month = `${sel.year}-${sel.month}`;
-      if (month !== this.month) {
-        document.querySelectorAll(".dx-cal-item").forEach((n) => n.remove());
-        this.month = month;
-      }
-      // the shows Stremio already has this month (by name: the same show can have several ids)
-      const norm = (name) => String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
-      const shown = new Set((state.items || []).flatMap((d) => (d.items || []).map((i) => norm(i.name))));
-      episodes.refresh(true);
-      const cells = new Map();
-      for (const cell of grid.querySelectorAll('[class*="cell-"]')) {
-        const day = parseInt(cell.querySelector('[class*="day-"]')?.textContent || "", 10);
-        const items = cell.querySelector('[class*="items-"]');
-        if (day && items) cells.set(day, items);
-      }
-      // Stremio's own look for the posters, when there's one on the page to copy
-      const sample = grid.querySelector('a[class*="item-"]:not(.dx-cal-item)');
-      const itemClass = sample ? sample.className : "";
-      const posterClass = sample && sample.querySelector("img") ? sample.querySelector("img").className : "";
-      for (const [id, e] of episodes.index) {
-        if (/^tt\d+$/.test(id) || shown.has(norm(e.name)) || !e.all) continue;
-        for (const ep of e.all) {
-          const d = new Date(ep.t);
-          if (d.getFullYear() !== sel.year || d.getMonth() + 1 !== sel.month) continue;
-          const items = cells.get(d.getDate());
-          const key = `${id}|${ep.id}`;
-          if (!items || items.querySelector(`[data-dx-cal="${CSS.escape(key)}"]`)) continue;
-          const a = document.createElement("a");
-          a.className = `${itemClass} dx-cal-item`.trim();
-          a.dataset.dxCal = key;
-          a.tabIndex = -1;
-          a.href = `#/detail/series/${encodeURIComponent(id)}/${encodeURIComponent(ep.id)}`;
-          a.title = `${e.name || ""} · S${ep.s} E${ep.e}`;
-          a.innerHTML = `<img class="${esc(posterClass || "dx-cal-poster")}" alt="${esc(e.name || "")}" loading="lazy" src="${esc(e.poster || "")}">`;
-          items.append(a);
+      // (Stremio's answer comes outside a pass: what's added here asks for none)
+      loop.quietly(() => {
+        const month = `${sel.year}-${sel.month}`;
+        if (month !== this.month) {
+          document.querySelectorAll(".dx-cal-item").forEach((n) => n.remove());
+          this.month = month;
         }
-      }
+        // the shows Stremio already has this month (by name: the same show can have several ids)
+        const norm = (name) => String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+        const shown = new Set((state.items || []).flatMap((d) => (d.items || []).map((i) => norm(i.name))));
+        const cells = new Map();
+        for (const cell of grid.querySelectorAll('[class*="cell-"]')) {
+          const day = parseInt(cell.querySelector('[class*="day-"]')?.textContent || "", 10);
+          const items = cell.querySelector('[class*="items-"]');
+          if (day && items) cells.set(day, items);
+        }
+        // Stremio's own look for the posters, when there's one on the page to copy
+        const sample = grid.querySelector('a[class*="item-"]:not(.dx-cal-item)');
+        const itemClass = sample ? sample.className : "";
+        const posterClass = sample && sample.querySelector("img") ? sample.querySelector("img").className : "";
+        // (the month as two moments: an episode outside them costs one comparison, not a date)
+        const from = new Date(sel.year, sel.month - 1, 1).getTime();
+        const to = new Date(sel.year, sel.month, 1).getTime();
+        // (what a day already has is listed once, not searched for again for each of its episodes)
+        const has = new Map();
+        const added = (items) => {
+          if (!has.has(items)) has.set(items, new Set([...items.querySelectorAll("[data-dx-cal]")].map((n) => n.dataset.dxCal)));
+          return has.get(items);
+        };
+        for (const [id, e] of episodes.index) {
+          if (/^tt\d+$/.test(id) || shown.has(norm(e.name)) || !e.all) continue;
+          for (const ep of e.all) {
+            if (!(ep.t >= from && ep.t < to)) continue;
+            const items = cells.get(new Date(ep.t).getDate());
+            const key = `${id}|${ep.id}`;
+            if (!items || added(items).has(key)) continue;
+            added(items).add(key);
+            const a = document.createElement("a");
+            a.className = `${itemClass} dx-cal-item`.trim();
+            a.dataset.dxCal = key;
+            a.tabIndex = -1;
+            a.href = `#/detail/series/${encodeURIComponent(id)}/${encodeURIComponent(ep.id)}`;
+            a.title = `${e.name || ""} · S${ep.s} E${ep.e}`;
+            a.innerHTML = `<img class="${esc(posterClass || "dx-cal-poster")}" alt="${esc(e.name || "")}" loading="lazy" src="${esc(e.poster || "")}">`;
+            items.append(a);
+          }
+        }
+      });
+      this.grid = grid;
+      // (the month was changed meanwhile: the next pass looks again)
+      this.seen = location.hash === hash ? this.look(grid, hash) : "";
     },
   };
 
@@ -12323,33 +14448,95 @@
   }
 
   const endsAt = {
+    // How long the film on the page has left is asked for once a visit to it, not once a pass: each
+    // asking has Stremio's core write out everything it knows of the page, every stream in its list
+    // included, and on a TV that came several times a second while the streams were arriving.
+    info: null, // Stremio's line of facts the chip sits in
+    chip: null,
+    hash: "", // the page `left` belongs to
+    left: null, // minutes; null: not known yet
+    asking: "", // the page it is being asked for
+    last: 0, // when a pass last came by
+    said: "", // what the chip says, worked out for `saidFor` minutes left in the minute `minute`
+    saidFor: null,
+    minute: 0,
+    swept: false, // a chip an earlier dx.bi left on the page has been looked for
+
+    clear() {
+      if (this.chip || !this.swept) document.querySelectorAll(".dx-ends").forEach((n) => n.remove());
+      this.swept = true;
+      this.info = this.chip = this.left = null;
+      this.hash = "";
+    },
+
     async ensure() {
-      const box = currentRoute() === "detail" ? dpage.hero() : null;
-      const info = box && dpage.facts(box);
-      const t = info && restrict.titleOnScreen();
-      if (!t || t.type !== "movie") {
-        document.querySelectorAll(".dx-ends").forEach((n) => n.remove());
+      const t = currentRoute() === "detail" ? restrict.titleOnScreen() : null;
+      if (!t || t.type !== "movie") { this.clear(); return; }
+      let info = this.info && this.info.isConnected ? this.info : null;
+      if (!info) info = dpage.facts() || null;
+      if (!info) { this.clear(); return; }
+      this.info = info;
+      // Asked again on another page, and after the page has been left alone a while (the film may
+      // have been watched meanwhile: a TV's own player leaves the page as it was)
+      const now = Date.now();
+      const hash = location.hash;
+      if (hash !== this.hash || now - this.last > 20000) {
+        this.hash = hash;
+        this.left = null;
+      }
+      this.last = now;
+      if (this.left === null) {
+        // (one asking at a time; an answer that never comes doesn't stop the next page's)
+        if (this.asking === hash) return;
+        this.asking = hash;
+        let left = 0;
+        try {
+          const s = await core().getState("meta_details");
+          // This page's own state is told by the title it was asked for, not by the id the addon
+          // gave the film: an addon can file it under another one (tmdb:… for tt…), and such a page
+          // was asked again at every pass, for as long as it was open, and never had its chip.
+          const mine = s && s.selected && s.selected.metaPath && s.selected.metaPath.id === t.id;
+          const meta = mine && s.metaItem && s.metaItem.content && s.metaItem.content.type === "Ready" ? s.metaItem.content.content : null;
+          if (!meta) return;
+          left = runtimeMinutes(meta.runtime);
+          // part watched: what's left of it
+          const st = s.libraryItem && s.libraryItem.state;
+          if (st && st.timeOffset > 0 && st.duration > st.timeOffset) left = Math.ceil((st.duration - st.timeOffset) / 60000);
+        } catch (_) {
+          return;
+        } finally {
+          if (this.asking === hash) this.asking = "";
+        }
+        // (the answer came after the pass: moved on meanwhile, it is for another page)
+        if (location.hash !== hash || this.hash !== hash || !info.isConnected) return;
+        this.left = left;
+        loop.quietly(() => this.show(info));
         return;
       }
-      let left = 0;
-      try {
-        const s = await core().getState("meta_details");
-        const meta = s && s.metaItem && s.metaItem.content && s.metaItem.content.type === "Ready" ? s.metaItem.content.content : null;
-        if (!meta || meta.id !== t.id) return;
-        left = runtimeMinutes(meta.runtime);
-        // part watched: what's left of it
-        const st = s.libraryItem && s.libraryItem.state;
-        if (st && st.timeOffset > 0 && st.duration > st.timeOffset) left = Math.ceil((st.duration - st.timeOffset) / 60000);
-      } catch (_) { return; }
-      const text = endsAtText(left);
-      let chip = info.querySelector(":scope > .dx-ends");
-      if (!text) { if (chip) chip.remove(); return; }
+      this.show(info);
+    },
+
+    show(info) {
+      const minute = Math.floor(Date.now() / 60000);
+      if (minute !== this.minute || this.saidFor !== this.left) {
+        this.minute = minute;
+        this.saidFor = this.left;
+        this.said = endsAtText(this.left);
+      }
+      const text = this.said;
+      let chip = this.chip && this.chip.parentNode === info ? this.chip : info.querySelector(":scope > .dx-ends");
+      if (!text) {
+        if (chip) chip.remove();
+        this.chip = null;
+        return;
+      }
       if (!chip) {
         ensureExtrasStyle();
         chip = document.createElement("div");
         chip.className = "dx-ends";
         info.append(chip);
       }
+      this.chip = chip;
       if (chip.textContent !== text) chip.textContent = text;
     },
   };
@@ -12358,16 +14545,56 @@
   const airing = {
     el: null,
     builtFor: -1,
+    host: null,
+    list: [], // the tiles to show: [{ id, html }]
+    listAt: 0,
+    shown: null, // the tiles on screen, as one text
+    tiles: new WeakMap(), // a tile → the show and the markup it was made from
 
     ensure() {
-      const host = hero.host();
-      if (!settings.airingRow || !host || currentRoute() !== "board") {
+      if (!settings.airingRow || currentRoute() !== "board") {
         if (!settings.airingRow) this.remove();
         return;
       }
+      // (Home's list of rows is kept while it's in the page, not searched for on every pass)
+      if (!this.host || !this.host.isConnected) this.host = hero.host();
+      const host = this.host;
+      if (!host) return;
       episodes.refresh();
-      // One card per show: its next episode (or the one just out), with a count of the rest this week.
-      // The same show can sit in the library under several ids (Cinemeta, TMDB, Kitsu): keep one.
+      // What the row shows changes when the episode lists do, and as time passes (an episode comes
+      // out, tomorrow becomes today). It's worked out then, or twice a minute, rather than on every
+      // pass; while the lists are being downloaded (the day's first start), as soon as there's a first
+      // show, then every few seconds.
+      const now = Date.now();
+      const fresh = this.builtFor !== episodes.version || now - this.listAt > (episodes.loading ? 5000 : 30000) || (!this.el && !!episodes.loading && episodes.asked > 0);
+      if (fresh) {
+        this.builtFor = episodes.version;
+        this.listAt = now;
+        this.list = this.pick(now);
+      }
+      if (!this.list.length) {
+        this.remove();
+        return;
+      }
+      const built = !this.el || (fresh && this.shown !== this.list.map((t) => t.html).join(""));
+      if (built) this.build(this.list);
+      // after the billboard, before the first row
+      const heroEl = hero.el && hero.el.parentElement === host ? hero.el : host.querySelector(":scope > .dx-hero");
+      if (heroEl) {
+        if (heroEl.nextElementSibling !== this.el) heroEl.after(this.el);
+      } else if (host.firstElementChild !== this.el) {
+        host.prepend(this.el);
+      }
+      // keep the countdowns fresh (they count in minutes)
+      if (fresh || built) this.el.querySelectorAll("[data-t]").forEach((n) => {
+        const text = countdownText(+n.dataset.t);
+        if (n.textContent !== text) n.textContent = text;
+      });
+    },
+
+    // One card per show: its next episode (or the one just out), with a count of the rest this week.
+    // The same show can sit in the library under several ids (Cinemeta, TMDB, Kitsu): keep one.
+    pick(now) {
       const byShow = new Map();
       for (const [id, e] of episodes.index) {
         const eps = e.upcoming || [];
@@ -12377,64 +14604,85 @@
         const prev = byShow.get(key);
         if (!prev || ep.t < prev.ep.t) byShow.set(key, { id, e, ep, more: eps.length - 1 });
       }
-      const items = [...byShow.values()].sort((a, b) => a.ep.t - b.ep.t);
-      if (!items.length) {
-        this.remove();
-        return;
-      }
-      if (!this.el || this.builtFor !== episodes.version) this.build(items.slice(0, 12));
-      // after the billboard, before the first row
-      const heroEl = host.querySelector(":scope > .dx-hero");
-      if (heroEl) {
-        if (heroEl.nextElementSibling !== this.el) heroEl.after(this.el);
-      } else if (host.firstElementChild !== this.el) {
-        host.prepend(this.el);
-      }
-      // keep the countdowns fresh
-      this.el.querySelectorAll("[data-t]").forEach((n) => {
-        const text = countdownText(+n.dataset.t);
-        if (n.textContent !== text) n.textContent = text;
-      });
+      return [...byShow.values()].sort((a, b) => a.ep.t - b.ep.t).slice(0, 12).map((item) => ({ id: item.id, html: this.tile(item, now) }));
     },
 
-    build(items) {
-      ensureExtrasStyle();
-      const el = this.el || document.createElement("section");
-      el.className = "dxe-airing";
-      el.innerHTML = `
-        <div class="dxe-airing-head"><h2>Airing this week</h2><span>New episodes of shows in your library</span></div>
-        <div class="dxe-airing-track">${items.map(({ id, e, ep, more }) => {
-          const out = ep.t <= Date.now();
-          const backdrop = e.background || (/^tt/.test(id) ? art.backgroundMedium(id) : e.poster || "");
-          // episode stills only exist once an episode is out; the backdrop sits underneath either way
-          const layers = [out && ep.th, backdrop].filter(Boolean).map((u) => `url('${esc(u)}')`).join(", ");
-          const title = ep.n && !/^episode\s*\d+$/i.test(ep.n) ? ep.n : "";
-          return `
+    // A tile's markup, without its countdown (written by ensure, minute by minute)
+    tile({ id, e, ep, more }, now) {
+      const out = ep.t <= now;
+      const backdrop = e.background || (/^tt/.test(id) ? art.backgroundMedium(id) : e.poster || "");
+      // episode stills only exist once an episode is out; the backdrop sits underneath either way
+      const layers = [out && ep.th, backdrop].filter(Boolean).map((u) => `url('${esc(u)}')`).join(", ");
+      const title = ep.n && !/^episode\s*\d+$/i.test(ep.n) ? ep.n : "";
+      return `
           <button class="dxe-air${out ? " is-out" : ""}" data-href="/detail/series/${encodeURIComponent(id)}">
             <span class="dxe-air-art" style="background-image:${layers || "none"}"></span>
             ${out ? '<span class="dxe-air-badge">NEW</span>' : ""}
             <span class="dxe-air-text">
               <b>${esc(e.name || "")}</b>
               <span>S${ep.s} · E${ep.e}${title ? ` · ${esc(title)}` : ""}${more > 0 ? ` · +${more} more` : ""}</span>
-              <em>${esc(whenText(ep.t))} · <i data-t="${ep.t}">${esc(countdownText(ep.t))}</i></em>
+              <em>${esc(whenText(ep.t))} · <i data-t="${ep.t}"></i></em>
             </span>
           </button>`;
-        }).join("")}</div>`;
-      if (!el.dataset.wired) {
+    },
+
+    // The row is put right tile by tile: one that still says the same stays as it is (with the remote's
+    // focus, if it's on it), the others are made again. The whole row used to be, every ten minutes.
+    build(list) {
+      ensureExtrasStyle();
+      let el = this.el;
+      if (!el) {
+        el = document.createElement("section");
+        el.className = "dxe-airing";
+        el.innerHTML = `
+        <div class="dxe-airing-head"><h2>Airing this week</h2><span>New episodes of shows in your library</span></div>
+        <div class="dxe-airing-track"></div>`;
         el.dataset.wired = "1";
         el.addEventListener("click", (ev) => {
           const go = ev.target.closest("[data-href]");
           if (go) navigate(go.dataset.href);
         });
+        this.el = el;
       }
-      this.el = el;
-      this.builtFor = episodes.version;
+      const track = el.lastElementChild;
+      const active = document.activeElement;
+      const wasAt = active && active.parentElement === track ? [...track.children].indexOf(active) : -1;
+      const had = new Map();
+      for (const tile of track.children) {
+        const made = this.tiles.get(tile);
+        if (made) had.set(made.id, tile);
+      }
+      const keep = list.map(({ id, html }) => {
+        const tile = had.get(id);
+        if (!tile || this.tiles.get(tile).html !== html) return null;
+        had.delete(id);
+        return tile;
+      });
+      for (const tile of had.values()) tile.remove();
+      let next = track.firstElementChild;
+      list.forEach(({ id, html }, i) => {
+        let tile = keep[i];
+        if (!tile) {
+          const t = document.createElement("template");
+          t.innerHTML = html;
+          tile = t.content.firstElementChild;
+          this.tiles.set(tile, { id, html });
+        }
+        if (tile === next) next = next.nextElementSibling;
+        else track.insertBefore(tile, next);
+      });
+      if (wasAt >= 0 && document.activeElement !== active) {
+        const to = active.isConnected ? active : track.children[Math.min(wasAt, track.childElementCount - 1)];
+        if (to) to.focus({ preventScroll: true });
+      }
+      this.shown = list.map((t) => t.html).join("");
     },
 
     remove() {
       if (this.el) this.el.remove();
       this.el = null;
       this.builtFor = -1;
+      this.shown = null;
     },
   };
 
@@ -12444,27 +14692,66 @@
   // ---------------------------------------------------------------------------
   const myList = {
     els: [],
-    built: null,
+    built: null, // what the rows were last made from: { raw, who, mode, owners, viewers }
     MAX: 40,
+    // TV: a row starts with two screens of titles and gets more as the remote nears its end. Forty at
+    // once (120 with Simkl's two rows) were as many more cards for every pass to go through. (Not on
+    // a phone, where a finger scrolls the rows and nothing says how near their end it is.)
+    short: IN_TV && !(window.__dxbiTv && window.__dxbiTv.phone),
+    FIRST: 14,
+    MORE: 8,
+    NEAR: 5,
+    rows: new WeakMap(), // a row → what it shows: { name, list, sigs, sig, shown, c, track }
+    cards: new WeakMap(), // a card → the title it was made from: { id, sig }
+    content: null,
+    cw: null,
+    looked: null,
+
+    // Home's list of rows (kept while it's in the page, not searched for on every pass)
+    board() {
+      if (!this.content || !this.content.isConnected) this.content = document.querySelector('[class*="board-content-"]:not([class*="board-content-container"])');
+      return this.content;
+    },
+
+    // Where dx.bi's rows go on Home: under Continue Watching, or the airing row, or the billboard
+    anchor(content) {
+      if (!this.cw || this.cw.parentElement !== content) this.cw = content.querySelector(':scope > [class*="continue-watching-row"]');
+      return this.cw || content.querySelector(":scope > .dxe-airing") || content.querySelector(":scope > .dx-hero");
+    },
 
     ensure() {
-      const content = document.querySelector('[class*="board-content-"]:not([class*="board-content-container"])');
-      if (settings.myList === "off" || !content || currentRoute() !== "board") {
-        if (settings.myList === "off") this.remove();
-        return;
-      }
-      const sig = `${settings.myList}|${viewers.current().id}|${localStorage.getItem("library_recent")}`;
-      if (sig !== this.built || this.els.some((el) => el.parentElement !== content)) {
+      if (settings.myList === "off") return this.remove();
+      if (currentRoute() !== "board") return;
+      const content = this.board();
+      if (!content) return;
+      // The rows are looked at again when the library, the viewer or the setting changes, and only
+      // what changed in them is touched. (Stremio rewrites its library as you watch: every time, the
+      // rows were thrown away and built again, forty cards each, the remote's selection with them.)
+      // Who has which title is kept by dx.bi, not in Stremio's library: a title one viewer of several
+      // removes, or owners brought from another device, change only that, so it is looked at too.
+      const raw = localStorage.getItem("library_recent");
+      const who = viewers.current().id;
+      const owners = store.data.libraryOwners;
+      const all = store.data.viewers;
+      const built = this.built;
+      if (!built || built.raw !== raw || built.who !== who || built.mode !== settings.myList || built.owners !== owners || built.viewers !== all) {
         const looks = this.looks();
         if (!looks) return; // no row of Stremio's to copy from yet: the next pass will
-        this.remove();
-        this.built = sig;
-        this.els = this.groups().map((g) => this.row(g, looks));
+        const had = new Map(this.els.map((el) => [this.rows.get(el).name, el]));
+        const els = this.groups().map((group) => {
+          const el = had.get(group[0]);
+          if (!el) return this.row(group, looks);
+          had.delete(group[0]);
+          this.update(el, group);
+          return el;
+        });
+        for (const el of had.values()) el.remove();
+        this.els = els;
+        this.built = { raw, who, mode: settings.myList, owners, viewers: all };
       }
-      const cw = content.querySelector(':scope > [class*="continue-watching-row"]');
-      const after = cw || content.querySelector(":scope > .dxe-airing") || content.querySelector(":scope > .dx-hero");
-      let at = after;
+      let at = this.anchor(content);
       for (const el of this.els) {
+        this.unhide(el);
         if (at ? at.nextElementSibling !== el : content.firstElementChild !== el) {
           if (at) at.after(el);
           else content.prepend(el);
@@ -12476,21 +14763,26 @@
     groups() {
       const items = stremioLibrary()
         .filter((i) => !i.removed && !i.temp && (i.type === "movie" || i.type === "series"))
-        .sort((a, b) => Date.parse(b._mtime || 0) - Date.parse(a._mtime || 0));
+        // (each date read once, not at every comparison)
+        .map((i) => [Date.parse(i._mtime || 0), i])
+        .sort((a, b) => b[0] - a[0])
+        .map((x) => x[1]);
       const groups = settings.myList === "split"
         ? [["My Films", items.filter((i) => i.type === "movie")], ["My Shows", items.filter((i) => i.type === "series")]]
         : [["My List", items]];
       return groups.filter(([, list]) => list.length).map(([name, list]) => [name, list.slice(0, this.MAX)]);
     },
 
-    // The class names of a row and a poster card (Stremio's change with every build)
+    // The class names of a row and a poster card (Stremio's change with every build). Read from the
+    // page once: they stay the same for as long as it's open.
     looks() {
+      if (this.looked) return this.looked;
       const link = document.querySelector('[class*="board-row-poster"]:not(.dxe-mylist) [class*="meta-item-container"] > a[class*="meta-item-link"]');
       const card = link && link.parentElement;
       const row = card && card.closest('[class*="meta-row-container"]');
       if (!row) return null;
       const name = (el) => (el ? el.className : "");
-      return {
+      const c = {
         row: name(row),
         head: name(row.querySelector('[class*="header-container"]')),
         titles: name(row.querySelector('[class*="title-container"]')),
@@ -12506,25 +14798,198 @@
         bar: name(link.querySelector('[class*="title-bar-container"]')),
         label: name(link.querySelector('[class*="title-label"]')),
       };
+      // (kept once every part was there to copy)
+      if (Object.values(c).every(Boolean)) this.looked = c;
+      return c;
+    },
+
+    // What a card is made from: the same again, and the card on screen is still right
+    made(i) {
+      return `${i.type}|${i._id}|${i.video || ""}|${i.name}|${i.poster || ""}`;
+    },
+
+    card(i, c) {
+      const poster = i.poster || (/^tt/.test(i._id) ? `https://images.metahub.space/poster/small/${i._id}/img` : "");
+      const id = encodeURIComponent(i._id);
+      return `<div class="${esc(c.card)}"><a tabindex="0"${i.video ? " data-dx-next" : ""} title="${esc(i.name)}" class="${esc(c.link)}" href="#/detail/${esc(i.type)}/${id}${i.video ? `/${encodeURIComponent(i.video)}` : i.type === "movie" ? `/${id}` : ""}">
+            <div class="${esc(c.poster)}"><div class="${esc(c.layer)}"><img class="${esc(c.image)}" src="${esc(poster)}" alt=" " loading="lazy"></div></div>
+            <div class="${esc(c.bar)}"><div class="${esc(c.label)}">${esc(i.name)}</div></div>
+          </a></div>`;
+    },
+
+    make(i, c, sig) {
+      const t = document.createElement("template");
+      t.innerHTML = this.card(i, c);
+      const card = t.content.firstElementChild;
+      this.cards.set(card, { id: i._id, sig });
+      return card;
     },
 
     row([name, list], c) {
       const el = document.createElement("div");
       el.className = `${c.row} dxe-mylist`;
+      const shown = this.short ? Math.min(list.length, this.FIRST) : list.length;
       el.innerHTML = `
         <div class="${esc(c.head)}">
           <div class="${esc(c.titles)}"><div class="${esc(c.title)}" title="${esc(name)}">${esc(name)}</div></div>
           <a tabindex="-1" title="See All" class="${esc(c.all)}" href="#/library"><div class="${esc(c.allLabel)}">See All</div>${ICONS.chevronRight}</a>
         </div>
-        <div class="${esc(c.track)}">${list.map((i) => {
-          const poster = i.poster || (/^tt/.test(i._id) ? `https://images.metahub.space/poster/small/${i._id}/img` : "");
-          const id = encodeURIComponent(i._id);
-          return `<div class="${esc(c.card)}"><a tabindex="0" title="${esc(i.name)}" class="${esc(c.link)}" href="#/detail/${esc(i.type)}/${id}${i.type === "series" ? "" : `/${id}`}">
-            <div class="${esc(c.poster)}"><div class="${esc(c.layer)}"><img class="${esc(c.image)}" src="${esc(poster)}" alt=" " loading="lazy"></div></div>
-            <div class="${esc(c.bar)}"><div class="${esc(c.label)}">${esc(i.name)}</div></div>
-          </a></div>`;
-        }).join("")}</div>`;
+        <div class="${esc(c.track)}">${list.slice(0, shown).map((i) => this.card(i, c)).join("")}</div>`;
+      const track = el.lastElementChild;
+      const sigs = list.map((i) => this.made(i));
+      [...track.children].forEach((card, n) => this.cards.set(card, { id: list[n]._id, sig: sigs[n] }));
+      this.rows.set(el, { name, list, sigs, sig: sigs.join("\n"), shown, c, track });
+      if (this.short) {
+        // the remote moves the selection along the row; a pointer (an air mouse) scrolls it
+        el.addEventListener("focusin", (e) => this.near(el, e.target));
+        track.addEventListener("scroll", () => this.scrolled(el), { passive: true });
+      }
       return el;
+    },
+
+    // A row put right in place. Titles it already shows keep their cards (with what dx.bi has hung on
+    // them, and the remote's selection if it's there), a title that changed gets a new card, and what
+    // has left the list goes.
+    update(el, [name, list]) {
+      const st = this.rows.get(el);
+      if (name !== st.name) {
+        const title = el.firstElementChild.firstElementChild.firstElementChild;
+        title.textContent = name;
+        title.setAttribute("title", name);
+        st.name = name;
+      }
+      const sigs = list.map((i) => this.made(i));
+      const sig = sigs.join("\n");
+      if (sig === st.sig) return;
+      const { track, c } = st;
+      const shown = this.short ? Math.min(list.length, Math.max(this.FIRST, st.shown)) : list.length;
+      const active = document.activeElement;
+      const was = active && track.contains(active) ? active : null;
+      let wasCard = was;
+      while (wasCard && wasCard.parentElement !== track) wasCard = wasCard.parentElement;
+      const wasId = wasCard && this.cards.has(wasCard) ? this.cards.get(wasCard).id : null;
+      const wasAt = wasCard ? [...track.children].indexOf(wasCard) : -1;
+      const had = new Map();
+      for (const card of track.children) {
+        const made = this.cards.get(card);
+        if (made) had.set(made.id, card);
+      }
+      const keep = [];
+      for (let n = 0; n < shown; n++) {
+        const card = had.get(list[n]._id);
+        const same = !!card && this.cards.get(card).sig === sigs[n];
+        if (same) had.delete(list[n]._id);
+        keep.push(same ? card : null);
+      }
+      for (const card of had.values()) card.remove();
+      const mine = (node) => {
+        while (node && !this.cards.has(node)) node = node.nextElementSibling;
+        return node;
+      };
+      let next = mine(track.firstElementChild);
+      for (let n = 0; n < shown; n++) {
+        const card = keep[n] || this.make(list[n], c, sigs[n]);
+        if (card === next) next = mine(next.nextElementSibling);
+        else track.insertBefore(card, next);
+      }
+      Object.assign(st, { list, sigs, sig, shown });
+      // The row snaps to its cards, so a title put in at the front pushes what's in view along by one.
+      // Without the remote in this row, it goes back to its start, where a newly built row would be.
+      // With the remote on one of its titles, that title stays selected (or what has taken its place
+      // is), and in view. (Both on the next frame, when the page is laid out anyway.)
+      if (!was) {
+        requestAnimationFrame(() => { if (track.isConnected) track.scrollTo({ left: 0, behavior: "instant" }); });
+        return;
+      }
+      let to = was;
+      if (document.activeElement !== was) {
+        if (!was.isConnected) {
+          const card = [...track.children].find((n) => this.cards.has(n) && this.cards.get(n).id === wasId) || track.children[Math.min(wasAt, track.childElementCount - 1)];
+          to = card && card.querySelector("a[href], [tabindex]");
+        }
+        if (to) to.focus({ preventScroll: true });
+      }
+      if (to) requestAnimationFrame(() => { if (to.isConnected) to.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" }); });
+    },
+
+    // TV: the next titles of a row that doesn't show them all yet (false when it does). Each card is
+    // marked before it goes in, as syncCards would mark it, so a title kept from this viewer is never
+    // drawn, near() and unhide() count only what shows, and a batch with nothing to show is followed
+    // by the next. (Unmarked until the next pass, a run of hidden titles left the row hidden, or ended
+    // it under the remote.)
+    grow(el) {
+      const st = this.rows.get(el);
+      if (!st || st.shown >= st.list.length) return false;
+      const sweep = !!(restrict.kidsAge() || restrict.hidden().length);
+      const more = document.createDocumentFragment();
+      let upTo = st.shown;
+      let seen = 0;
+      while (upTo < st.list.length && !seen) {
+        const end = Math.min(st.list.length, upTo + this.MORE);
+        for (let n = upTo; n < end; n++) {
+          const item = st.list[n];
+          const card = this.make(item, st.c, st.sigs[n]);
+          // (a title not known yet is marked pending and counts as shown: its answer asks for a pass)
+          if (sweep) restrict.card(card, { type: item.type, id: item._id });
+          if (!card.hasAttribute("data-dx-off")) seen++;
+          more.append(card);
+        }
+        upTo = end;
+      }
+      st.shown = upTo;
+      st.track.append(more);
+      return true;
+    },
+
+    // TV: the selection has moved in a row. Fewer than a handful of titles left after it: more are added,
+    // so the end of the row is only ever the end of the list. (Titles hidden from this viewer don't count.)
+    near(el, target) {
+      const st = this.rows.get(el);
+      if (!st || st.shown >= st.list.length) return;
+      let card = target;
+      while (card && card.parentElement !== st.track) card = card.parentElement;
+      if (!card) return;
+      let after = 0;
+      for (let n = card.nextElementSibling; n && after < this.NEAR; n = n.nextElementSibling) {
+        if (!n.hasAttribute("data-dx-off") && !n.hasAttribute("data-dx-pending")) after++;
+      }
+      if (after < this.NEAR) this.grow(el);
+    },
+
+    // …or it has been scrolled to within a screen of its end. Looked at a moment after, not while it
+    // scrolls; and as that's outside a pass, the pass the new cards need is asked for by name.
+    scrolled(el) {
+      const st = this.rows.get(el);
+      if (!st || st.timer || st.shown >= st.list.length) return;
+      st.timer = setTimeout(() => {
+        st.timer = 0;
+        const track = st.track;
+        if (!track.isConnected) return;
+        if (track.scrollLeft + track.clientWidth * 2 >= track.scrollWidth && loop.quietly(() => this.grow(el))) scheduleSync();
+      }, 150);
+    },
+
+    // TV: every title the row shows is hidden from this viewer (a kids profile, titles they've hidden),
+    // so the row is too: the next ones are tried
+    unhide(el) {
+      if (this.short && el.hasAttribute("data-dx-off")) this.grow(el);
+    },
+
+    // TV: the same once syncCards has marked the cards (a step of its own, straight after it). A
+    // title whose age was only just found out is marked in a pass that adds nothing to the page,
+    // and no other pass followed it: a row it left with nothing to show stayed hidden, and the row
+    // the remote was in stopped short, until something else on the page changed.
+    unhideAll() {
+      if (!this.short || currentRoute() !== "board") return;
+      const active = document.activeElement;
+      for (const el of [...this.els, forYou.el, ...simklRows.els]) {
+        if (!el || !el.isConnected || !this.rows.has(el)) continue;
+        if (el.hasAttribute("data-dx-off")) {
+          if (this.grow(el) && [...this.rows.get(el).track.children].some((c) => !c.hasAttribute("data-dx-off"))) el.removeAttribute("data-dx-off");
+        } else if (active && el.contains(active)) {
+          this.near(el, active);
+        }
+      }
     },
 
     remove() {
@@ -12547,10 +15012,19 @@
     KEEP: 6 * 3600e3,
     BASE: "https://v3-cinemeta.strem.io",
 
+    // (found again when the library, the viewer or who has which title changes, not on every pass)
     seed() {
-      return stremioLibrary()
+      const raw = localStorage.getItem("library_recent");
+      const who = viewers.current().id;
+      const owners = store.data.libraryOwners;
+      const all = store.data.viewers;
+      const had = this.seeded;
+      if (had && had.raw === raw && had.who === who && had.owners === owners && had.viewers === all) return had.seed;
+      const seed = stremioLibrary()
         .filter((i) => /^tt/.test(i._id) && (i.type === "movie" || i.type === "series") && i.state && i.state.lastWatched)
         .sort((a, b) => Date.parse(b.state.lastWatched) - Date.parse(a.state.lastWatched))[0] || null;
+      this.seeded = { raw, who, owners, viewers: all, seed };
+      return seed;
     },
 
     // Titles on both genre lists come first: they're the closest match
@@ -12599,18 +15073,23 @@
       scheduleSync();
     },
 
+    // (read from storage when what's there changes, not on every pass)
     saved(sig) {
       try {
-        const data = JSON.parse(localStorage.getItem("dxbi.forYou") || "null");
+        const raw = localStorage.getItem("dxbi.forYou");
+        if (!this.kept || this.kept.raw !== raw) this.kept = { raw, data: JSON.parse(raw || "null") };
+        const data = this.kept.data;
         return data && data.sig === sig && Date.now() - data.t < this.KEEP ? data : null;
       } catch (_) { return null; }
     },
 
     ensure() {
-      const content = document.querySelector('[class*="board-content-"]:not([class*="board-content-container"])');
+      // (off in lite mode: nothing is looked for then, the page least of all)
       const off = !settings.forYou || lite.on || viewers.current().kids;
-      if (off) this.remove();
-      if (off || !content || currentRoute() !== "board") return;
+      if (off) return this.remove();
+      if (currentRoute() !== "board") return;
+      const content = myList.board();
+      if (!content) return;
       const seed = this.seed();
       if (!seed) return this.remove();
       const sig = `${viewers.current().id}|${seed._id}`;
@@ -12624,15 +15103,20 @@
       }
       if (!data.list.length) return this.remove();
       if (this.built !== sig || !this.el) {
-        const looks = myList.looks();
-        if (!looks) return;
-        this.remove();
-        this.el = myList.row([`Because you watched ${data.name}`, data.list], looks);
-        this.el.classList.add("dxe-foryou");
-        this.el.querySelector('[class*="see-all-container"]')?.remove();
+        const group = [`Because you watched ${data.name}`, data.list];
+        // (a row already there is put right in place, like My List's)
+        if (this.el) myList.update(this.el, group);
+        else {
+          const looks = myList.looks();
+          if (!looks) return;
+          this.el = myList.row(group, looks);
+          this.el.classList.add("dxe-foryou");
+          this.el.querySelector('[class*="see-all-container"]')?.remove();
+        }
         this.built = sig;
       }
-      const after = myList.els[myList.els.length - 1] || content.querySelector(':scope > [class*="continue-watching-row"]') || content.querySelector(":scope > .dxe-airing") || content.querySelector(":scope > .dx-hero");
+      myList.unhide(this.el);
+      const after = myList.els[myList.els.length - 1] || myList.anchor(content);
       if (after ? after.nextElementSibling !== this.el : content.firstElementChild !== this.el) {
         if (after) after.after(this.el);
         else content.prepend(this.el);
@@ -12647,6 +15131,933 @@
   };
 
   // ---------------------------------------------------------------------------
+  // Simkl: your Simkl lists as rows on Home (Watching, Plan to Watch, On Hold, Completed), and what
+  // you watch marked on Simkl as you watch it. Simkl needs an app key of your own (free, a minute at
+  // simkl.com/settings/developer): it goes to Simkl with every request and nowhere else, and signing
+  // in is a code you type at simkl.com/pin, so your Simkl password never comes near dx.bi. The
+  // connection is kept per viewer, on this device only (never through dx.bi's viewer sync).
+  // ---------------------------------------------------------------------------
+
+  const SIMKL_API = "https://api.simkl.com";
+  const SIMKL_APP = "dxbi";
+  const simklSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // The page to type the code at comes from Simkl's answer: only Simkl's own site is ever opened
+  const simklPinUrl = (u) => (/^https:\/\/(www\.)?simkl\.com\//i.test(String(u || "")) ? String(u) : "https://simkl.com/pin");
+
+  const SIMKL_CSS = `
+  .dxs .dxs-body { padding: .2rem 1.4rem .6rem; overflow-y: auto; }
+  .dxs .dxs-p { margin: .3rem 0 .9rem; color: rgba(255,255,255,.75); font: 400 .92rem/1.5 Inter, system-ui, sans-serif !important; }
+  .dxs .dxs-p a, .dxs .dxs-facts a { color: #fff; text-decoration: underline; }
+  .dxs .dxs-input { width: 100%; padding: .75rem .9rem; border: 1px solid rgba(255,255,255,.18); border-radius: .5rem; background: #0e0e11; color: #fff; font: 500 .95rem ui-monospace, monospace !important; }
+  .dxs .dxs-input:focus { outline: none; border-color: rgba(255,255,255,.5); }
+  .dxs .dxs-code { margin: .6rem 0 1rem; padding: 1rem; text-align: center; border-radius: .6rem; background: rgba(255,255,255,.06); color: #fff; font: 800 2.4rem/1 ui-monospace, monospace !important; letter-spacing: .12em; user-select: all; }
+  .dxs .dxs-facts { display: grid; gap: .35rem; margin: .4rem 0 .9rem; color: rgba(255,255,255,.6); font: 500 .85rem/1.4 Inter, system-ui, sans-serif !important; }
+  .dxs .dxs-facts b { color: #fff; }
+  .dxs .dxe-msg { margin: .2rem 0 .6rem; }
+  .dxs .dxe-foot a.dxe-btn { text-decoration: none; }
+  `;
+
+  // Remembered id lookups (MAL ↔ Kitsu): { id, t } per key in localStorage. A hit is kept for good, a
+  // miss ("") only for a day. (Entries from before this shape, plain strings, count as a miss.)
+  const simklIdCache = {
+    DAY: 86400e3,
+    maps: {}, // name → the list as last read or written (it was read from storage for every title of a Simkl list)
+    load(name) {
+      try { return JSON.parse(localStorage.getItem(name) || "{}") || {}; } catch (_) { return {}; }
+    },
+    read(name, key) {
+      const had = (this.maps[name] || (this.maps[name] = this.load(name)))[key];
+      if (!had || typeof had !== "object") return undefined;
+      if (had.id) return String(had.id);
+      return Date.now() - (Number(had.t) || 0) < this.DAY ? "" : undefined;
+    },
+    write(name, key, id) {
+      // (from storage again: the mini player's window adds to the same list)
+      const map = this.load(name);
+      map[key] = { id: String(id || ""), t: Date.now() };
+      this.maps[name] = map;
+      try { localStorage.setItem(name, JSON.stringify(map)); } catch (_) { /* ignore */ }
+    },
+  };
+
+  function ensureSimklStyle() {
+    if (document.getElementById("dx-simkl-style")) return;
+    const style = document.createElement("style");
+    style.id = "dx-simkl-style";
+    style.textContent = SIMKL_CSS;
+    document.head.append(style);
+  }
+
+  const simkl = {
+    pending: null, // a sign-in in progress ({ cancelled })
+    code: null, // the code being shown while a sign-in waits
+    refreshing: null,
+    quota: null, // { remaining, limit, at } from Simkl's own headers
+    el: null,
+    error: "",
+
+    key() { return viewers.key("simkl"); },
+    get() {
+      const c = store.get(this.key(), null);
+      return c && typeof c === "object" ? c : null;
+    },
+    save(c) { store.set(this.key(), c); },
+    connected() { const c = this.get(); return !!(c && c.access); },
+    clientId() { const c = this.get(); return (c && c.clientId) || ""; },
+    user() { const c = this.get(); return (c && c.user) || null; },
+
+    params(clientId) {
+      return `client_id=${encodeURIComponent(clientId)}&app-name=${SIMKL_APP}&app-version=${encodeURIComponent(PLUGIN_VERSION)}`;
+    },
+    url(path, clientId) {
+      return `${SIMKL_API}${path}${path.includes("?") ? "&" : "?"}${this.params(clientId || this.clientId())}`;
+    },
+
+    // One HTTP call, answered as { status, ok, json, headers } whatever the status (the caller decides)
+    async call(url, { method = "GET", body, token, timeout = 15000, keepalive = false } = {}) {
+      const headers = { Accept: "application/json", "User-Agent": `${SIMKL_APP}/${PLUGIN_VERSION}` };
+      if (body) headers["Content-Type"] = "application/json";
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const r = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: "no-store", keepalive, signal: AbortSignal.timeout(timeout) });
+      const text = await r.text().catch(() => "");
+      let json = null;
+      try { json = text ? JSON.parse(text) : null; } catch (_) { json = null; }
+      return { status: r.status, ok: r.ok, json, text, headers: r.headers };
+    },
+
+    // One request as the viewer. A token about to expire is refreshed first; a 401 gets one retry
+    // with a fresh token; a burst limit waits a second; a used-up day is reported as such.
+    async request(path, { method = "GET", body, keepalive = false, refreshed = false, waited = false } = {}) {
+      const c = this.latest();
+      if (!c || !c.access) throw new Error("Simkl isn't connected");
+      // (not for a request sent as dx.bi closes: a refresh couldn't finish, and the token is still good)
+      if (c.auth === 2 && c.refresh && c.exp && Date.now() > c.exp - 6 * 3600e3 && !refreshed && !keepalive) await this.refresh().catch(() => { /* a 401 below says more */ });
+      const token = (this.get() || {}).access;
+      if (!token) throw new Error("Simkl isn't connected");
+      const r = await this.call(this.url(path), { method, body, token, keepalive });
+      const remaining = r.headers.get("X-RateLimit-Remaining");
+      if (remaining !== null) this.quota = { remaining: Number(remaining), limit: Number(r.headers.get("X-RateLimit-Limit")) || 0, at: Date.now() };
+      if (r.ok) return r.json;
+      // Simkl answers with { error } or { message }, or with a bare word for a burst limit
+      const why = String((r.json && typeof r.json === "object" ? r.json.error || r.json.message : r.json) || (r.text || "").slice(0, 120)).trim();
+      if (r.status === 401) {
+        if (!refreshed && c.auth === 2 && c.refresh) {
+          // the mini player window may have refreshed the token already: its newer copy is tried first
+          const newer = this.latest();
+          let fresh = !!(newer && newer.access && newer.access !== token);
+          if (!fresh) { try { await this.refresh(); fresh = true; } catch (_) { /* told below */ } }
+          if (fresh) return this.request(path, { method, body, keepalive, refreshed: true, waited });
+        }
+        this.expired();
+        throw new Error("Simkl signed dx.bi out: connect again from your profile menu");
+      }
+      if (r.status === 429) {
+        if (why === "rate_limit") {
+          if (!waited) {
+            await simklSleep(1200);
+            return this.request(path, { method, body, keepalive, refreshed, waited: true });
+          }
+          throw Object.assign(new Error("Simkl is busy right now: try again in a moment"), { busy: true });
+        }
+        const wait = Number(r.headers.get("Retry-After")) || 0;
+        throw Object.assign(new Error(`Simkl's daily limit is used up${wait ? ` (resets in ${Math.max(1, Math.ceil(wait / 3600))} h)` : ""}`), { quota: true, retryAfter: wait * 1000 });
+      }
+      if (r.status === 400 && why.toUpperCase() === "RATE_LIMIT") throw Object.assign(new Error("Simkl is still busy with the last update"), { lock: true });
+      if (r.status === 409) throw Object.assign(new Error("Simkl already has it"), { conflict: true });
+      throw new Error(`Simkl ${r.status}${why ? `: ${why}` : ""}`);
+    },
+
+    // Simkl no longer takes the token (revoked, or six months unused): the key stays, the sign-in goes
+    expired() {
+      const c = this.get();
+      this.save({ v: 2, clientId: (c && c.clientId) || "", user: (c && c.user) || null, expired: true });
+      simklRows.reset();
+      simklScrobble.reset();
+      this.render();
+    },
+
+    // Another dx.bi window (the mini player runs the plugin too) may have refreshed the token first: its
+    // copy is in localStorage and wins, or the two windows would keep signing each other out
+    latest() {
+      try {
+        const all = JSON.parse(localStorage.getItem(DATA_LOCAL) || "{}") || {};
+        const theirs = all[this.key()];
+        const mine = store.data[this.key()];
+        if (theirs && typeof theirs.t === "number" && (!mine || mine.t < theirs.t)) store.data[this.key()] = theirs;
+      } catch (_) { /* nothing newer */ }
+      return this.get();
+    },
+
+    async refresh() {
+      const c = this.latest();
+      if (!c || c.auth !== 2 || !c.refresh) throw new Error("nothing to refresh with");
+      if (this.refreshing) return this.refreshing;
+      this.refreshing = (async () => {
+        const r = await this.call(`${SIMKL_API}/oauth2/token`, { method: "POST", body: { grant_type: "refresh_token", refresh_token: c.refresh, client_id: c.clientId } });
+        if (r.ok && r.json && r.json.access_token) {
+          this.save({ ...c, access: r.json.access_token, refresh: r.json.refresh_token || c.refresh, exp: Date.now() + (Number(r.json.expires_in) || 604800) * 1000, scope: r.json.scope || c.scope || "" });
+          return;
+        }
+        const why = (r.json && r.json.error) || "";
+        if (r.status === 400 || r.status === 401) this.expired();
+        throw new Error(`Simkl refresh failed${why ? `: ${why}` : ""}`);
+      })().finally(() => { this.refreshing = null; });
+      return this.refreshing;
+    },
+
+    // Sign in: a code to type at simkl.com/pin. New Simkl apps use OAuth 2's device flow; apps made
+    // on the older AUTH V1 use Simkl's PIN flow. Both are tried, in that order.
+    async connect(clientId, onCode) {
+      clientId = String(clientId || "").trim();
+      if (!/^[A-Za-z0-9_-]{16,}$/.test(clientId)) throw new Error("That doesn't look like a Simkl client ID");
+      const me = { cancelled: false };
+      this.pending = me;
+      try {
+        const d = await this.call(`${SIMKL_API}/oauth2/device`, { method: "POST", body: { client_id: clientId, scope: "media:read media:write" } });
+        if (d.ok && d.json && d.json.device_code) return await this.deviceFlow(clientId, d.json, onCode, me);
+        const why = d.json && (d.json.error_description || d.json.error);
+        if (d.status === 401 || d.status === 400 || d.status === 403) return await this.pinFlow(clientId, onCode, me, why);
+        throw new Error(`Simkl ${d.status}${why ? `: ${why}` : ""}`);
+      } finally {
+        if (this.pending === me) this.pending = null;
+      }
+    },
+
+    async deviceFlow(clientId, d, onCode, me) {
+      onCode({ code: String(d.user_code || ""), url: simklPinUrl(d.verification_uri_complete || d.verification_uri) });
+      const until = Date.now() + Math.min(Number(d.expires_in) || 900, 1800) * 1000;
+      let interval = Math.max(Number(d.interval) || 5, 5) * 1000;
+      while (Date.now() < until) {
+        await simklSleep(interval);
+        if (me.cancelled) throw new Error("cancelled");
+        let r;
+        try {
+          r = await this.call(`${SIMKL_API}/oauth2/token`, { method: "POST", body: { grant_type: "urn:ietf:params:oauth:grant-type:device_code", device_code: d.device_code, client_id: clientId } });
+        } catch (err) {
+          if (me.cancelled) throw new Error("cancelled");
+          log("simkl: still waiting for the code", err && err.message); // a blip: the code is good for a while yet
+          continue;
+        }
+        if (me.cancelled) throw new Error("cancelled");
+        if (r.ok && r.json && r.json.access_token) {
+          this.save({ v: 2, clientId, auth: 2, access: r.json.access_token, refresh: r.json.refresh_token || "", exp: Date.now() + (Number(r.json.expires_in) || 604800) * 1000, scope: r.json.scope || "" });
+          await this.whoAmI();
+          return;
+        }
+        const e = (r.json && r.json.error) || "";
+        if (e === "authorization_pending") continue;
+        if (e === "slow_down") { interval += 5000; continue; }
+        if (e === "expired_token") throw new Error("The code expired before it was entered. Try again.");
+        if (e === "invalid_client") throw new Error("Simkl doesn't know this client ID");
+        if (r.status >= 500 || r.status === 0) continue; // a hiccup: keep waiting
+        throw new Error(`Simkl ${r.status}${e ? `: ${e}` : ""}`);
+      }
+      throw new Error("The code expired before it was entered. Try again.");
+    },
+
+    async pinFlow(clientId, onCode, me, why) {
+      const p = await this.call(`${SIMKL_API}/oauth/pin?${this.params(clientId)}`);
+      if (!p.ok || !p.json || !p.json.user_code) throw new Error(why || (p.json && p.json.message) || "Simkl didn't accept this client ID");
+      onCode({ code: String(p.json.user_code), url: simklPinUrl(p.json.verification_url || p.json.verification_uri) });
+      const until = Date.now() + Math.min(Number(p.json.expires_in) || 900, 1800) * 1000;
+      const interval = Math.max(Number(p.json.interval) || 5, 5) * 1000;
+      while (Date.now() < until) {
+        await simklSleep(interval);
+        if (me.cancelled) throw new Error("cancelled");
+        let r;
+        try {
+          r = await this.call(`${SIMKL_API}/oauth/pin/${encodeURIComponent(p.json.user_code)}?${this.params(clientId)}`);
+        } catch (err) {
+          if (me.cancelled) throw new Error("cancelled");
+          log("simkl: still waiting for the code", err && err.message);
+          continue;
+        }
+        if (me.cancelled) throw new Error("cancelled");
+        if (r.ok && r.json && r.json.access_token) {
+          this.save({ v: 2, clientId, auth: 1, access: r.json.access_token, refresh: "", exp: 0, scope: "" });
+          await this.whoAmI();
+          return;
+        }
+      }
+      throw new Error("The code expired before it was entered. Try again.");
+    },
+
+    async whoAmI() {
+      try {
+        const s = await this.request("/users/settings");
+        const c = this.get();
+        if (c && s) this.save({ ...c, user: { name: String((s.user && s.user.name) || ""), id: (s.account && s.account.id) || 0, type: String((s.account && s.account.type) || "") } });
+      } catch (err) {
+        log("simkl: couldn't read the account", err && err.message);
+      }
+    },
+
+    disconnect() {
+      this.save({ v: 2, clientId: this.clientId() });
+      simklRows.reset();
+      simklScrobble.reset();
+    },
+
+    start() {
+      simklScrobble.stopped = false;
+      window.addEventListener("beforeunload", simklScrobble.onUnload);
+    },
+
+    close() {
+      if (this.pending) this.pending.cancelled = true;
+      this.pending = null;
+      this.code = null;
+      this.error = "";
+      if (this.el) this.el.remove();
+      this.el = null;
+    },
+
+    // For problem reports: never the key or the token
+    summary() {
+      const c = this.get() || {};
+      return { connected: !!c.access, auth: c.auth || null, expired: !!c.expired, rows: simklRows.summary(), scrobble: simklScrobble.summary(), quota: this.quota };
+    },
+
+    toast(text) {
+      ensureExtrasStyle();
+      document.querySelectorAll(".dxe-toast.is-simkl").forEach((n) => n.remove());
+      const el = document.createElement("div");
+      el.className = "dxe-toast is-simkl";
+      el.textContent = text;
+      document.body.append(el);
+      setTimeout(() => el.remove(), 4500);
+    },
+
+    open() {
+      ensureExtrasStyle();
+      ensureSimklStyle();
+      this.close();
+      const el = document.createElement("div");
+      el.className = "dxe-modal dxs";
+      el.innerHTML = `<div class="dxe-sheet" role="dialog" aria-label="Simkl">
+        <div class="dxe-head"><b>Simkl<small>Your Simkl lists as rows on Home, and what you watch marked on Simkl. For ${esc(viewers.current().name)}.</small></b></div>
+        <div class="dxs-body"></div>
+        <div class="dxe-foot"></div>
+      </div>`;
+      for (const type of ["keydown", "keyup", "keypress"]) el.addEventListener(type, (e) => {
+        e.stopPropagation();
+        if (e.type === "keydown" && e.key === "Escape") this.close();
+        if (e.type === "keydown" && e.key === "Enter" && e.target.classList && e.target.classList.contains("dxs-input")) this.act("connect");
+      });
+      el.addEventListener("click", (e) => {
+        if (e.target === el) return this.close();
+        const act = e.target.closest("[data-act]");
+        if (act) this.act(act.dataset.act);
+      });
+      document.body.append(el);
+      this.el = el;
+      this.render();
+      const input = el.querySelector(".dxs-input");
+      if (input) input.focus();
+    },
+
+    render() {
+      if (!this.el) return;
+      const body = this.el.querySelector(".dxs-body");
+      const foot = this.el.querySelector(".dxe-foot");
+      const c = this.get() || {};
+      const msg = this.error ? `<div class="dxe-msg is-bad">${esc(this.error)}</div>` : "";
+      if (this.pending && this.code) {
+        body.innerHTML = `<p class="dxs-p">Enter this code at <a href="${esc(this.code.url)}" target="_blank" rel="noopener">simkl.com/pin</a>, signed in to your Simkl account:</p>
+          <div class="dxs-code">${esc(this.code.code)}</div>
+          <p class="dxe-note">Waiting for Simkl… the code is good for 15 minutes.</p>${msg}`;
+        foot.innerHTML = `<a class="dxe-btn is-primary" href="${esc(this.code.url)}" target="_blank" rel="noopener">Open simkl.com/pin</a><span class="dxe-spacer"></span><button class="dxe-btn" data-act="cancel">Cancel</button>`;
+        return;
+      }
+      if (this.pending) {
+        body.innerHTML = `<p class="dxs-p">Asking Simkl for a code…</p>${msg}`;
+        foot.innerHTML = `<span class="dxe-spacer"></span><button class="dxe-btn" data-act="cancel">Cancel</button>`;
+        return;
+      }
+      if (c.access) {
+        const u = c.user || {};
+        const data = simklRows.saved();
+        const rowsLabel = { watching: "Watching and Plan to Watch", all: "Watching, Plan to Watch, On Hold and Completed", off: "off" }[settings.simklRows] || "off";
+        const q = this.quota && this.quota.limit ? `${this.quota.remaining} of ${this.quota.limit}` : "";
+        body.innerHTML = `<p class="dxs-p">Connected${u.name ? ` as <b>${esc(u.name)}</b>` : ""}${u.type ? ` (${esc(u.type)})` : ""}.</p>
+          <div class="dxs-facts">
+            <div>Lists on Home: <b>${esc(rowsLabel)}</b>${data ? ` · ${data.rows.length} row${data.rows.length === 1 ? "" : "s"}, updated ${esc(simklRows.ago(data.at))}` : " · not loaded yet"}</div>
+            <div>Marking what you watch: <b>${settings.simklScrobble ? "on" : "off"}</b>${simklScrobble.error ? ` · last try failed: ${esc(simklScrobble.error)}` : ""}</div>
+            ${q ? `<div>Simkl requests left today: <b>${esc(q)}</b></div>` : ""}
+            ${simklRows.error ? `<div class="dxe-msg is-bad">Lists: ${esc(simklRows.error)}</div>` : ""}
+          </div>
+          <p class="dxe-note">Which lists show, and whether what you watch is sent to Simkl, is under Settings → ${esc(SETTINGS_SECTION)} → Simkl. Rows refresh when Simkl says something changed (checked every 20 minutes while Home is open, and right after an episode is marked watched).</p>${msg}`;
+        foot.innerHTML = `<button class="dxe-btn" data-act="refresh"${simklRows.loading ? " disabled" : ""}>${simklRows.loading ? "Refreshing…" : "Refresh lists"}</button><span class="dxe-spacer"></span><button class="dxe-btn" data-act="disconnect">Disconnect</button><button class="dxe-btn is-primary" data-act="close">Done</button>`;
+        return;
+      }
+      body.innerHTML = `<p class="dxs-p">Simkl needs a free app key of your own. Sign in at <a href="https://simkl.com/settings/developer/" target="_blank" rel="noopener">simkl.com/settings/developer</a>, create a new app (any name, say "dx.bi"; choose a TV, device or command-line type if it asks; if it wants a redirect address, use <code>urn:ietf:wg:oauth:2.0:oob</code>), and paste its <b>Client ID</b> here. It only ever goes to Simkl.</p>
+        <input class="dxs-input" type="text" spellcheck="false" autocomplete="off" placeholder="Client ID" value="${esc(c.clientId || "")}">
+        ${c.expired ? `<div class="dxe-msg is-bad">Simkl signed dx.bi out (the connection was revoked or went unused for months): connect again.</div>` : ""}${msg}`;
+      foot.innerHTML = `<button class="dxe-btn is-primary" data-act="connect">Connect</button><span class="dxe-spacer"></span><button class="dxe-btn" data-act="close">Close</button>`;
+    },
+
+    async act(what) {
+      if (what === "close") return this.close();
+      if (what === "cancel") {
+        if (this.pending) this.pending.cancelled = true;
+        this.pending = null;
+        this.code = null;
+        this.error = "";
+        return this.render();
+      }
+      if (what === "disconnect") {
+        this.disconnect();
+        this.error = "";
+        return this.render();
+      }
+      if (what === "refresh") {
+        this.error = "";
+        this.render();
+        try {
+          const d = simklRows.saved();
+          if (d) { d.all = ""; simklRows.write(d); } // ask for the lists even if Simkl says nothing changed
+          await simklRows.refresh();
+        } catch (err) { this.error = err.message; }
+        return this.render();
+      }
+      if (what === "connect") {
+        if (this.pending) return;
+        const input = this.el && this.el.querySelector(".dxs-input");
+        const clientId = String((input && input.value) || "").trim();
+        this.error = "";
+        this.code = null;
+        const c = this.get() || {};
+        if (clientId) this.save({ ...c, v: 2, clientId });
+        this.render();
+        try {
+          await this.connect(clientId, (code) => { this.code = code; this.render(); });
+          this.code = null;
+          this.render();
+          simklRows.refresh().catch(() => { /* shown in the dialog */ }).finally(() => this.render());
+        } catch (err) {
+          if (err.message === "cancelled") return; // a newer attempt (or the closed dialog) owns the dialog now
+          this.code = null;
+          this.error = err.message;
+          this.render();
+        }
+      }
+    },
+  };
+
+  // Simkl's lists on Home. Rows are built from Stremio's own row markup (myList.row), so they scroll,
+  // preview and take the remote like any other. Films and shows link by IMDb id, like Cinemeta;
+  // anime goes through a Kitsu addon when one is installed (Simkl and Kitsu both count episodes per
+  // season entry, so "Watching" cards can open the next episode), otherwise by IMDb id too.
+  const simklRows = {
+    els: [],
+    keys: [], // which list each row is ("watching", "plantowatch"…)
+    built: null, // the lists the rows were last made from
+    content: null,
+    waiting: null,
+    loading: null,
+    soon: null,
+    memory: null,
+    error: "",
+    failures: 0, // refreshes that failed in a row: the next try waits longer each time
+    nextTry: 0,
+    CACHE: "dxbi.simkl.lists",
+    KITSU: "dxbi.simkl.kitsu",
+    MAX: 40,
+    CHECK: 20 * 60e3,
+    STATUSES: { watching: "Watching", plantowatch: "Plan to Watch", hold: "On Hold", completed: "Completed" },
+
+    wanted() {
+      if (settings.simklRows === "all") return ["watching", "plantowatch", "hold", "completed"];
+      if (settings.simklRows === "off") return [];
+      return ["watching", "plantowatch"];
+    },
+    sig() {
+      return `${viewers.current().id}|${simkl.clientId()}|${this.wanted().join(",")}|${settings.simklAnime ? "anime" : ""}`;
+    },
+    // (What storage holds is read once, then kept: until the first refresh of the day came back, every
+    // pass used to read the lists from storage again. A copy that doesn't fit isn't read twice either.)
+    saved() {
+      const sig = this.sig();
+      if (this.memory && this.memory.sig === sig) return this.memory;
+      try {
+        const raw = localStorage.getItem(this.CACHE);
+        if (!raw || (raw === this.unfit && sig === this.unfitFor)) return null;
+        const d = JSON.parse(raw);
+        if (d && d.sig === sig && Array.isArray(d.rows)) return (this.memory = d);
+        this.unfit = raw;
+        this.unfitFor = sig;
+        return null;
+      } catch (_) { return null; }
+    },
+    write(d) {
+      this.memory = d;
+      try { localStorage.setItem(this.CACHE, JSON.stringify(d)); } catch (_) { /* storage full: kept in memory until next time */ }
+    },
+    reset() {
+      this.remove();
+      this.memory = null;
+      this.error = "";
+      this.failures = 0;
+      this.nextTry = 0;
+      try { localStorage.removeItem(this.CACHE); } catch (_) { /* ignore */ }
+    },
+    // After our own mark on Simkl: look again soon, so a finished episode leaves Watching's card
+    changed() {
+      clearTimeout(this.soon);
+      this.soon = setTimeout(() => {
+        const d = this.saved();
+        if (d) { d.t = 0; this.write(d); }
+        scheduleSync();
+      }, 8000);
+    },
+    ago(t) {
+      const m = Math.round((Date.now() - (t || 0)) / 60000);
+      return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+    },
+    summary() {
+      const d = this.saved();
+      return { rows: d ? d.rows.map((r) => `${r.key}:${r.list.length}`) : null, at: d ? d.at : null, error: this.error || null };
+    },
+
+    ensure() {
+      const on = this.wanted().length > 0 && simkl.connected() && !viewers.current().kids;
+      if (!on) return this.remove();
+      if (currentRoute() !== "board") return;
+      // (Home's list of rows is kept while it's in the page, not searched for on every pass)
+      if (!this.content || !this.content.isConnected) this.content = document.querySelector('[class*="board-content-"]:not([class*="board-content-container"])');
+      const content = this.content;
+      if (!content) return;
+      const data = this.saved();
+      if ((!data || Date.now() - data.t > this.CHECK) && !this.loading && Date.now() >= this.nextTry) {
+        // TV: Simkl is asked once the remote has rested (a whole list is read and sorted in one go)
+        if (IN_TV && performance.now() - keyNav.lastPress < 2000) this.later();
+        else this.refresh().catch((err) => {
+          this.error = err && err.message ? err.message : String(err);
+          log("simkl rows", this.error);
+          // Simkl is down, the day's requests are used up, or the network is: later, and later each time
+          this.failures++;
+          this.nextTry = Date.now() + (err && err.quota ? Math.max(Number(err.retryAfter) || 0, 3600e3) : Math.min(this.CHECK, 30e3 * 2 ** Math.min(this.failures, 6)));
+        });
+      }
+      if (!data) {
+        // Another viewer's rows don't wait for this viewer's lists (on a TV the remote is let rest
+        // first, and a failing Simkl is asked again only later). The same viewer's stay up while a
+        // changed setting's lists are fetched.
+        if (this.built && !String(this.built.sig).startsWith(`${viewers.current().id}|`)) this.remove();
+        return;
+      }
+      if (!data.rows.length) return this.remove();
+      // The rows are looked at again when Simkl's lists have been read again, and only what changed in
+      // them is touched. (Every refresh used to throw them away and build them again, forty cards each
+      // and the remote's selection with them, whether or not a title had changed.)
+      if (data !== this.built) {
+        const looks = myList.looks();
+        if (!looks) return; // no row of Stremio's to copy from yet: the next pass will
+        const had = new Map(this.els.map((el, n) => [this.keys[n], el]));
+        const els = data.rows.map((row) => {
+          let el = had.get(row.key);
+          if (el) {
+            had.delete(row.key);
+            myList.update(el, [row.name, row.list]);
+            return el;
+          }
+          el = myList.row([row.name, row.list], looks);
+          el.classList.add("dxe-simkl");
+          el.querySelector('[class*="see-all-container"]')?.remove();
+          return el;
+        });
+        for (const el of had.values()) el.remove();
+        this.els = els;
+        this.keys = data.rows.map((row) => row.key);
+        this.built = data;
+      }
+      // under My List and Because you watched
+      let at = (forYou.el && forYou.el.parentElement === content ? forYou.el : null)
+        || myList.els[myList.els.length - 1]
+        || myList.anchor(content);
+      for (const el of this.els) {
+        myList.unhide(el);
+        if (at ? at.nextElementSibling !== el : content.firstElementChild !== el) {
+          if (at) at.after(el);
+          else content.prepend(el);
+        }
+        at = el;
+      }
+    },
+
+    // (a pass shortly, in case nothing else on the page asks for one)
+    later() {
+      if (this.waiting) return;
+      this.waiting = setTimeout(() => {
+        this.waiting = null;
+        scheduleSync();
+      }, 2500);
+    },
+
+    remove() {
+      clearTimeout(this.soon);
+      this.els.forEach((el) => el.remove());
+      this.els = [];
+      this.keys = [];
+      this.built = null;
+    },
+
+    // Every wanted list, one request per list (all types at once), and only when Simkl says
+    // something changed since the last look (one small request)
+    async refresh() {
+      if (this.loading) return this.loading;
+      const sig = this.sig();
+      this.loading = (async () => {
+        const act = await simkl.request("/sync/activities");
+        const all = String((act && act.all) || "");
+        const before = this.saved();
+        if (before && before.all && before.all === all) {
+          before.t = Date.now();
+          this.write(before);
+          this.error = "";
+          this.failures = 0;
+          this.nextTry = 0;
+          return;
+        }
+        const rows = [];
+        for (const status of this.wanted()) {
+          const data = await simkl.request(`/sync/all-items/all/${status}?extended=full${status === "watching" ? "&next_watch_info=yes" : ""}`);
+          // (TV: a whole list has just been read in one go: the remote gets a turn before it's sorted)
+          if (IN_TV) await simklSleep(0);
+          const list = await this.items(data || {}, status);
+          if (list.length) rows.push({ key: status, name: `Simkl · ${this.STATUSES[status]}`, list });
+        }
+        if (this.sig() !== sig) return; // the viewer or the settings changed meanwhile
+        this.write({ sig, t: Date.now(), at: Date.now(), all, rows });
+        this.error = "";
+        this.failures = 0;
+        this.nextTry = 0;
+        scheduleSync();
+      })().finally(() => { this.loading = null; });
+      return this.loading;
+    },
+
+    parseNext(text) {
+      const m = /S(\d+)\s*E(\d+)/i.exec(String(text || ""));
+      return m ? { season: Number(m[1]), episode: Number(m[2]) } : null;
+    },
+
+    // The Stremio type a Kitsu addon lists anime under ("anime" for Anime Kitsu), or null without one
+    kitsuType() {
+      for (const addon of metadataSource.addons) {
+        const prefixes = Array.isArray(addon.manifest.idPrefixes) ? addon.manifest.idPrefixes : [];
+        if (!prefixes.some((p) => /^kitsu:?$/.test(String(p)))) continue;
+        const types = Array.isArray(addon.manifest.types) ? addon.manifest.types.map(String) : [];
+        return types.includes("anime") ? "anime" : "series";
+      }
+      return null;
+    },
+
+    poster(path) {
+      return path ? `https://wsrv.nl/?url=https://simkl.in/posters/${encodeURI(String(path))}_m.webp&q=90` : "";
+    },
+
+    async items(data, status) {
+      await metadataSource.refresh().catch(() => { /* core still starting: anime falls back to IMDb */ });
+      const kitsuType = this.kitsuType();
+      const when = (e) => Date.parse((status === "plantowatch" ? e.added_to_watchlist_at : e.last_watched_at) || e.last_watched_at || e.added_to_watchlist_at || 0) || 0;
+      const entries = [];
+      for (const kind of ["shows", "movies", ...(settings.simklAnime ? ["anime"] : [])]) {
+        // (each entry's date read once: at every comparison, a long list took a TV a good while to sort)
+        for (const e of Array.isArray(data[kind]) ? data[kind] : []) if (e && (e.show || e.movie)) entries.push([kind, e, when(e)]);
+      }
+      entries.sort((a, b) => b[2] - a[2]);
+      const out = [];
+      const seen = new Set();
+      for (const [kind, e] of entries.slice(0, this.MAX * 2)) {
+        const m = e.movie || e.show;
+        const ids = m.ids || {};
+        const next = status === "watching" ? this.parseNext(e.next_to_watch) : null;
+        let item = null;
+        if (kind === "movies") {
+          if (isImdb(ids.imdb)) item = { _id: ids.imdb, type: "movie" };
+        } else if (kind === "shows") {
+          if (isImdb(ids.imdb)) item = { _id: ids.imdb, type: "series", video: next ? `${ids.imdb}:${next.season}:${next.episode}` : null };
+        } else {
+          let kitsu = ids.kitsu ? String(ids.kitsu) : "";
+          if (!kitsu && kitsuType && ids.mal) kitsu = await this.kitsuOf(ids.mal).catch(() => "");
+          if (kitsu && kitsuType) item = { _id: `kitsu:${kitsu}`, type: kitsuType, video: next ? `kitsu:${kitsu}:${next.episode}` : null };
+          else if (isImdb(ids.imdb)) item = { _id: ids.imdb, type: e.anime_type === "movie" ? "movie" : "series" };
+        }
+        if (!item || seen.has(item._id)) continue;
+        seen.add(item._id);
+        const title = String(m.title || "").slice(0, 120);
+        item.name = next ? `${title} · ${kind === "anime" ? `E${next.episode}` : `S${next.season} E${next.episode}`}` : title;
+        item.poster = this.poster(m.poster);
+        out.push(item);
+        if (out.length >= this.MAX) break;
+      }
+      return out;
+    },
+
+    // MAL id → Kitsu id, through Kitsu's own mapping list (no key). A match is remembered for good, a
+    // miss for a day (Kitsu adds mappings all the time).
+    async kitsuOf(mal) {
+      const key = String(mal);
+      const known = simklIdCache.read(this.KITSU, key);
+      if (known !== undefined) return known;
+      // (the anime itself only comes along with include=item: without it there's just a link to it)
+      const r = await fetch(`https://kitsu.app/api/edge/mappings?filter[externalSite]=myanimelist/anime&filter[externalId]=${encodeURIComponent(key)}&include=item&fields[anime]=slug`, { headers: { Accept: "application/vnd.api+json" }, signal: AbortSignal.timeout(10000) });
+      if (!r.ok) throw new Error(`Kitsu ${r.status}`);
+      const j = await r.json();
+      const hit = Array.isArray(j.data) ? j.data.find((x) => x.relationships && x.relationships.item && x.relationships.item.data && x.relationships.item.data.type === "anime") : null;
+      const id = hit ? String(hit.relationships.item.data.id) : "";
+      simklIdCache.write(this.KITSU, key, id);
+      return id;
+    },
+  };
+
+  // What you watch, sent to Simkl: "Watching now" when a title has really been playing for a while,
+  // a pause when it's paused, and where it got to when you leave it (Simkl counts it watched from
+  // 80%, otherwise keeps your place). Nothing is sent on a timer: only when you press play, pause, or
+  // move on, as Simkl asks. On dx.bi TV the title plays in the native player, whose progress reports
+  // reach us through a stand-in for the video (window.__dxbiTv.scrobbleVideo, see dxbi-tv.js).
+  const simklScrobble = {
+    video: null,
+    hash: null,
+    media: null, // { key, body, name } for the title playing, body null when Simkl can't track it
+    state: "idle", // idle | started | paused | stopped
+    progress: 0,
+    played: 0, // seconds really played, for ARM
+    lastTick: 0,
+    pauseTimer: null,
+    chain: Promise.resolve(),
+    sentAt: 0,
+    error: "",
+    ARM: 15,
+    MAL: "dxbi.simkl.mal",
+
+    on() { return !!(settings.simklScrobble && simkl.connected()); },
+
+    // The player's video; on dx.bi TV the stand-in for the title in the native player, and only the
+    // one made for this player route (an earlier title's, still around for a moment, is left alone)
+    find() {
+      if (!IN_TV) return document.querySelector('[class*="player-container"] video');
+      const v = window.__dxbiTv && window.__dxbiTv.scrobbleVideo;
+      return v && v.hash === location.hash ? v : null;
+    },
+
+    ensure() {
+      const video = this.on() && currentRoute() === "player" ? this.find() : null;
+      if (video !== this.video) {
+        if (this.video) {
+          this.detach();
+          this.finish();
+        }
+        this.video = video;
+        this.clear();
+        if (video) this.attach(video);
+      }
+      if (video && this.hash !== location.hash) {
+        this.finish();
+        this.clear();
+        this.hash = location.hash;
+        this.loadMedia(this.hash);
+      }
+    },
+
+    clear() {
+      this.hash = null;
+      this.media = null;
+      this.state = "idle";
+      this.progress = 0;
+      this.played = 0;
+      this.lastTick = 0;
+      clearTimeout(this.pauseTimer);
+    },
+
+    attach(v) {
+      for (const t of ["playing", "pause", "ended", "timeupdate"]) v.addEventListener(t, this.onEvent);
+    },
+    detach() {
+      if (this.video) for (const t of ["playing", "pause", "ended", "timeupdate"]) this.video.removeEventListener(t, this.onEvent);
+    },
+    // dx.bi closing or reloading: Simkl hears where we got to, without waiting
+    onUnload: () => simklScrobble.finish(true),
+    stop() {
+      this.detach();
+      this.finish();
+      this.video = null;
+      this.clear();
+      this.stopped = true; // a late answer from Simkl must not redraw anything
+      window.removeEventListener("beforeunload", simklScrobble.onUnload);
+    },
+    // Disconnected: whatever was playing is no longer Simkl's business
+    reset() {
+      this.clear();
+    },
+
+    onEvent: (e) => simklScrobble.handle(e.type),
+
+    pct() {
+      const v = this.video;
+      if (!v || !(v.duration > 0) || !isFinite(v.duration)) return null;
+      return Math.max(0, Math.min(100, Math.round((v.currentTime / v.duration) * 10000) / 100));
+    },
+
+    handle(type) {
+      const v = this.video;
+      if (!v) return;
+      if (type === "timeupdate") {
+        const p = this.pct();
+        if (p !== null) this.progress = p;
+        const now = performance.now();
+        const playing = !v.paused && !v.seeking && v.readyState >= 3;
+        // (a video speaks every frame; dx.bi TV's stand-in every few seconds, as tickGap says)
+        const within = v.tickGap > 0 ? v.tickGap * 2 : 3000;
+        if (playing && this.lastTick && now - this.lastTick < within) this.played += (now - this.lastTick) / 1000;
+        this.lastTick = playing ? now : 0;
+        if (this.state === "idle" && playing && this.played >= this.ARM && this.media && this.media.body) this.send("start");
+        return;
+      }
+      if (type === "playing") {
+        clearTimeout(this.pauseTimer);
+        this.lastTick = 0;
+        if (this.state === "paused") this.send("start");
+        return;
+      }
+      if (type === "pause") {
+        this.lastTick = 0;
+        if (this.state !== "started" || v.ended) return;
+        clearTimeout(this.pauseTimer);
+        // seeks and short blips aren't pauses
+        this.pauseTimer = setTimeout(() => {
+          if (this.video === v && v.paused && !v.ended && this.state === "started") this.send("pause");
+        }, 2000);
+        return;
+      }
+      if (type === "ended") {
+        clearTimeout(this.pauseTimer);
+        if (this.state === "started" || this.state === "paused") this.send("stop", 100);
+      }
+    },
+
+    // Leaving a title (another episode, back to browsing, dx.bi closing): Simkl keeps the place, or
+    // counts it watched from 80%
+    finish(fast) {
+      clearTimeout(this.pauseTimer);
+      if (this.state === "started" || this.state === "paused") this.send("stop", this.progress, fast);
+      this.state = "idle";
+    },
+
+    async loadMedia(hash) {
+      const { getState } = core();
+      for (let i = 0; i < 20 && getState && this.hash === hash && !this.media; i++) {
+        try {
+          const s = await getState("player");
+          const sel = s && s.selected;
+          const mp = sel && sel.metaRequest && sel.metaRequest.path;
+          const sp = sel && sel.streamRequest && sel.streamRequest.path;
+          const meta = s && s.metaItem && s.metaItem.type === "Ready" ? s.metaItem.content : null;
+          if (mp && sp && meta) {
+            const body = await this.describe(String(mp.type), String(mp.id), String(sp.id), meta);
+            if (this.hash !== hash) return;
+            this.media = { key: String(sp.id), body, name: String(meta.name || "").slice(0, 80) };
+            if (!body) log("simkl: not tracking", mp.type, String(mp.id).split(":")[0]);
+            return;
+          }
+        } catch (_) { /* not ready yet */ }
+        await simklSleep(500);
+      }
+    },
+
+    // What to tell Simkl, from Stremio's ids: a film or show by IMDb (or TMDB) id with its season and
+    // episode, an anime by its MAL id with the episode number Kitsu counts (per season entry)
+    async describe(type, metaId, videoId, meta) {
+      const title = String((meta && meta.name) || "").slice(0, 200);
+      const year = parseInt(String((meta && (meta.year || meta.releaseInfo)) || "").slice(0, 4), 10) || undefined;
+      const idsOf = (key, value) => (year ? { title, year, ids: { [key]: value } } : { title, ids: { [key]: value } });
+      let m;
+      if ((m = /^(tt\d+)$/.exec(metaId))) {
+        if (type === "movie") return { movie: idsOf("imdb", m[1]) };
+        // a show is tracked by the episode playing, never as a whole
+        const e = /^tt\d+:(\d+):(\d+)$/.exec(videoId);
+        return e ? { show: idsOf("imdb", m[1]), episode: { season: Number(e[1]), number: Number(e[2]) } } : null;
+      }
+      if ((m = /^tmdb:(\d+)$/.exec(metaId))) {
+        if (type === "movie") return { movie: idsOf("tmdb", Number(m[1])) };
+        const e = /^tmdb:\d+:(\d+):(\d+)$/.exec(videoId);
+        return e ? { show: idsOf("tmdb", Number(m[1])), episode: { season: Number(e[1]), number: Number(e[2]) } } : null;
+      }
+      if ((m = /^(kitsu|mal|anilist|anidb):(\d+)$/.exec(metaId))) {
+        const e = new RegExp(`^${m[1]}:${m[2]}:(\\d+)$`).exec(videoId);
+        const number = e ? Number(e[1]) : null;
+        const ids = {};
+        if (m[1] === "mal") ids.mal = Number(m[2]);
+        else if (m[1] === "anilist") ids.anilist = Number(m[2]);
+        else if (m[1] === "anidb") ids.anidb = Number(m[2]);
+        else {
+          const mal = await this.malOf(m[2]).catch(() => "");
+          if (mal) ids.mal = Number(mal);
+        }
+        if (!Object.keys(ids).length) return null;
+        const anime = year ? { title, year, ids } : { title, ids };
+        return { anime, episode: { number: number || 1 } };
+      }
+      return null;
+    },
+
+    // Kitsu id → MAL id, through Kitsu's own mapping list (a match is remembered for good, a miss for a day)
+    async malOf(kitsu) {
+      const key = String(kitsu);
+      const known = simklIdCache.read(this.MAL, key);
+      if (known !== undefined) return known;
+      const r = await fetch(`https://kitsu.app/api/edge/anime/${encodeURIComponent(key)}/mappings?filter[externalSite]=myanimelist/anime`, { headers: { Accept: "application/vnd.api+json" }, signal: AbortSignal.timeout(10000) });
+      if (!r.ok) throw new Error(`Kitsu ${r.status}`);
+      const j = await r.json();
+      const hit = Array.isArray(j.data) ? j.data.find((x) => x.attributes && x.attributes.externalSite === "myanimelist/anime") : null;
+      const id = hit ? String(hit.attributes.externalId).split("/")[0] : "";
+      simklIdCache.write(this.MAL, key, id);
+      return id;
+    },
+
+    // One after another, a second apart at least: Simkl takes one scrobble at a time per person
+    send(action, progress, fast) {
+      const media = this.media;
+      if (!media || !media.body || !this.on()) return;
+      const p = progress !== undefined ? progress : this.progress;
+      this.state = action === "stop" ? "stopped" : action === "pause" ? "paused" : "started";
+      const job = { action, progress: Math.round(Math.max(0, Math.min(100, Number(p) || 0)) * 100) / 100, body: media.body, name: media.name, fast: !!fast };
+      if (job.fast) { this.post(job).catch(() => { /* logged in post */ }); return; } // dx.bi is closing: now or never
+      this.chain = this.chain.then(() => this.post(job)).catch(() => { /* logged in post */ });
+    },
+
+    async post(job, retried) {
+      const gap = 1100 - (performance.now() - this.sentAt);
+      if (gap > 0 && !job.fast) await simklSleep(gap);
+      try {
+        const r = await simkl.request(`/scrobble/${job.action}`, { method: "POST", body: { ...job.body, progress: job.progress }, keepalive: job.fast });
+        this.sentAt = performance.now();
+        this.error = "";
+        const did = r && r.action;
+        log(`simkl: ${job.action} at ${job.progress}%${did ? ` → ${did}` : ""}`); // (no title: the log goes into problem reports)
+        if (job.action === "stop" && did === "scrobble" && !this.stopped) {
+          simklRows.changed();
+          if (!job.fast) simkl.toast(`Marked as watched on Simkl: ${job.name}`);
+        }
+      } catch (err) {
+        this.sentAt = performance.now();
+        if (err && err.conflict) return;
+        if (err && err.lock && !retried && !job.fast) {
+          await simklSleep(21000);
+          return this.post(job, true);
+        }
+        this.error = (err && err.message) || String(err);
+        log("simkl: scrobble failed", this.error);
+      }
+    },
+
+    summary() {
+      return { on: this.on(), state: this.state, tracking: !!(this.media && this.media.body), error: this.error || null };
+    },
+  };
+
+  // ---------------------------------------------------------------------------
   // Customise Home: rows moved, hidden and renamed for this viewer, whichever addon they're from.
   // Rows belong to Stremio's page, so they're only moved on screen (CSS order), never in the page.
   // ---------------------------------------------------------------------------
@@ -12655,8 +16066,23 @@
     catalogs: [],
     byLink: new Map(), // a row's See All link → its key (the link can hold debrid keys: never kept or shown)
     readFor: -1,
+    readGen: -1, // the addons (metadataSource.generation) the catalogs were read for
+    anchors: new WeakMap(), // a row → its See All link's element
+    applied: null, // what apply last put right (see there)
+    plain: new WeakMap(), // a row's title element → { name, wrote }: Stremio's own name for it, and the text dx.bi last left there
 
-    storeKey: () => `homeLayout:${viewers.current().id}`,
+    // (every row asks on every pass whether Home is customised: the viewer is looked up when the
+    // viewers change, and what's saved is read when it changes)
+    storeKey() {
+      const v = store.data.viewers;
+      if (!this.keyed || this.keyed.v !== v) this.keyed = { v, key: `homeLayout:${viewers.current().id}` };
+      return this.keyed.key;
+    },
+    view() {
+      const entry = store.data[this.storeKey()];
+      if (!this.viewed || this.viewed.entry !== entry) this.viewed = { entry, data: this.data() };
+      return this.viewed.data;
+    },
     data() {
       return { order: [], hidden: [], names: {}, ...(store.get(this.storeKey(), null) || {}) };
     },
@@ -12671,10 +16097,28 @@
     },
 
     key: (c) => `${(c.addon && c.addon.manifest && c.addon.manifest.id) || ""}/${c.type}/${c.id}`,
-    rows: () => document.querySelectorAll('[class*="board-content-"]:not([class*="board-content-container"]) > [class*="board-row"]:not(.dxe-mylist):not([class*="continue-watching-row"])'),
-    link: (row) => (row.querySelector('[class*="header-container"] a[href^="#/discover/"]')?.getAttribute("href") || "").replace(/\?$/, ""),
+    // Stremio's catalog rows on Home (not Continue Watching, not dx.bi's own), from the board's children:
+    // the whole page was searched for them twice a pass
+    rows(content = myList.board()) {
+      const out = [];
+      for (const row of content ? content.children : []) {
+        const cls = typeof row.className === "string" ? row.className : "";
+        if (cls.includes("board-row") && !cls.includes("continue-watching-row") && !row.classList.contains("dxe-mylist")) out.push(row);
+      }
+      return out;
+    },
+    // (the link's element is kept, and its address read each time: Stremio can hand a row to another catalog)
+    link(row) {
+      let a = this.anchors.get(row);
+      if (!a || !row.contains(a) || !(a.getAttribute("href") || "").startsWith("#/discover/")) {
+        a = row.querySelector('[class*="header-container"] a[href^="#/discover/"]');
+        if (!a) return "";
+        this.anchors.set(row, a);
+      }
+      return a.getAttribute("href").replace(/\?$/, "");
+    },
     hides(row) {
-      return this.active() && this.data().hidden.includes(this.byLink.get(this.link(row)));
+      return this.active() && this.view().hidden.includes(this.byLink.get(this.link(row)));
     },
 
     // Which row is which comes from Stremio's list of catalogs
@@ -12694,8 +16138,11 @@
         return;
       }
       const count = this.rows().length;
-      if (count !== this.readFor) {
+      // (read again when the number of rows changes, or the addons do: one addon swapped for another
+      // with as many catalogs left the new rows without a key, so they couldn't be moved, hidden or renamed)
+      if (count !== this.readFor || this.readGen !== metadataSource.generation) {
         this.readFor = count;
+        this.readGen = metadataSource.generation;
         this.read().then(() => { this.apply(); filterRows(); }).catch(() => { this.readFor = -1; });
         homeRows.preload();
       }
@@ -12711,23 +16158,56 @@
     },
 
     apply() {
-      const content = document.querySelector('[class*="board-content-"]:not([class*="board-content-container"])');
+      const content = myList.board();
       if (!content) return;
       const on = this.active();
+      const rows = this.rows(content);
+      const links = rows.map((row) => this.link(row));
+      const entry = store.data[this.storeKey()];
+      // The same rows with the same links, catalogs and saved layout as were put right last time:
+      // only the rows given a name of their own are looked at (Stremio may have redrawn their titles).
+      // Every row's place and title used to be read from the page on every pass.
+      const was = this.applied;
+      if (was && was.content === content && was.on === on && was.entry === entry && was.byLink === this.byLink
+        && was.rows.length === rows.length && rows.every((row, i) => row === was.rows[i] && links[i] === was.links[i])) {
+        // (what Stremio wrote there instead is its own name for the row, kept for when the name goes)
+        for (const [title, text] of was.named) {
+          if (title.textContent === text || !title.firstChild) continue;
+          const plain = this.plain.get(title);
+          if (plain) plain.name = title.textContent;
+          title.firstChild.nodeValue = text;
+        }
+        return;
+      }
       if (content.hasAttribute("data-dx-ordered") !== on) content.toggleAttribute("data-dx-ordered", on);
       const { names, order } = this.data();
       const place = new Map(this.ordered().map((k, i) => [k, i + 1]));
-      for (const row of this.rows()) {
-        const key = on ? this.byLink.get(this.link(row)) : null;
+      const named = [];
+      let whole = true;
+      rows.forEach((row, i) => {
+        const key = on ? this.byLink.get(links[i]) : null;
         const at = order.length && key ? String(place.get(key) || "") : "";
         if (row.style.order !== at) row.style.order = at;
         const title = row.querySelector('[class*="title-container"] > [class*="title-"]');
-        if (!title) continue;
-        if (!title.dataset.dxName) title.dataset.dxName = title.textContent;
-        const text = (key && names[key]) || title.dataset.dxName;
+        if (!title) {
+          whole = false;
+          return;
+        }
+        // Stremio's own name for the row: read when the title is first met, and again whenever its text
+        // is no longer what dx.bi left there. Only Stremio changes it, for another catalog (it hands a
+        // row on when addons change) or another language. (Read only once, it put the old catalog's
+        // name back over the new one's, for the rest of the session.)
+        let plain = this.plain.get(title);
+        if (!plain) this.plain.set(title, (plain = { name: title.textContent, wrote: title.textContent }));
+        else if (title.textContent !== plain.wrote) plain.name = title.textContent;
+        const text = (key && names[key]) || plain.name;
         // the same text node, so Stremio can still update it
         if (title.textContent !== text && title.firstChild) title.firstChild.nodeValue = text;
-      }
+        plain.wrote = text;
+        if (key && names[key]) named.push([title, text]);
+      });
+      // (a row still without its title is looked at again on the next pass, as every row used to be)
+      this.applied = whole ? { content, on, entry, byLink: this.byLink, rows, links, named } : null;
     },
 
     async open() {
@@ -12760,6 +16240,20 @@
       this.el = null;
       // Stremio's focus falls back to the search button, which opens the search bar on a phone
       if (window.__dxbiTv && window.__dxbiTv.phone) setTimeout(() => document.activeElement && document.activeElement.blur(), 0);
+    },
+
+    // dx.bi closing, or loaded again in place (switched off and on in Stremio's plugins): Stremio's
+    // own names go back on the rows. Stremio's names are kept in this copy of dx.bi only, and a new
+    // copy would otherwise take a name of the viewer's for Stremio's own.
+    letGo() {
+      const content = myList.board();
+      if (!content) return;
+      for (const row of this.rows(content)) {
+        const title = row.querySelector('[class*="title-container"] > [class*="title-"]');
+        const plain = title && this.plain.get(title);
+        if (plain && title.firstChild && title.textContent !== plain.name) title.firstChild.nodeValue = plain.name;
+      }
+      this.applied = null;
     },
 
     focus(row, act) {
@@ -12892,6 +16386,7 @@
     },
 
     clear() {
+      this.page = null;
       if (!this.route) return;
       for (const root of document.querySelectorAll("[data-dx-tint]")) delete root.dataset.dxTint;
       this.route = "";
@@ -12901,8 +16396,14 @@
       const hash = location.hash;
       const route = currentRoute();
       if (!settings.posterAccent || settings.accent === "white" || (route !== "detail" && route !== "player")) return this.clear();
-      const root = this.root(route);
-      if (!root) return;
+      // (the title's page is kept while it's in the document: it was searched for on every pass, with
+      // all of Home in front of it)
+      let root = this.page && this.page.hash === hash && this.page.root.isConnected ? this.page.root : null;
+      if (!root) {
+        root = this.root(route);
+        if (!root) return;
+        this.page = { hash, root };
+      }
       // Stremio can rebuild the page for the same title
       if (this.route === hash && root.dataset.dxTint !== undefined) return;
       if (this.route === hash && (this.pending || this.plain)) return;
@@ -12912,7 +16413,13 @@
       this.plain = false;
       try {
         const url = await this.artwork(route);
-        if (!url) { this.route = ""; return; }
+        // still loading: asked again on the next pass. Settled without artwork (or failed): nothing
+        // to take a colour from, and the title's whole page isn't asked for again on every pass.
+        if (!url) {
+          if (url === null) this.plain = true;
+          else this.route = "";
+          return;
+        }
         if (!this.colours.has(url)) {
           if (this.colours.size >= 200) this.colours.delete(this.colours.keys().next().value);
           this.colours.set(url, await this.read(url));
@@ -12929,13 +16436,16 @@
       }
     },
 
+    // The artwork's address; "" while the details are still loading; null once they have come without
+    // any, or have failed
     async artwork(route) {
       const s = await core().getState(route === "player" ? "player" : "meta_details");
       const item = s && s.metaItem;
       // (a title's page nests it one level deeper than the player)
       const ready = item && (item.type ? item : item.content);
+      if (ready && ready.type === "Err") return null;
       const meta = ready && ready.type === "Ready" ? ready.content : null;
-      return meta ? meta.background || meta.poster || "" : "";
+      return meta ? meta.background || meta.poster || null : "";
     },
 
     async read(url) {
@@ -13359,6 +16869,7 @@
       this.ownFullscreen = false;
       el.classList.remove("is-in");
       setTimeout(() => el.remove(), 260);
+      titleStart.afterTrailer();
     },
 
     fail() {
@@ -13528,6 +17039,8 @@
   }
 
   const filler = {
+    // an episode's row: the older page's, or the redesign's
+    ROWS: '[class*="video-container"], [class*="list-"] [class*="video-"][class*="button-container"]',
     shows: null,
     cache: new Map(),
 
@@ -13561,16 +17074,45 @@
       return (this.shows = list);
     },
 
-    // Strict title match: a wrong show would mark the wrong episodes as filler
+    // How many letter pairs a title has (what similarity() counts in)
+    pairs(s) {
+      let n = 0;
+      for (let i = 0; i < s.length; i++) if (s[i] !== " ") n++;
+      return n > 1 ? n - 1 : 0;
+    },
+
+    // Strict title match: a wrong show would mark the wrong episodes as filler. Every name used to
+    // be compared letter by letter with every show on the list, three ways each: a second or more
+    // on a slow processor, in one go. Two titles can only be 88% alike when their lengths are close,
+    // so length alone now rules most of the list out (the answer is the same), and on a TV the rest
+    // is done a few milliseconds at a time.
     async match(names) {
       const list = await this.showList();
+      if (this.sizedFor !== list) {
+        this.sizes = list.map(([slug, title, alt]) => {
+          const spaced = slug.replace(/-/g, " ");
+          return [spaced, this.pairs(title), this.pairs(alt), this.pairs(spaced)];
+        });
+        this.sizedFor = list;
+      }
+      const alike = (a, na, b, nb) => (a === b || (na && nb && (2 * Math.min(na, nb)) / (na + nb) >= 0.88) ? similarity(a, b) : 0);
       let best = null;
+      let since = performance.now();
       for (const name of names) {
         const n = normTitle(name);
         if (!n) continue;
-        for (const [slug, title, alt] of list) {
-          const score = Math.max(similarity(n, title), similarity(n, alt), similarity(n, slug.replace(/-/g, " ")));
+        const size = this.pairs(n);
+        for (let i = 0; i < list.length; i++) {
+          const [slug, title, alt] = list[i];
+          const [spaced, titleSize, altSize, spacedSize] = this.sizes[i];
+          const score = Math.max(alike(n, size, title, titleSize), alike(n, size, alt, altSize), alike(n, size, spaced, spacedSize));
           if (!best || score > best.score) best = { slug, score };
+          // (nothing can beat the very same title)
+          if (score === 1) return best.slug;
+          if (IN_TV && (i & 63) === 63 && performance.now() - since > 4) {
+            await new Promise((r) => setTimeout(r, 0));
+            since = performance.now();
+          }
         }
       }
       return best && best.score >= 0.88 ? best.slug : null;
@@ -13602,11 +17144,12 @@
       return data;
     },
 
-    // Absolute episode number (1, 2, 3 … across seasons) for a video of a series
-    absolute(videos, videoId) {
+    // Absolute episode numbers (1, 2, 3 … across seasons) of a series' videos, by video id
+    numbers(videos) {
       const list = (videos || []).filter((v) => (v.season || 0) > 0).sort((a, b) => (a.season - b.season) || (a.episode - b.episode));
-      const i = list.findIndex((v) => v.id === videoId);
-      return i < 0 ? null : i + 1;
+      const out = new Map();
+      list.forEach((v, i) => { if (!out.has(v.id)) out.set(v.id, i + 1); });
+      return out;
     },
 
     isAnime(metaId, meta) {
@@ -13621,53 +17164,85 @@
 
     // Episode list tags on the detail page
     tagged: null,
+    none: "", // the series on this page has nothing to tag: not anime, or not on the list
+    list: null, // the page's episode list
+    other: null, // { sig, at }: Stremio's answer was for another title with these episodes on the page
 
     async ensureDetail() {
       if (!settings.fillerGuide || currentRoute() !== "detail") return;
-      const parts = (location.hash || "").split("/");
+      // (the season picked is in the address too, "?season=N": not part of the title's id)
+      const parts = (location.hash || "").split("?")[0].split("/");
       const type = decodeURIComponent(parts[2] || "");
       const metaId = decodeURIComponent(parts[3] || "");
       if (type !== "series" || !metaId) return;
-      // only when the episode list changed (sync runs on every page update)
-      const rows = dpage.videoRows();
+      // (most series: settled the first time, with nothing more to look at on later passes)
+      if (this.none === metaId || this.busy) return;
+      // only when the episode list changed (sync runs on every page update). A list that has gone
+      // takes its tags with it: the same title opened again draws the same rows anew, untagged,
+      // and they were taken for the ones already done.
+      if (this.list && !this.list.isConnected) { this.list = null; this.tagged = null; }
+      if (!this.list) this.list = dpage.videosPanel();
+      const rows = this.list ? this.list.querySelectorAll(this.ROWS) : [];
+      // (the redesign's season tabs: the season showing is part of what the list is)
       const sig = `${location.hash}|${dpage.seasonText()}|${rows.length}|${rows[0] ? rows[0].textContent.slice(0, 40) : ""}`;
-      if (sig === this.tagged || this.busy) return;
+      if (sig === this.tagged) return;
+      // (an addon that files the title under another id: asked again now and then, not at every pass)
+      if (this.other && this.other.sig === sig && performance.now() - this.other.at < 2000) return;
       this.busy = true;
       try {
         // remember the page only once we had a definite answer (data loaded, anime or not)
-        if (await this.tagEpisodes(metaId)) this.tagged = sig;
+        if (await this.tagEpisodes(metaId, sig)) this.tagged = sig;
       } finally {
         this.busy = false;
       }
     },
 
-    async tagEpisodes(metaId) {
+    async tagEpisodes(metaId, sig) {
       const { getState } = core();
       if (!getState) return false;
       let s;
       try { s = await getState("meta_details"); } catch (_) { return false; }
       const meta = s && s.metaItem && s.metaItem.content && s.metaItem.content.type === "Ready" ? s.metaItem.content.content : null;
+      if (meta && meta.id !== metaId) this.other = { sig, at: performance.now() };
       if (!meta || meta.id !== metaId) return false;
-      if (!this.isAnime(metaId, meta)) return true;
+      if (!this.isAnime(metaId, meta)) return (this.none = metaId), true;
       const data = await this.forShow(metaId, [meta.name].concat(meta.aliases || []));
-      if (!data) return true;
+      // (a list not known yet takes a second or more to arrive: the page may have moved on to
+      // another series, whose episodes it would tag by number. A pass is asked for the page that is
+      // there. A season picked meanwhile only adds "?season=N" to the address: still this series.)
+      if (currentRoute() !== "detail" || decodeURIComponent((location.hash || "").split("?")[0].split("/")[3] || "") !== metaId) {
+        scheduleSync();
+        return false;
+      }
+      if (!data) return (this.none = metaId), true;
       // Episode rows only show "N. Title", so match them to Stremio's episode data by number and
       // title, using the selected season to tell apart episodes with the same number
       const seasonMatch = /(\d+)/.exec(dpage.seasonText());
       const season = seasonMatch ? parseInt(seasonMatch[1], 10) : null;
       const videos = (meta.videos || []).filter((v) => (v.season || 0) > 0);
-      dpage.videoRows().forEach((a) => {
+      // Each episode's place in the whole series, and the episodes that share a number, worked out
+      // once for the list. Every row used to sort and search all the videos again: on a long anime
+      // (a thousand episodes in one list) the page froze while it did.
+      const numbers = this.numbers(meta.videos);
+      const numbered = new Map();
+      for (const v of videos) {
+        const same = numbered.get(v.episode);
+        if (same) same.push(v);
+        else numbered.set(v.episode, [v]);
+      }
+      // (dx.bi's own tags are no news to the main loop)
+      loop.quietly(() => dpage.videoRows().forEach((a) => {
         const titleEl = dpage.videoTitle(a);
         const num = /^\s*(\d+)\./.exec((titleEl && titleEl.textContent) || "");
         if (!num) return;
         const episode = parseInt(num[1], 10);
         const title = a.getAttribute("title") || "";
-        const same = videos.filter((v) => v.episode === episode);
+        const same = numbered.get(episode) || [];
         const video = same.find((v) => (v.title || v.name) === title && (season === null || v.season === season)) ||
           same.find((v) => season !== null && v.season === season) ||
           (same.length === 1 ? same[0] : null);
         if (!video) return;
-        const kind = this.kind(data, this.absolute(meta.videos, video.id));
+        const kind = this.kind(data, numbers.get(video.id));
         const holder = titleEl || a;
         const tag = holder.querySelector(":scope > .dxe-filler");
         a.classList.toggle("dxe-is-filler", kind === "f");
@@ -13682,7 +17257,7 @@
         } else if (tag) {
           tag.remove();
         }
-      });
+      }));
       return true;
     },
   };
@@ -15101,58 +18676,204 @@
         return `<span class="dxv-q"><b>Link</b></span><span class="dxv-main"><strong>${esc(d.provider)}</strong>${file ? `<small>${esc(file)}</small>` : ""}</span>`;
       }
       const seeds = d.seeds >= 0 ? `${d.seeds} seed${d.seeds === 1 ? "" : "s"}` : "";
-      const facts = [d.provider, d.site, seeds, this.size(d.size), ...d.langs.filter((l) => l !== NOT_LISTED).slice(0, 2)].filter(Boolean);
+      // Two languages by name, each behind its flag as the addon listed it ("🇬🇧 English · 🇷🇺 Russian"),
+      // and the flags of any more after them, as Stremio shows them (six at most, then a count)
+      const langs = d.langs.map((l, i) => [l, (d.flags && d.flags[i]) || ""]).filter(([l]) => l !== NOT_LISTED);
+      const named = langs.slice(0, 2).map(([l, flag]) => `<span class="dxv-lang">${flagTag(flag)}${esc(l)}</span>`);
+      const more = langs.slice(2).map(([, flag]) => flag).filter(Boolean);
+      const facts = [d.provider, d.site, seeds, this.size(d.size)].filter(Boolean).map(esc).concat(named);
+      const extra = more.length ? ` <span class="dxv-more">${more.slice(0, 6).map(flagTag).join("")}${more.length > 6 ? `+${more.length - 6}` : ""}</span>` : "";
       const state = d.instant ? ["is-ready", "Ready"] : d.pending ? ["is-wait", "Download"] : null;
       return `<span class="dxv-q"><b>${esc(QUALITY_LABEL[d.res])}</b>${d.dv || d.hdr ? `<i>${d.dv ? "Dolby Vision" : "HDR"}</i>` : ""}</span>
-        <span class="dxv-main"><em class="dxv-best">Best match</em><span class="dxv-top"><strong>${esc([this.SOURCES[d.source], d.codec].filter(Boolean).join(" · "))}</strong>${state ? `<span class="dxv-state ${state[0]}">${esc(state[1])}</span>` : ""}</span><small>${esc(facts.join(" · "))}</small>${file ? `<u>${esc(file)}</u>` : ""}</span>`;
+        <span class="dxv-main"><em class="dxv-best">Best match</em><span class="dxv-top"><strong>${esc([this.SOURCES[d.source], d.codec].filter(Boolean).join(" · "))}</strong>${state ? `<span class="dxv-state ${state[0]}">${esc(state[1])}</span>` : ""}</span><small>${facts.join(" · ")}${extra}</small>${file ? `<u>${esc(file)}</u>` : ""}</span>`;
     },
 
+    // TV: a long list is not drawn in one go. Fifty rows built at once, in the task in which
+    // Stremio had just made its own, held the page for over half a second with the remote waiting;
+    // three hundred would be seconds. The rows in sight are drawn at once (`FIRST` of them: a TV
+    // shows six, and each one more costs the first paint as much again as a row of the page), the
+    // rest `SLICE` to a frame. A computer draws them all at once.
+    FIRST: 8,
+    SLICE: 20,
+    key: "", // what the rows were last drawn from
+    at: -1, // …and Stremio's changes to the list as of then (streamTools.seen)
+    queue: [], // rows still to draw, nearest the ones in sight first
+    frame: 0,
+    timer: 0,
+    gaveWay: false,
+
+    // Has this row its dx.bi version, saying what the row says now? (`hit`: streamTools' entry for it)
+    drawn: (el, hit) => !!(hit && hit.drawn && hit.row && hit.row.parentNode === el),
+
+    // Streams get their dx.bi rows before the browser paints, so Stremio's own never show. Called
+    // each time Stremio changes the page, so it must cost nothing unless the stream list itself has
+    // changed, and then only read what has: nothing here asks the page for a measurement, and the
+    // rows already drawn are not read again.
+    prepaint() {
+      if (!settings.streamRows) return;
+      const tools = streamTools;
+      // (a list is looked for on any title's page, whatever its address: a film opened without its
+      // video in the address shows its streams all the same. With none in hand, that costs a look
+      // at the children of the page's content, once the content has been found)
+      if (!tools.look(true) || tools.seen === this.at) return;
+      tools.ensure(false, true);
+      this.ensure();
+    },
+
+    // (rows still without their dx.bi version)
     waiting: () => settings.streamRows && dpage.streamItems().some((el) => !el.hasAttribute("data-dxv")),
 
     ensure() {
       // Until a row is ready, the theme keeps Stremio's version of it out of sight
       const root = document.documentElement;
       if (root.hasAttribute("data-dx-rows") !== !!settings.streamRows) root.toggleAttribute("data-dx-rows", !!settings.streamRows);
-      const list = dpage.streamList();
+      const tools = streamTools;
+      const list = tools.look();
       if (!list) return;
+      const key = [tools.seen, settings.streamRows ? 1 : 0, streamPrefs.site, streamPrefs.dubbed, streamPrefs.anime, streamPrefs.foreign, streamPrefs.tongue].join("|");
+      // Nothing it works from has changed: the list's rows, and what makes a stream the best match
+      if (key === this.key) {
+        if (this.queue.length && !this.timer) this.later();
+        return;
+      }
+      this.key = "";
+      this.at = tools.seen;
+      this.queue = [];
+      const items = tools.items(list);
+      if (!settings.streamRows) {
+        for (const el of items) this.undraw(el);
+        this.key = key;
+        return;
+      }
       let best = null;
       let bestRank = -1;
-      for (const el of dpage.streamItems(list)) {
-        let row = el.querySelector(":scope > .dxv-row");
-        if (!settings.streamRows) {
-          if (row) row.remove();
-          el.removeAttribute("data-dxv");
-          el.removeAttribute("data-dx-best");
-          continue;
-        }
-        const d = streamTools.data(el);
-        // unchanged since the last pass: nothing to rebuild (only the best-match pick below)
-        if (row && row._d === d) {
-          if (row._rank > bestRank) { bestRank = row._rank; best = el; }
-          continue;
-        }
-        const desc = el.querySelector(dpage.DESC);
-        const file = desc ? desc.textContent.trim().split("\n")[0].slice(0, 140) : "";
-        const html = this.html(d, file);
-        if (!row) {
-          row = document.createElement("span");
-          row.className = "dxv-row";
-          el.append(row);
-          el.setAttribute("data-dxv", "");
-        }
-        if (row._html !== html) {
-          row._html = html;
-          row.innerHTML = html;
-        }
-        row._d = d;
-        row._rank = d.source !== "CAM" && !d.pending && !this.isLink(d) ? streamChoice.rank(d) : -1;
-        if (row._rank > bestRank) {
-          bestRank = row._rank;
+      for (const el of items) {
+        const d = tools.data(el);
+        if (d.source !== "CAM" && !d.pending && !this.isLink(d) && streamChoice.rank(d) > bestRank) {
+          bestRank = streamChoice.rank(d);
           best = el;
         }
       }
       for (const el of list.querySelectorAll("[data-dx-best]")) if (el !== best) el.removeAttribute("data-dx-best");
       if (best && !best.hasAttribute("data-dx-best")) best.setAttribute("data-dx-best", "");
+
+      // The rows that still need drawing, in the order they show. TV: nearest first to where the
+      // remote is in the list, or to its top. (Where the list is scrolled to is not asked: the
+      // answer would cost a layout, and a list steered by a remote keeps its selection in the middle.)
+      const shown = tools.inOrder && tools.inOrderAt === tools.seen ? tools.inOrder : items;
+      let due = shown;
+      if (IN_TV) {
+        const from = Math.max(0, shown.indexOf(document.activeElement));
+        due = shown.map((el, pos) => [Math.abs(pos - from), pos, el]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((x) => x[2]);
+      }
+      // (…then the ones the filters have out of the list, for when they come back)
+      if (shown !== items) {
+        const listed = new Set(shown);
+        due = due.concat(items.filter((el) => !listed.has(el)));
+      }
+      due = due.filter((el) => !this.drawn(el, tools.cache.get(el)));
+      for (const el of due.splice(0, IN_TV ? this.FIRST : due.length)) this.draw(el);
+      this.queue = due;
+      this.key = key;
+      if (due.length) this.later(true);
+    },
+
+    // One row, drawn or drawn again
+    draw(el) {
+      const d = streamTools.data(el);
+      const hit = streamTools.cache.get(el);
+      if (hit.file === undefined) {
+        const desc = el.querySelector(dpage.DESC);
+        hit.file = desc ? desc.textContent.trim().split("\n")[0].slice(0, 140) : "";
+      }
+      const html = this.html(d, hit.file);
+      let row = el.querySelector(":scope > .dxv-row");
+      if (!row) {
+        row = document.createElement("span");
+        row.className = "dxv-row";
+        el.append(row);
+        el.setAttribute("data-dxv", "");
+      }
+      if (row._html !== html) {
+        row._html = html;
+        row.innerHTML = html;
+      }
+      hit.row = row;
+      hit.drawn = true;
+      if (IN_TV) this.tuck(el, row, true);
+      // (it was waiting out of the page: see streamTools.apply)
+      if (hit.keep && el.hasAttribute("data-dx-hide")) el.removeAttribute("data-dx-hide");
+    },
+
+    // TV: Stremio's own parts of a drawn row leave the page altogether. The theme keeps them out
+    // of sight in a box one pixel wide, where their words are laid out a letter or two to a line:
+    // that took the browser twice as long as the row dx.bi draws beside them, for every row, each
+    // time the list was laid out. (Its menu stays: the theme shows that.)
+    tuck(el, row, away) {
+      for (const c of el.children) {
+        if (c === row || /menu-container/.test(c.getAttribute("class") || "")) continue;
+        if (away ? c.style.display !== "none" : c.style.display === "none") c.style.display = away ? "none" : "";
+      }
+    },
+
+    // The clean list switched off: the row as Stremio draws it
+    undraw(el) {
+      const row = el.querySelector(":scope > .dxv-row");
+      if (row) row.remove();
+      el.removeAttribute("data-dxv");
+      el.removeAttribute("data-dx-best");
+      if (IN_TV) this.tuck(el, null, false);
+      const hit = streamTools.cache.get(el);
+      if (hit) {
+        hit.row = null;
+        hit.drawn = false;
+      }
+    },
+
+    // The rows still waiting come a slice a frame, so that each paint has one slice to lay out and
+    // no more. (Zero-delay timers ran slice after slice between two paints, which left the browser
+    // the whole list to lay out at once after all; and on a busy page they came late.) `skip`: the
+    // frame about to be painted has the first rows in it already. A page that isn't being painted
+    // gets no frames, so a timer stands by.
+    later(skip) {
+      this.forget();
+      const run = () => this.more();
+      this.frame = requestAnimationFrame(skip ? () => { this.frame = requestAnimationFrame(run); } : run);
+      this.timer = setTimeout(run, 500);
+    },
+
+    forget() {
+      cancelAnimationFrame(this.frame);
+      clearTimeout(this.timer);
+      this.frame = this.timer = 0;
+    },
+
+    // The next few of the rows that were waiting
+    more() {
+      this.forget();
+      if (destroyed || !this.queue.length) return;
+      // A press on the remote goes first, once: with a direction held down there is always one
+      // waiting, and the rows it is heading for must still come
+      if (IN_TV && !this.gaveWay && loop.pressWaiting()) {
+        this.gaveWay = true;
+        this.later();
+        return;
+      }
+      this.gaveWay = false;
+      const tools = streamTools;
+      const list = tools.list;
+      if (!settings.streamRows || currentRoute() !== "detail" || !list || tools.look() !== list || tools.seen !== this.at) {
+        // the list has changed or gone, or its page has: the next pass starts again from what is there
+        this.queue = [];
+        this.key = "";
+        return;
+      }
+      loop.quietly(() => {
+        for (const el of this.queue.splice(0, this.SLICE)) {
+          if (list.contains(el) && !this.drawn(el, tools.cache.get(el))) this.draw(el);
+        }
+      });
+      if (this.queue.length) this.later();
     },
   };
 
@@ -15344,21 +19065,47 @@
       if (this.intent === intent) this.intent = null;
     },
 
+    // The Play button and the row it sits in are kept in hand: with the feature off, or the button
+    // where it was left, a pass looks nothing up (it used to search the whole page twice each time)
+    btn: null,
+    row: null,
+    swept: false, // a button an earlier dx.bi left on the page has been looked for
+
     button() {
-      const row = currentRoute() === "detail" ? dpage.actions() : null;
-      let btn = document.querySelector(".dxq-play");
-      if (!this.on || !row || !this.videoOf(location.hash)) {
+      const wanted = this.on && !!this.videoOf(location.hash);
+      let row = wanted ? this.row : null;
+      if (wanted && !(row && row.isConnected)) row = (currentRoute() === "detail" && dpage.actions()) || null;
+      this.row = row;
+      let btn = this.btn;
+      if (!btn && (row || !this.swept)) btn = document.querySelector(".dxq-play");
+      this.swept = true;
+      if (!row) {
         if (btn) btn.remove();
+        this.btn = null;
         return;
       }
-      if (btn && btn.parentElement === row) return;
+      if (btn && btn.parentElement === row) {
+        this.btn = btn;
+        return;
+      }
       if (btn) btn.remove();
-      btn = document.createElement("button");
+      // (a TV: not a <button>, see streamTools.ctl)
+      btn = document.createElement(IN_TV ? "div" : "button");
+      if (IN_TV) {
+        btn.setAttribute("role", "button");
+        btn.tabIndex = 0;
+        btn.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          btn.click();
+        });
+      }
       btn.className = "dxq-play";
       btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.3-7.2c.6-.4.6-1.3 0-1.7L8.6 3.9C7.9 3.5 7 4 7 4.8z"/></svg><span>Play</span>';
       btn.addEventListener("click", () => this.run());
       row.prepend(btn);
       dpage.native(btn, row);
+      this.btn = btn;
     },
 
     status(text) {
@@ -15399,6 +19146,13 @@
       const started = Date.now();
       let picked = null;
       let lastItems = [];
+      // (the list is read again every 300 ms while addons answer: a stream already described isn't described again)
+      const described = new Map();
+      const describe = (name, all) => {
+        let d = described.get(all);
+        if (!d) described.set(all, (d = describeStream(name, all)));
+        return d;
+      };
       while (live() && Date.now() - started < 15000) {
         await new Promise((r) => setTimeout(r, 300));
         if (!live()) return;
@@ -15412,7 +19166,7 @@
           st,
           torrent: !!st.infoHash && !st.url,
           hint: watchParty.streamHints(st),
-          d: describeStream(String(st.name || ""), `${st.name || ""}\n${st.description || st.title || ""}`),
+          d: describe(String(st.name || ""), `${st.name || ""}\n${st.description || st.title || ""}`),
         }));
         const settled = groups.length > 0 && !groups.some((g) => g && g.content && g.content.type === "Loading");
         lastItems = items;
@@ -15609,8 +19363,41 @@
       return { order: LIB_ORDERS[p.order] ? p.order : "", genre: typeof p.genre === "string" ? p.genre : "" };
     },
 
+    // The Library's page, its grid of titles and each title's id. All three were looked up afresh
+    // on every pass (and, with a Watched filter on, at every change of the page): the whole page
+    // gone through for the Library, the Library for its titles, and each title for its link, name
+    // and poster, twice over. A long library made every pass on a TV slow. The page and the grid
+    // are kept while they're still in the page, and a title's id for as long as its link is the same.
+    lib: null,
+    grid: null,
+    ids: new WeakMap(), // a title's card → { link, href, id: { type, id } or null }
+
+    page() {
+      if (currentRoute() !== "library") return null;
+      if (!this.lib || !this.lib.isConnected) this.lib = document.querySelector('#app [class*="library-container"]');
+      return this.lib;
+    },
+
+    cards(lib) {
+      if (!this.grid || !this.grid.isConnected || !lib.contains(this.grid)) this.grid = lib.querySelector('[class*="meta-items-container"]');
+      const out = [];
+      if (this.grid) for (const c of this.grid.children) if (String(c.getAttribute("class") || "").includes("meta-item-container")) out.push(c);
+      return out;
+    },
+
+    idOf(card) {
+      let known = this.ids.get(card);
+      if (!known || !known.link || !known.link.isConnected || known.link.getAttribute("href") !== known.href) {
+        const link = card.querySelector('a[class*="meta-item-link"]') || card.querySelector("a[href]");
+        const href = link ? link.getAttribute("href") : null;
+        known = { link, href, id: link ? parseDetailHref(href || "") : null };
+        this.ids.set(card, known);
+      }
+      return known.id;
+    },
+
     ensure() {
-      const lib = currentRoute() === "library" ? document.querySelector('#app [class*="library-container"]') : null;
+      const lib = this.page();
       const inputs = lib && lib.querySelector('[class*="selectable-inputs-container"]');
       if (!inputs) return;
       let tools = lib.querySelector(".dxl-tools");
@@ -15657,35 +19444,82 @@
       this.ensure();
     },
 
+    // One title's year, rating and genres (from the cache dx.bi already keeps for ratings)
+    look(k) {
+      const [type, ...rest] = k.split(":");
+      const id = rest.join(":");
+      return getInfo(type, id).then(async (m) => {
+        // ids Cinemeta doesn't know: ask the addon they came from
+        if (!m || !m.releaseInfo || !(m.genres && m.genres.length)) {
+          const full = await addonMeta(type, id);
+          if (full) m = { ...full, ...(m || {}), releaseInfo: (m && m.releaseInfo) || full.releaseInfo || full.year || full.released, genres: (m && m.genres && m.genres.length ? m.genres : full.genres || full.genre || []) };
+        }
+        const s = scoreOf(m);
+        this.info.set(k, { year: parseInt(String((m && m.releaseInfo) || ""), 10) || 0, rating: s ? s.value : 0, genres: (m && m.genres) || [] });
+      }).catch(() => this.info.set(k, { year: 0, rating: 0, genres: [] }));
+    },
+
+    // TV: the titles that aren't known yet, a few at a time and top of the page first. They were
+    // all asked for at once as the Library opened (hundreds of lookups begun in one go, and their
+    // answers read together). While nothing is sorted or filtered only the list of genres waits
+    // for them, and it waits for the remote to rest.
+    waiting: [],
+    asking: false,
+    async ask(keys) {
+      this.waiting.push(...keys);
+      if (this.asking) return;
+      this.asking = true;
+      let since = performance.now();
+      try {
+        while (this.waiting.length) {
+          await Promise.all(this.waiting.splice(0, 4).map((k) => this.look(k)));
+          while (!this.prefs().order && !this.prefs().genre && performance.now() - keyNav.lastPress < 600) await new Promise((r) => setTimeout(r, 300));
+          if (performance.now() - since > 6) {
+            await new Promise((r) => setTimeout(r, 0));
+            since = performance.now();
+          }
+        }
+      } finally {
+        this.asking = false;
+      }
+      this.key = "";
+      scheduleSync();
+    },
+
     apply(lib, tools) {
-      const cards = [...lib.querySelectorAll('[class*="meta-items-container"] > [class*="meta-item-container"]')];
+      const cards = this.cards(lib);
       const p = this.prefs();
-      const ids = cards.map((c) => { const i = cardInfo(c); return i ? `${i.type}:${i.id}` : ""; });
-      const key = `${p.order}|${p.genre}|${ids.join(",")}|${this.info.size}`;
-      if (key === this.key) return;
-      this.key = key;
-      // fetch what we don't know yet (from the cache dx.bi already keeps for ratings)
+      const ids = cards.map((c) => { const i = this.idOf(c); return i ? `${i.type}:${i.id}` : ""; });
+      // fetch what we don't know yet (noted as asked for first, so the page isn't gone over a
+      // second time on the next pass just because that note was made)
       const missing = ids.filter((k) => k && !this.info.has(k));
+      for (const k of missing) this.info.set(k, null);
+      const key = `${p.order}|${p.genre}|${ids.join(",")}|${this.info.size}`;
+      // Nothing has changed since the last time, if that was on this row and this grid: a Library
+      // left and opened again is a new page with an empty row, and with the same titles it stayed
+      // empty, and in Stremio's order
+      if (key === this.key && this.drawn === tools && this.placed === this.grid) return;
+      this.key = key;
       if (missing.length) {
-        for (const k of missing) this.info.set(k, null);
-        Promise.all(missing.map((k) => {
-          const [type, ...rest] = k.split(":");
-          const id = rest.join(":");
-          return getInfo(type, id).then(async (m) => {
-            // ids Cinemeta doesn't know: ask the addon they came from
-            if (!m || !m.releaseInfo || !(m.genres && m.genres.length)) {
-              const full = await addonMeta(type, id);
-              if (full) m = { ...full, ...(m || {}), releaseInfo: (m && m.releaseInfo) || full.releaseInfo || full.year || full.released, genres: (m && m.genres && m.genres.length ? m.genres : full.genres || full.genre || []) };
-            }
-            const s = scoreOf(m);
-            this.info.set(k, { year: parseInt(String((m && m.releaseInfo) || ""), 10) || 0, rating: s ? s.value : 0, genres: (m && m.genres) || [] });
-          }).catch(() => this.info.set(k, { year: 0, rating: 0, genres: [] }));
-        })).then(() => { this.key = ""; scheduleSync(); });
+        if (IN_TV) this.ask(missing);
+        else Promise.all(missing.map((k) => this.look(k))).then(() => { this.key = ""; scheduleSync(); });
       }
       const known = ids.map((k) => this.info.get(k) || { year: 0, rating: 0, genres: [] });
       const genres = [...new Set(known.flatMap((x) => x.genres))].sort((a, b) => a.localeCompare(b));
-      tools.innerHTML = `${Object.entries(LIB_ORDERS).map(([v, label]) => `<button class="dxl-opt${p.order === v ? " is-on" : ""}" data-order="${v}">${label}</button>`).join("")}
+      // (written only when it has changed: writing it again made new buttons, and the remote lost its place on the old one)
+      const html = `${Object.entries(LIB_ORDERS).map(([v, label]) => `<button class="dxl-opt${p.order === v ? " is-on" : ""}" data-order="${v}">${label}</button>`).join("")}
         <select class="dxl-select" aria-label="Genre"><option value="">All genres</option>${genres.concat(p.genre && !genres.includes(p.genre) ? [p.genre] : []).map((g) => `<option${g === p.genre ? " selected" : ""}>${esc(g)}</option>`).join("")}</select>`;
+      if (this.drawn !== tools || this.html !== html) {
+        // the remote's place on the row is kept: the button just pressed (or the genres) is drawn
+        // anew, and the selection used to go with it, the next press landing on the first title
+        const at = tools.contains(document.activeElement) ? document.activeElement : null;
+        const mark = at && (at.dataset.order ? `[data-order="${at.dataset.order}"]` : at.tagName === "SELECT" ? "select" : "");
+        tools.innerHTML = html;
+        this.drawn = tools;
+        this.html = html;
+        const again = mark && tools.querySelector(mark);
+        if (again) again.focus({ preventScroll: true });
+      }
       lib.classList.toggle("dxl-sorted", !!p.order);
       const rank = cards.map((c, i) => i);
       if (p.order) {
@@ -15703,6 +19537,7 @@
         c.style.order = p.order ? String(pos.get(i)) : "";
         c.classList.toggle("dxl-off", !!p.genre && !known[i].genres.includes(p.genre));
       });
+      this.placed = this.grid;
     },
 
     reset(lib) {
@@ -15720,16 +19555,32 @@
     at: 0,
     busy: false,
 
+    // Which of the two filters the address asks for (true: Watched, false: Not watched, null: neither)
+    seen: null, // the address last read
+    want: null,
+    hiding: false, // titles may be hidden, or the "nothing to show" note up, from a filter
+
+    // Runs on every pass, and in the Library at every change of the page. With neither filter
+    // chosen (the usual case) and nothing left hidden from one, there is nothing to do: it used to
+    // go through every title of the Library all the same, looking each one up, at each change.
     ensure() {
-      const lib = currentRoute() === "library" ? document.querySelector('#app [class*="library-container"]') : null;
+      if (currentRoute() !== "library") return;
+      const hash = location.hash;
+      if (hash !== this.seen) {
+        this.seen = hash;
+        const sort = new URLSearchParams(hash.split("?")[1] || "").get("sort") || "";
+        this.want = sort === "watched" ? true : sort === "notwatched" ? false : null;
+      }
+      const want = this.want;
+      if (want === null && !this.hiding) return;
+      const lib = librarySort.page();
       if (!lib) return;
-      const sort = new URLSearchParams(location.hash.split("?")[1] || "").get("sort") || "";
-      const want = sort === "watched" ? true : sort === "notwatched" ? false : null;
       if (want !== null) this.refresh();
-      const cards = [...lib.querySelectorAll('[class*="meta-items-container"] > [class*="meta-item-container"]')];
+      this.hiding = want !== null;
+      const cards = librarySort.cards(lib);
       let shown = 0;
       for (const c of cards) {
-        const info = cardInfo(c);
+        const info = librarySort.idOf(c);
         const watched = info ? this.flags.get(info.id) : undefined;
         // (until Stremio's answer first arrives, nothing: the wrong titles flashed up otherwise)
         const off = want !== null && (this.at === 0 || (watched !== undefined && watched !== want));
@@ -15745,13 +19596,9 @@
         (lib.querySelector('[class*="meta-items-container"]') || lib).before(note);
       }
       if (note) {
+        const text = want ? "Nothing in your library is watched yet." : "You've watched everything in your library.";
         if (!empty) note.remove();
-        else {
-          // (only when it differs: rewriting the same text is still a page change, which brought
-          // this straight back here, for ever — the Library froze once everything was watched)
-          const text = want ? "Nothing in your library is watched yet." : "You've watched everything in your library.";
-          if (note.textContent !== text) note.textContent = text;
-        }
+        else if (note.textContent !== text) note.textContent = text;
       }
     },
 
@@ -15825,9 +19672,15 @@
     navMenu.ensure();
     if (currentRoute() === "board") airing.ensure();
     if (currentRoute() === "detail") filler.ensureDetail();
-    playback.ensure();
-    stats.ensure();
-    upNext.ensure();
+    // dx.bi TV plays in its own player, which has its own "next episode": Stremio's video underneath
+    // never plays there, so there is no volume to remember, no watch time to count and no countdown
+    // to show. (They also read the player's state over and over just as a stream was starting, and
+    // saved "muted" as the viewer's choice each time the TV silenced that video.)
+    if (!IN_TV) {
+      playback.ensure();
+      stats.ensure();
+      upNext.ensure();
+    }
     if (settings.newEpisodes) episodes.refresh();
   }
 
@@ -15895,78 +19748,178 @@
       el.textContent = css;
     },
 
+    // What a kept copy is good for: this Stremio build (its class names), this text of dx.bi's, and
+    // this version of the browser. The copy is the styles as the browser read them, and what a
+    // version doesn't understand it leaves out, so a newer one has to read the text again. (The
+    // browser's whole name used to stand here, with dx.bi TV's own version in it: every update of
+    // the app threw both copies away, though nothing they depend on had changed.)
     stamp(css, main) {
       let h = 0;
       for (let i = 0; i < css.length; i++) h = (Math.imul(h, 31) + css.charCodeAt(i)) | 0;
-      return `${main.href}|${navigator.userAgent}|${css.length}|${h}`;
+      const browser = (/Chrom(?:e|ium)\/[\d.]+/.exec(navigator.userAgent) || [navigator.userAgent])[0];
+      return `${main.href}|${browser}|${css.length}|${h}|2`;
     },
 
-    soon() {
+    // (`wait`: Stremio's stylesheet isn't there to read yet. Asked again, less and less often.)
+    waits: 0,
+    soon(wait) {
+      if (!IN_TV) return;
+      this.waits = wait ? this.waits + 1 : 0;
       clearTimeout(this.timer);
-      this.timer = setTimeout(() => this.run(), 300);
+      this.timer = setTimeout(() => this.run(), Math.min(5000, 300 * 2 ** Math.min(Math.max(this.waits - 1, 0), 5)));
     },
 
-    run() {
+    // The work used to be done in one go: one to three seconds, the first time dx.bi started after
+    // any update of Stremio, of the browser or of dx.bi, in which a TV drew nothing and heard no
+    // remote. Now it is done in short turns: the new selectors are worked out first, with the page
+    // left as it is, then given to it in one go (so it is restyled once), and the copy is kept last.
+    // The turns follow each other closely on purpose. Until the selectors are sharp every restyle
+    // is a slow one, and Home is loading meanwhile: with turns of a few milliseconds, and the rest
+    // of the page's work let in between them, three times as much time went on restyling as
+    // dx.bi started.
+    running: false,
+    again: false,
+    since: 0,
+    late() {
+      return performance.now() - this.since > 12;
+    },
+    // (the browser's own "let a key press or a frame through, then carry on" where it has one)
+    rest() {
+      const pause = window.scheduler && typeof window.scheduler.yield === "function" ? window.scheduler.yield() : new Promise((r) => setTimeout(r, 0));
+      return pause.then(() => { this.since = performance.now(); });
+    },
+
+    async run() {
+      if (this.running) {
+        this.again = true;
+        return;
+      }
       const main = this.stremioSheet();
       let rules;
       try { rules = main && main.cssRules; } catch (_) { /* not readable */ }
       if (!rules) {
-        this.soon();
+        this.soon(true);
         return;
       }
-      // Only the styles it can keep a copy of: changing any stylesheet restyles the whole page
-      for (const el of document.querySelectorAll('style[data-dx-sharp="todo"]')) {
-        const sheet = el.sheet;
-        if (!sheet) {
-          this.soon();
-          continue;
+      this.running = true;
+      this.since = performance.now();
+      try {
+        // Only the styles it can keep a copy of: changing any stylesheet restyles the whole page
+        for (const el of document.querySelectorAll('style[data-dx-sharp="todo"]')) {
+          const sheet = el.sheet;
+          if (!sheet) {
+            this.again = true;
+            continue;
+          }
+          if (this.done.has(sheet)) continue;
+          const original = el.textContent;
+          let plan = null;
+          try { plan = await this.plan(sheet.cssRules); } catch (_) { /* leave it as it is */ }
+          // (filled afresh meanwhile: what's there now gets its own turn)
+          if (el.sheet !== sheet) continue;
+          this.done.add(sheet);
+          el.dataset.dxSharp = "1";
+          if (!plan || !plan.length) continue;
+          await this.rest();
+          if (el.sheet !== sheet) continue;
+          try {
+            for (const [rule, selector] of plan) rule.selectorText = selector;
+            const css = [];
+            for (let i = 0; i < sheet.cssRules.length; i++) {
+              if (this.late()) await this.rest();
+              css.push(sheet.cssRules[i].cssText);
+            }
+            if (el.sheet !== sheet) continue;
+            localStorage.setItem(`dxbi.sharp.${el.id}`, JSON.stringify({ from: this.stamp(original, main), css: css.join("\n") }));
+          } catch (_) { /* storage full: it's redone next start */ }
         }
-        if (this.done.has(sheet)) continue;
-        this.done.add(sheet);
-        const original = el.textContent;
-        let changed = false;
-        try { changed = this.rules(sheet.cssRules); } catch (_) { /* leave it as it is */ }
-        el.dataset.dxSharp = "1";
-        if (!changed) continue;
-        try {
-          const css = [...sheet.cssRules].map((r) => r.cssText).join("\n");
-          localStorage.setItem(`dxbi.sharp.${el.id}`, JSON.stringify({ from: this.stamp(original, main), css }));
-        } catch (_) { /* storage full: it's redone next start */ }
+      } finally {
+        this.running = false;
+      }
+      if (this.again) {
+        this.again = false;
+        this.soon();
       }
     },
 
-    // Every class name Stremio's stylesheet, dx.bi's styles and the page use
-    known() {
-      if (this.classes) return this.classes;
+    // The rules whose selectors can be sharper, each with its new selector: [[rule, selector], …]
+    async plan(top) {
+      await this.learn();
+      const out = [];
+      const lists = [top];
+      while (lists.length) {
+        const list = lists.pop();
+        for (let i = 0; i < list.length; i++) {
+          if (this.late()) await this.rest();
+          const r = list[i];
+          if (r.cssRules) lists.push(r.cssRules);
+          const now = r.selectorText;
+          if (!now) continue;
+          const next = splitTop(now, ",").flatMap((s) => this.selector(s.trim())).join(", ");
+          if (next !== now) out.push([r, next]);
+        }
+      }
+      return out;
+    },
+
+    // Every class name Stremio's stylesheet, dx.bi's styles and the page use: gathered once, in
+    // short turns (Stremio's stylesheet alone is thousands of rules)
+    async learn() {
+      if (this.classes) return;
       const set = new Set();
       const add = (text) => { for (const m of text.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)) set.add(m[1]); };
-      const walk = (list) => { for (const r of list) { if (r.selectorText) add(r.selectorText); if (r.cssRules) walk(r.cssRules); } };
-      for (const s of document.styleSheets) {
-        try { walk(s.cssRules); } catch (_) { /* another site's sheet */ }
+      for (const s of [...document.styleSheets]) {
+        let top;
+        try { top = s.cssRules; } catch (_) { continue; /* another site's sheet */ }
+        // (in the order they're written, rules inside a rule straight after it)
+        const stack = [{ list: top, i: 0 }];
+        while (stack.length) {
+          const at = stack[stack.length - 1];
+          if (at.i >= at.list.length) {
+            stack.pop();
+            continue;
+          }
+          const r = at.list[at.i++];
+          if (r.selectorText) add(r.selectorText);
+          if (r.cssRules) stack.push({ list: r.cssRules, i: 0 });
+          if (this.late()) await this.rest();
+        }
       }
       for (const el of document.querySelectorAll("[class]")) for (const c of el.classList) set.add(c);
-      return (this.classes = [...set]);
+      if (!this.classes) this.classes = [...set];
+    },
+
+    // (what learn() gathered: plan() waits for it before any selector is looked at)
+    known() {
+      return this.classes || [];
     },
 
     // The class names a [class*="…"] (or [class="…"]) can stand for
     matches(op, value) {
+      if (!this.classes) return [];
       const k = op + value;
-      if (!this.found.has(k)) this.found.set(k, this.known().filter((c) => (op === "*" ? c.includes(value) : c === value)));
+      if (!this.found.has(k)) this.found.set(k, op === "*" ? this.containing(value) : this.known().filter((c) => c === value));
       return this.found.get(k);
     },
 
-    rules(list) {
-      let changed = false;
-      for (const r of list) {
-        if (r.cssRules) changed = this.rules(r.cssRules) || changed;
-        if (!r.selectorText) continue;
-        const next = splitTop(r.selectorText, ",").flatMap((s) => this.selector(s.trim())).join(", ");
-        if (next !== r.selectorText) {
-          r.selectorText = next;
-          changed = true;
-        }
+    // Every name with `value` in it, in the order of known(). The names are kept as one text, a
+    // name to a line, for the browser's own search: asking each of the thousands of names in turn,
+    // for each of the hundreds of parts the styles name, was a quarter of all the work.
+    containing(value) {
+      const names = this.known();
+      if (!value || value.includes("\n")) return names.filter((c) => c.includes(value));
+      if (this.listed !== names) {
+        this.listed = names;
+        this.lines = `\n${names.join("\n")}\n`;
       }
-      return changed;
+      const text = this.lines;
+      const out = [];
+      for (let at = text.indexOf(value); at >= 0;) {
+        const end = text.indexOf("\n", at);
+        out.push(text.slice(text.lastIndexOf("\n", at) + 1, end));
+        at = text.indexOf(value, end + 1);
+      }
+      return out;
     },
 
     // One selector: each part's [class*="…"] becomes its class names (one selector per combination,
@@ -16157,6 +20110,7 @@
     store.load().then(() => {
       cloudSync.start();
       stats.load();
+      simkl.start();
       setTimeout(() => subtitlesStart.apply().catch(() => { /* core not ready */ }), 3000);
       if (!miniPlayer.info) whoIsWatching.maybeShow().catch(() => { /* nothing to show */ });
       store.ready.then(() => restrict.apply()).catch(() => { /* next sync */ });
@@ -17177,6 +21131,7 @@
     restrict,
     whoIsWatching,
     homeLayout,
+    simkl,
     episodes,
     calendarFill,
     report,
@@ -17816,6 +21771,7 @@
       return true;
     },
     destroy() {
+      destroyed = true;
       mo.disconnect();
       io.disconnect();
       themeLinkWatch.disconnect();
@@ -17844,17 +21800,22 @@
       keys.close();
       statsPanel.close();
       reviews.close();
+      streamTools.letGo();
       document.querySelectorAll(".dx-scores, .dx-reviews-btn").forEach((el) => el.remove());
       whoIsWatching.close();
       homeLayout.close();
+      homeLayout.letGo();
       playerClock.stop();
       myList.remove();
+      simklRows.remove();
+      simklScrobble.stop();
+      simkl.close();
       airing.remove();
       document.body.classList.remove("dx-upnext");
       document.querySelectorAll(".dxe-new-ep, .dxe-filler, .dxe-menu-item").forEach((el) => el.remove());
       skip.reset();
       addonTools.close();
-      for (const id of ["dx-extras-style", "dx-sub-style", "dx-focus-style"]) document.getElementById(id)?.remove();
+      for (const id of ["dx-extras-style", "dx-sub-style", "dx-focus-style", "dx-simkl-style"]) document.getElementById(id)?.remove();
       document.querySelectorAll(".dxe-skip, .dxe-addon-btn, .dx-pip").forEach((el) => el.remove());
       onTitle.disconnect();
       document.removeEventListener("scroll", onScroll, { capture: true });
@@ -17954,7 +21915,7 @@ vec4 hook() {
   // ---------------------------------------------------------------------------
   // Generated from dxbi.theme.css by tools/bundle-theme.mjs: edit the theme, then run it
   function bundledThemeCss() {
-    return /*@bundled-theme*/"/* dx.bi — Copyright (C) 2026 dx.bi. Free software under the GNU General Public License, version 3\n   or later (see LICENSE and NOTICE.md at github.com/notdxbi/dxbi-stremio). Versions up to 2.15.9: MIT. */\n\n@import url(\"https://fonts.googleapis.com/css2?family=Inter:wght@300..800&family=Bebas+Neue&display=swap\");\n\n/* Country flags drawn the same on every OS: Windows has no flag emoji and shows letters (\"GB\")\n   instead. A flag-only font (Twemoji Country Flags, 78 KB), downloaded only when a flag is on screen. */\n@font-face {\n    font-family: \"Twemoji Country Flags\";\n    unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;\n    src: url(\"https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.8/dist/TwemojiCountryFlags.woff2\") format(\"woff2\");\n    font-display: swap;\n}\n\n/* =====================================================================\n   1. TOKENS\n   ===================================================================== */\n\n:root {\n    /* Accent is overridable by the plugin (Settings → dx.bi) */\n    --dx-accent: #e50914;\n    --dx-accent-hover: color-mix(in srgb, var(--dx-accent) 85%, white);\n    --dx-accent-soft: color-mix(in srgb, var(--dx-accent) 18%, transparent);\n\n    --dx-bg: #0b0b0d;\n    --dx-bg-raised: #131317;\n    --dx-surface: #18181d;\n    --dx-surface-2: #212128;\n    --dx-surface-3: #2b2b33;\n    --dx-line: rgba(255, 255, 255, 0.08);\n    --dx-line-strong: rgba(255, 255, 255, 0.16);\n\n    --dx-text: #f4f4f5;\n    --dx-text-2: #c4c4cc;\n    --dx-text-3: #8a8a96;\n\n    --dx-radius-s: 4px;\n    --dx-radius: 8px;\n    --dx-radius-l: 14px;\n\n    --dx-gutter: clamp(1.25rem, 4vw, 4.5rem);\n    --dx-nav-h: 4.25rem;\n    --dx-cols: 7;\n\n    --dx-ease: cubic-bezier(0.22, 0.61, 0.36, 1);\n    --dx-ease-out: cubic-bezier(0.16, 1, 0.3, 1);\n    --dx-shadow-1: 0 2px 10px rgba(0, 0, 0, 0.35);\n    --dx-shadow-2: 0 18px 50px rgba(0, 0, 0, 0.6);\n\n    /* Stremio's own variables — recolours every stock component at once */\n    --primary-background-color: var(--dx-bg);\n    --secondary-background-color: var(--dx-bg);\n    --primary-foreground-color: var(--dx-text);\n    --secondary-foreground-color: var(--dx-bg);\n    --primary-accent-color: var(--dx-accent);\n    --secondary-accent-color: var(--dx-accent);\n    --tertiary-accent-color: #f5c518;\n    --overlay-color: rgba(255, 255, 255, 0.07);\n    --modal-background-color: var(--dx-surface);\n    --outer-glow: 0 0 0 transparent;\n    --border-radius: var(--dx-radius);\n    --horizontal-nav-bar-size: var(--dx-nav-h);\n    --color-placeholder: rgba(255, 255, 255, 0.05);\n    --color-placeholder-background: rgba(255, 255, 255, 0.04);\n}\n\n@media (max-width: 2200px) { :root { --dx-cols: 7; --dx-wide-cols: 4.6; } }\n@media (max-width: 1800px) { :root { --dx-cols: 6; --dx-wide-cols: 4.2; } }\n@media (max-width: 1400px) { :root { --dx-cols: 5; --dx-wide-cols: 3.6; } }\n@media (max-width: 1050px) { :root { --dx-cols: 4; --dx-wide-cols: 2.6; } }\n@media (min-width: 2201px) { :root { --dx-cols: 8; --dx-wide-cols: 5.4; } }\n\n/* =====================================================================\n   2. BASE\n   ===================================================================== */\n\nhtml,\nhtml body {\n    background: var(--dx-bg) !important;\n    font-family: \"Twemoji Country Flags\", \"Inter\", \"PlusJakartaSans\", system-ui, sans-serif !important;\n    -webkit-font-smoothing: antialiased;\n    text-rendering: optimizeLegibility;\n}\n\n#app,\n#app * {\n    font-family: \"Twemoji Country Flags\", \"Inter\", \"PlusJakartaSans\", system-ui, sans-serif;\n}\n\n::selection {\n    background: var(--dx-accent);\n    color: #fff;\n}\n\n* {\n    scrollbar-width: thin;\n    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;\n}\n\n::-webkit-scrollbar {\n    width: 8px;\n    height: 8px;\n}\n\n::-webkit-scrollbar-thumb {\n    background: rgba(255, 255, 255, 0.14);\n    border-radius: 8px;\n}\n\n::-webkit-scrollbar-track {\n    background: transparent;\n}\n\n/* Smooth page entry */\n#app .animation-fade-in {\n    animation: dx-rise 0.5s var(--dx-ease-out) both !important;\n}\n\n@keyframes dx-rise {\n    from { opacity: 0; transform: translateY(10px); }\n    to { opacity: 1; transform: none; }\n}\n\n@keyframes dx-fade {\n    from { opacity: 0; }\n    to { opacity: 1; }\n}\n\n/* =====================================================================\n   3. TOP NAVIGATION (main pages)\n   ===================================================================== */\n\n#app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"] {\n    z-index: 5;\n    height: var(--dx-nav-h);\n    padding: 0 var(--dx-gutter);\n    gap: 1.25rem;\n    justify-content: flex-start;\n    background: var(--dx-bg);\n    transition: background-color 0.35s var(--dx-ease), box-shadow 0.35s var(--dx-ease);\n}\n\n/* Board: header floats over the billboard and turns solid on scroll */\nbody[data-dx-route=\"board\"] #app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"] {\n    background: linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);\n}\n\nbody.dx-scrolled #app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"],\nbody #app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"][data-dx-scrolled] {\n    background-color: rgba(11, 11, 13, 0.97);\n    box-shadow: 0 1px 0 var(--dx-line), 0 10px 30px rgba(0, 0, 0, 0.35);\n}\n\n/* Wordmark */\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"logo-container\"] {\n    flex: none;\n    margin-right: auto;\n    width: 6.5rem;\n    height: var(--dx-nav-h);\n    justify-content: flex-start;\n    order: 0;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"logo-container\"] img {\n    display: none !important;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"logo-container\"]::before {\n    content: \"DX.BI\";\n    font-family: \"Bebas Neue\", \"Inter\", sans-serif;\n    font-size: 2.35rem;\n    line-height: 1;\n    letter-spacing: 0.05em;\n    color: var(--dx-accent);\n    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);\n    transform: translateY(2px);\n}\n\n/* Tabs: the stock vertical bar becomes a row of text links beside the logo */\n#app [class*=\"main-nav-bars-container\"] > nav[class*=\"vertical-nav-bar\"] {\n    top: 0;\n    bottom: auto;\n    left: calc(var(--dx-gutter) + 6.5rem + 1.5rem);\n    z-index: 6;\n    width: auto;\n    height: var(--dx-nav-h);\n    padding: 0;\n    flex-direction: row;\n    align-items: center;\n    gap: 1.75rem;\n    background: transparent;\n    overflow: visible;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] {\n    position: relative;\n    width: auto;\n    height: auto;\n    min-height: 0;\n    padding: 0.4rem 0;\n    flex-direction: row;\n    border-radius: 0;\n    background: transparent !important;\n    overflow: visible;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] svg {\n    display: none;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] [class*=\"label\"] {\n    display: block;\n    max-height: none;\n    padding: 0;\n    margin: 0;\n    font-size: 0.92rem;\n    font-weight: 500;\n    letter-spacing: 0.01em;\n    text-transform: capitalize;\n    color: var(--dx-nav-label, var(--dx-text-2));\n    opacity: 1;\n    overflow: visible;\n    white-space: nowrap;\n    transition: color 0.25s var(--dx-ease);\n}\n\n/* Hover effects below set a variable on the hovered element itself, never \"hovered [class*=x]\":\n   that shape makes the browser restyle the whole page on every hover change. */\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"]:hover,\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"]:focus-visible {\n    --dx-nav-label: var(--dx-text);\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"].selected [class*=\"label\"] {\n    color: #fff;\n    font-weight: 700;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"]::after {\n    content: \"\";\n    position: absolute;\n    left: 0;\n    right: 0;\n    bottom: -0.15rem;\n    height: 2px;\n    border-radius: 2px;\n    background: var(--dx-accent);\n    transform: scaleX(0);\n    transform-origin: left;\n    transition: transform 0.35s var(--dx-ease-out);\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"].selected::after {\n    transform: scaleX(1);\n}\n\n/* \"Board\" reads as \"Home\" */\n#app nav[class*=\"vertical-nav-bar\"] a[href=\"#/\"] [class*=\"label\"] {\n    font-size: 0 !important;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[href=\"#/\"] [class*=\"label\"]::after {\n    content: \"Home\";\n    font-size: 0.92rem;\n}\n\n/* Search: compact field on the right */\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] {\n    flex: none;\n    order: 1;\n    width: 15rem;\n    height: 2.4rem;\n    padding: 0 0.35rem 0 0.9rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.06);\n    border: 1px solid var(--dx-line);\n    transition: width 0.4s var(--dx-ease-out), background-color 0.25s, border-color 0.25s;\n}\n\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"]:hover,\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.09);\n}\n\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"]:focus-within,\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"].active {\n    width: 22rem;\n    background: rgba(0, 0, 0, 0.85);\n    border-color: rgba(255, 255, 255, 0.55);\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] [class*=\"search-input\"],\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] input {\n    font-size: 0.9rem;\n    color: var(--dx-text);\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] [class*=\"placeholder-label\"] {\n    font-size: 0.9rem;\n    color: var(--dx-text-3);\n    opacity: 1;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] [class*=\"submit-button-container\"] {\n    width: 2rem;\n    height: 2rem;\n    padding: 0;\n    border-radius: var(--dx-radius-s);\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] svg {\n    width: 1.1rem;\n    height: 1.1rem;\n    color: var(--dx-text-2);\n    opacity: 1;\n}\n\n/* Right-hand buttons */\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] {\n    flex: none;\n    order: 2;\n    gap: 0.35rem;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] > [class*=\"button-container\"] {\n    height: 2.5rem;\n    min-width: 2.5rem;\n    border-radius: var(--dx-radius);\n    background: transparent;\n    transition: background-color 0.2s;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] > [class*=\"button-container\"]:hover,\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] > [class*=\"button-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.08);\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] svg {\n    width: 1.3rem;\n    height: 1.3rem;\n    color: var(--dx-text);\n    opacity: 0.9;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"avatar\"] {\n    width: 2rem;\n    height: 2rem;\n    border: 0 !important;\n    border-radius: var(--dx-radius-s) !important;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"avatar\"] img {\n    border-radius: var(--dx-radius-s) !important;\n}\n\n/* Content starts under the header; full width (no sidebar) */\n#app [class*=\"main-nav-bars-container\"] > [class*=\"nav-content-container\"] {\n    top: var(--dx-nav-h);\n    left: 0;\n}\n\nbody[data-dx-route=\"board\"] #app [class*=\"board-container\"] [class*=\"nav-content-container\"] {\n    top: 0;\n}\n\n/* Narrower windows */\n@media (max-width: 1450px) {\n    #app [class*=\"main-nav-bars-container\"] > nav[class*=\"vertical-nav-bar\"] {\n        gap: 1.25rem;\n    }\n\n    #app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] {\n        width: 2.6rem;\n        padding: 0 0.25rem;\n        background: transparent;\n        border-color: transparent;\n    }\n\n    #app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] [class*=\"search-input\"] {\n        opacity: var(--dx-search-open, 0);\n    }\n\n    #app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"]:focus-within,\n    #app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"].active {\n        position: relative;\n        z-index: 7;\n        width: 18rem;\n        padding: 0 0.35rem 0 0.9rem;\n        --dx-search-open: 1;\n    }\n}\n\n@media (max-width: 1000px) {\n    #app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] [class*=\"label\"] {\n        display: none;\n    }\n\n    #app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] svg {\n        display: block;\n        width: 1.35rem;\n        height: 1.35rem;\n        color: var(--dx-text-2);\n    }\n\n    #app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"].selected svg {\n        color: #fff;\n    }\n}\n\n/* =====================================================================\n   4. BOARD — rows become carousels\n   ===================================================================== */\n\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) {\n    padding: 0 0 4rem 0 !important;\n    overflow-x: hidden;\n    scroll-behavior: smooth;\n}\n\n/* No billboard (plugin off): keep rows clear of the floating header */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]):not(:has(> .dx-hero)) {\n    padding-top: calc(var(--dx-nav-h) + 1rem) !important;\n}\n\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"board-row\"],\n#app [class*=\"search-content\"] [class*=\"search-row\"] {\n    position: relative;\n    margin: 0 0 1.4rem 0 !important;\n}\n\n/* Rows that only show an addon error are noise — hide them */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"board-row\"]:has(> [class*=\"message-container\"]),\n#app [class*=\"search-content\"] [class*=\"search-row\"]:has(> [class*=\"message-container\"]) {\n    display: none !important;\n}\n\n#app [class*=\"meta-row\"] > [class*=\"header-container\"] {\n    padding: 0 var(--dx-gutter) !important;\n    margin: 0 0 0.1rem 0;\n    height: 2.5rem;\n}\n\n#app [class*=\"meta-row\"] > [class*=\"header-container\"] [class*=\"title-container\"] {\n    font-size: clamp(1.05rem, 1.25vw, 1.45rem) !important;\n    font-weight: 700 !important;\n    letter-spacing: -0.005em;\n    color: var(--dx-text);\n    max-height: none;\n}\n\n#app [class*=\"meta-row\"] > [class*=\"header-container\"] [class*=\"title-container\"] [class*=\"title\"] {\n    font-size: inherit !important;\n    font-weight: inherit !important;\n}\n\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"] {\n    height: 2rem;\n    padding: 0 0.4rem 0 0.75rem;\n    border-radius: var(--dx-radius-s);\n    opacity: var(--dx-row-hot, 0);\n    transform: translateX(calc(6px * (var(--dx-row-hot, 0) - 1)));\n    transition: opacity 0.3s, transform 0.3s var(--dx-ease-out), background-color 0.2s;\n}\n\n#app [class*=\"meta-row\"]:hover,\n#app [class*=\"meta-row\"]:focus-visible {\n    --dx-row-hot: 1;\n}\n\n/* (set on See All alone: on the whole row it would restyle every title in it at each key press) */\n#app [class*=\"meta-row\"]:focus-within [class*=\"see-all-container\"] {\n    --dx-row-hot: 1;\n}\n\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"]:hover,\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"] [class*=\"label\"] {\n    font-size: 0.82rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n}\n\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"] svg {\n    height: 1rem;\n    color: var(--dx-text-2);\n}\n\n/* Rows fade softly into the screen edges: titles that slide aside for a hover card (or peek in\n   from a scrolled row) glide out of view instead of being sliced off at the edge */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"],\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] {\n    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 calc(var(--dx-gutter) - 0.6rem), #000 calc(100% - var(--dx-gutter) + 0.6rem), transparent 100%);\n    mask-image: linear-gradient(90deg, transparent 0, #000 calc(var(--dx-gutter) - 0.6rem), #000 calc(100% - var(--dx-gutter) + 0.6rem), transparent 100%);\n}\n\n/* The track */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"],\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] {\n    display: flex !important;\n    flex-wrap: nowrap;\n    overflow-x: auto !important;\n    overflow-y: hidden !important;\n    scroll-behavior: smooth;\n    scroll-snap-type: x proximity;\n    scroll-padding-inline: var(--dx-gutter);\n    scrollbar-width: none;\n    padding: 0.9rem calc(var(--dx-gutter) - 0.35rem) 1.1rem;\n    margin: -0.65rem 0 -0.35rem;\n    overscroll-behavior-x: contain;\n}\n\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"]::-webkit-scrollbar,\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"]::-webkit-scrollbar {\n    display: none;\n}\n\n/* Show every item (stock hides some by screen width) */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > *,\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > * {\n    display: block !important;\n    flex: 0 0 calc(100% / var(--dx-cols)) !important;\n    max-width: none !important;\n    padding: 0 0.35rem !important;\n    scroll-snap-align: start;\n}\n\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > *:empty,\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > *:empty {\n    display: none !important;\n}\n\n/* Landscape rows (and Continue Watching, made landscape by the plugin) */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"board-row-landscape\"] > [class*=\"meta-items-container\"] > *,\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"continue-watching-row\"][data-dx-wide-row] > [class*=\"meta-items-container\"] > * {\n    flex-basis: calc(100% / var(--dx-wide-cols, 4)) !important;\n}\n\n/* =====================================================================\n   5. POSTER CARDS (everywhere)\n   ===================================================================== */\n\n#app [class*=\"meta-item-container\"] {\n    padding: 0.5rem 0.35rem;\n    transition: transform 0.35s var(--dx-ease-out);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-container\"] {\n    border-radius: var(--dx-radius) !important;\n    background: var(--dx-surface);\n    box-shadow: none !important;\n    overflow: hidden;\n    transform: translate3d(0, calc(-4px * var(--dx-card-focus, 0)), 0) scale(calc(1 + 0.035 * var(--dx-card-focus, 0)));\n    transition: transform 0.35s var(--dx-ease-out), box-shadow 0.35s var(--dx-ease-out) !important;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-container\"]::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    border-radius: inherit;\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);\n    pointer-events: none;\n    z-index: 5;\n    transition: box-shadow 0.3s;\n}\n\n#app [class*=\"meta-item-container\"]:is(.hovered, .active, .selected) [class*=\"poster-container\"] {\n    box-shadow: var(--dx-shadow-2) !important;\n    transform: translateY(-4px) scale(1.035);\n}\n\n/* Titles on anime artwork (plugin): the name over a soft shade at the bottom of the card */\n.dx-anime-title {\n    position: absolute;\n    z-index: 4;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    padding: 2.2rem 0.6rem 0.55rem;\n    background: linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.55) 55%, transparent);\n    color: #fff;\n    font-size: 0.92rem;\n    font-weight: 700;\n    line-height: 1.2;\n    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);\n    display: -webkit-box;\n    -webkit-line-clamp: 2;\n    -webkit-box-orient: vertical;\n    overflow: hidden;\n    pointer-events: none;\n}\n\n/* Discover selects its first title by itself (to fill its side panel): no lift or ring for that one\n   until a title is picked (the plugin sets the flag) */\nbody:not(.dx-discover-picked) #app [class*=\"discover-content\"] [class*=\"meta-item-container\"].selected:not(.hovered):not(.active) [class*=\"poster-container\"] {\n    box-shadow: none !important;\n    transform: none;\n}\n\nbody:not(.dx-discover-picked) #app [class*=\"discover-content\"] [class*=\"meta-item-container\"].selected:not(.hovered):not(.active) [class*=\"poster-container\"]::after {\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);\n}\n\n/* keyboard highlight: the poster lifts like it does under the mouse, and the hover card shows\n   what's selected: no outline or ring around the card */\n#app [class*=\"meta-item-link\"]:focus-visible {\n    --dx-card-focus: 1;\n    outline: none !important;\n}\n\n#app [class*=\"meta-item-container\"]:active:not(.active) {\n    --dx-card-press: 1;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-container\"] {\n    scale: calc(1 - 0.03 * var(--dx-card-press, 0));\n}\n\n#app [class*=\"meta-item-container\"]:is(.hovered, .active, .selected) [class*=\"poster-container\"]::after {\n    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-image-layer\"] {\n    transition: transform 0.6s var(--dx-ease-out) !important;\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"poster-image-layer\"] {\n    transform: scale(1.04) !important;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-image\"] {\n    object-fit: cover;\n}\n\n\n/* Library: no ring, lift or zoom under the mouse (a grid of posters reads calmer); the poster\n   just brightens a little */\n#app [class*=\"library-content\"] [class*=\"meta-item-container\"]:is(.hovered, .active, .selected) [class*=\"poster-container\"] {\n    box-shadow: none !important;\n    transform: none;\n}\n\n#app [class*=\"library-content\"] [class*=\"meta-item-container\"]:is(.hovered, .active, .selected) [class*=\"poster-container\"]::after {\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);\n}\n\n#app [class*=\"library-content\"] [class*=\"meta-item-container\"] [class*=\"poster-image-layer\"] {\n    transition: filter 0.25s var(--dx-ease) !important;\n}\n\n#app [class*=\"library-content\"] [class*=\"meta-item-container\"].hovered [class*=\"poster-image-layer\"] {\n    transform: none !important;\n    filter: brightness(1.12);\n}\n\n/* Titles under cards: quiet, single line */\n#app [class*=\"meta-item-container\"] [class*=\"title-bar-container\"] {\n    height: auto;\n    min-height: 0;\n    padding: 0.55rem 0.15rem 0 0.15rem;\n    justify-content: flex-start;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"title-bar-container\"] [class*=\"title-label\"] {\n    padding: 0;\n    font-size: 0.85rem;\n    font-weight: 500;\n    color: var(--dx-text-2);\n    text-align: left;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n    max-height: 1.3em;\n    transition: color 0.2s;\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"title-bar-container\"] [class*=\"title-label\"] {\n    color: var(--dx-text);\n}\n\n/* Rows on Home/Search: artwork only, like the real thing (titles live in the preview card) */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] [class*=\"meta-item-container\"] [class*=\"title-bar-container\"],\n#app [class*=\"search-content\"] [class*=\"meta-row\"] [class*=\"meta-item-container\"] [class*=\"title-bar-container\"] {\n    display: none;\n}\n\n/* Progress */\n#app [class*=\"meta-item-container\"] [class*=\"progress-bar-layer\"] {\n    left: 0.6rem;\n    right: 0.6rem;\n    bottom: 0.6rem;\n    height: 3px;\n    border-radius: 3px;\n    overflow: hidden;\n}\n\n#app [class*=\"progress-bar-layer\"] [class*=\"progress-bar-background\"] {\n    background: rgba(255, 255, 255, 0.28) !important;\n    opacity: 1 !important;\n}\n\n#app [class*=\"progress-bar-layer\"] [class*=\"progress-bar\"]:not([class*=\"background\"]),\n#app [class*=\"progress-bar-container\"] [class*=\"progress-bar\"]:not([class*=\"background\"]) {\n    background: var(--dx-accent) !important;\n}\n\n/* Play overlay on Continue Watching */\n#app [class*=\"meta-item-container\"] [class*=\"play-icon-layer\"] {\n    opacity: 0;\n    transition: opacity 0.25s;\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"play-icon-layer\"] {\n    opacity: 1;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"play-icon-background\"] {\n    background: rgba(0, 0, 0, 0.55) !important;\n    border: 2px solid rgba(255, 255, 255, 0.9);\n    opacity: 1 !important;\n    backdrop-filter: blur(6px);\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"play-icon-background\"] {\n    background: var(--dx-accent) !important;\n    border-color: var(--dx-accent);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"play-icon-outer\"] {\n    display: none;\n}\n\n/* Watched tick */\n#app [class*=\"meta-item-container\"] [class*=\"watched-icon-layer\"] {\n    background: rgba(0, 0, 0, 0.7);\n    border-radius: 50%;\n    backdrop-filter: blur(4px);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"watched-icon\"] {\n    color: #fff;\n}\n\n/* \"New episodes\" stack */\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] [class*=\"layer\"]:last-child {\n    background: var(--dx-accent) !important;\n    border-radius: var(--dx-radius-s);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] [class*=\"layer\"]:not(:last-child) {\n    background: color-mix(in srgb, var(--dx-accent) 55%, black) !important;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] [class*=\"label\"],\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] svg {\n    color: #fff !important;\n}\n\n/* Dismiss on Continue Watching: a slim glass tab that opens out into \"Remove\" when pointed at.\n   It takes the corner from the \"+N new episodes\" badge while the card is hovered. */\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"] {\n    z-index: 7 !important;\n    top: 0.6rem;\n    left: auto;\n    right: 0.6rem;\n    width: auto !important;\n    height: 1.55rem !important;\n    min-width: 1.55rem;\n    padding: 0 0.42rem;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: 0.4rem;\n    background: rgba(12, 12, 14, 0.62);\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 4px 14px rgba(0, 0, 0, 0.35);\n    backdrop-filter: blur(8px);\n    opacity: 0;\n    transform: translateY(-2px);\n    transition: opacity 0.18s ease, transform 0.18s ease, background-color 0.15s ease, box-shadow 0.15s ease;\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"dismiss-icon-layer\"],\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:focus-visible {\n    opacity: 1;\n    transform: none;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-backdrop\"] {\n    display: none !important;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"] svg {\n    position: static !important;\n    flex: none;\n    width: 0.62rem !important;\n    height: 0.62rem !important;\n    color: #fff !important;\n    fill: currentColor !important;\n    opacity: 1;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]::before {\n    content: \"Remove\";\n    max-width: 0;\n    overflow: hidden;\n    white-space: nowrap;\n    color: #fff;\n    font: 600 0.72rem/1 Inter, system-ui, sans-serif;\n    letter-spacing: 0.02em;\n    transition: max-width 0.22s ease, margin 0.22s ease;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:hover,\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:focus-visible {\n    background: var(--dx-accent);\n    box-shadow: 0 4px 16px color-mix(in srgb, var(--dx-accent) 45%, transparent);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:hover::before,\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:focus-visible::before {\n    max-width: 4.5rem;\n    margin-right: 0.4rem;\n}\n\n/* the \"+N\" badge steps aside while the remove tab is showing */\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] {\n    transition: opacity 0.18s ease;\n}\n\n#app [class*=\"continue-watching-row\"] [class*=\"meta-item-container\"].hovered [class*=\"new-videos\"] {\n    opacity: 0;\n}\n\n/* Card menu dots */\n#app [class*=\"meta-item-container\"] [class*=\"menu-label-container\"] {\n    border-radius: var(--dx-radius-s);\n}\n\n/* Placeholders while loading */\n#app [class*=\"meta-row-placeholder-container\"] [class*=\"poster-container\"],\n#app [class*=\"meta-item-placeholder\"] [class*=\"poster-container\"],\n#app [class*=\"placeholder\"] [class*=\"poster-container\"] {\n    border-radius: var(--dx-radius) !important;\n    /* static on purpose: rows from broken addons stay placeholders forever, and an endless\n       animation on dozens of them would cost CPU the whole time Home is open */\n    background: var(--dx-surface) !important;\n    animation: none !important;\n}\n\n#app [class*=\"meta-row-placeholder-container\"] [class*=\"title-bar-container\"],\n#app [class*=\"meta-row-placeholder-container\"] [class*=\"title-label\"] {\n    display: none;\n}\n\n#app [class*=\"meta-row-placeholder-container\"] [class*=\"header-container\"] [class*=\"title-container\"] {\n    width: 14rem;\n    height: 1.1rem;\n    border-radius: var(--dx-radius-s);\n    background: var(--dx-surface);\n    color: transparent !important;\n}\n\n\n/* =====================================================================\n   6. BILLBOARD (built by the plugin)\n   ===================================================================== */\n\n.dx-hero {\n    position: relative;\n    width: 100%;\n    height: min(82vh, 56.25vw);\n    min-height: 26rem;\n    margin-bottom: -6vw;\n    overflow: hidden;\n    background: var(--dx-bg);\n    isolation: isolate;\n    animation: dx-fade 0.8s var(--dx-ease) both;\n}\n\n.dx-hero-slide {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n}\n\n.dx-hero-slide.is-active {\n    pointer-events: auto;\n}\n\n/* Only the pictures cross-fade; the text is handled separately so it never looks washed out */\n.dx-hero-backdrop {\n    position: absolute;\n    inset: 0;\n    opacity: 0;\n    background-size: cover;\n    background-position: center 20%;\n    transform: scale(1.06);\n    transform-origin: 70% 40%;\n    transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);\n    will-change: transform, opacity;\n}\n\n.dx-hero-slide.is-active .dx-hero-backdrop {\n    opacity: 1;\n}\n\n/* The slow zoom keeps running on the outgoing picture until it has faded (class managed by the plugin) */\n.dx-hero-backdrop.kb {\n    animation: dx-kenburns 16s linear both;\n}\n\n@keyframes dx-kenburns {\n    from { transform: scale(1.06) translate3d(0, 0, 0); }\n    to { transform: scale(1.14) translate3d(-1.2%, -1%, 0); }\n}\n\n.dx-hero-shade {\n    position: absolute;\n    inset: 0;\n    z-index: 1;\n    pointer-events: none;\n    background:\n        linear-gradient(90deg, rgba(11, 11, 13, 0.92) 0%, rgba(11, 11, 13, 0.6) 28%, rgba(11, 11, 13, 0.08) 58%, transparent 75%),\n        linear-gradient(0deg, var(--dx-bg) 0%, rgba(11, 11, 13, 0.75) 14%, rgba(11, 11, 13, 0) 42%),\n        linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, transparent 18%);\n}\n\n.dx-hero-content {\n    position: absolute;\n    z-index: 2;\n    left: var(--dx-gutter);\n    bottom: calc(6vw + 4.5rem);\n    /* never higher than just under the top bar: on short screens (phones on their side, small\n       windows) the logo gives way first, so nothing slides up under the bar or off the screen */\n    top: calc(var(--dx-nav-h) + 0.75rem);\n    width: min(36rem, 42vw);\n    display: flex;\n    flex-direction: column;\n    justify-content: flex-end;\n    align-items: flex-start;\n    gap: min(1rem, 1.8vh);\n}\n\n.dx-hero-content > * {\n    flex-shrink: 0;\n}\n\n.dx-hero-content > .dx-hero-logo {\n    flex: 0 1 auto;\n    min-height: 2.75rem;\n}\n\n/* Shorter screens: a two-line description, then none, so the logo keeps a sensible size */\n@media (max-height: 680px) {\n    .dx-hero-desc {\n        -webkit-line-clamp: 2;\n    }\n}\n\n@media (max-height: 540px) {\n    .dx-hero-desc {\n        display: none !important;\n    }\n}\n\n/* Old text fades out first, then the new text fades in — never both at once, never moving,\n   so it stays crisp the whole time */\n.dx-hero-slide .dx-hero-content {\n    opacity: 0;\n    visibility: hidden;\n    transition: opacity 0.3s ease, visibility 0s linear 0.3s;\n}\n\n.dx-hero-slide.is-active .dx-hero-content {\n    opacity: 1;\n    visibility: visible;\n    transition: opacity 0.6s ease 0.45s, visibility 0s linear 0.45s;\n}\n\n/* First appearance on load: no waiting */\n.dx-hero.is-first .dx-hero-slide.is-active .dx-hero-content {\n    transition-delay: 0s;\n}\n\n.dx-hero-kicker {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.5rem;\n    font-size: 0.78rem;\n    font-weight: 700;\n    letter-spacing: 0.22em;\n    text-transform: uppercase;\n    color: var(--dx-text-2);\n}\n\n.dx-hero-kicker b {\n    font-family: \"Bebas Neue\", sans-serif;\n    font-size: 1.25rem;\n    font-weight: 400;\n    letter-spacing: 0.06em;\n    color: var(--dx-accent);\n}\n\n.dx-hero-logo {\n    display: block;\n    max-width: min(30rem, 100%);\n    max-height: 11rem;\n    object-fit: contain;\n    object-position: left bottom;\n    filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.55));\n}\n\n.dx-hero-title {\n    font-size: clamp(2.2rem, 4vw, 4rem);\n    font-weight: 800;\n    line-height: 1.02;\n    letter-spacing: -0.02em;\n    color: #fff;\n    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);\n}\n\n.dx-hero-meta {\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    gap: 0.35rem 0.85rem;\n    font-size: 0.95rem;\n    font-weight: 500;\n    color: var(--dx-text-2);\n}\n\n.dx-hero-desc {\n    font-size: clamp(0.95rem, 1.05vw, 1.15rem);\n    line-height: 1.5;\n    color: rgba(255, 255, 255, 0.88);\n    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);\n    display: -webkit-box;\n    -webkit-line-clamp: 3;\n    -webkit-box-orient: vertical;\n    overflow: hidden;\n}\n\n.dx-hero-actions {\n    display: flex;\n    gap: 0.75rem;\n    margin-top: 0.35rem;\n}\n\n.dx-btn {\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    gap: 0.6rem;\n    height: 2.9rem;\n    padding: 0 1.6rem 0 1.3rem;\n    border-radius: var(--dx-radius);\n    font-size: 1.02rem;\n    font-weight: 700;\n    cursor: pointer;\n    white-space: nowrap;\n    transition: background-color 0.2s, transform 0.2s var(--dx-ease-out), box-shadow 0.2s;\n}\n\n.dx-btn:active {\n    transform: scale(0.97);\n}\n\n.dx-btn svg {\n    width: 1.35rem;\n    height: 1.35rem;\n    flex: none;\n}\n\n.dx-btn-primary {\n    background: #fff;\n    color: #000;\n}\n\n.dx-btn-primary svg {\n    fill: #000;\n}\n\n.dx-btn-primary:hover {\n    background: rgba(255, 255, 255, 0.82);\n}\n\n.dx-btn-secondary {\n    background: rgba(109, 109, 118, 0.55);\n    color: #fff;\n    backdrop-filter: blur(8px);\n}\n\n.dx-btn-secondary svg {\n    fill: none;\n    stroke: #fff;\n}\n\n.dx-btn-secondary:hover {\n    background: rgba(109, 109, 118, 0.38);\n}\n\n/* Keyboard: the selected button comes forward in white, like a TV menu (dimming it the way the\n   mouse hover does read as \"off\" when nothing points at it) */\n.dx-btn:focus-visible {\n    background: #fff;\n    color: #000;\n    transform: scale(1.06);\n    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);\n}\n\n.dx-btn:focus-visible svg {\n    fill: #000;\n}\n\n.dx-btn-secondary:focus-visible svg {\n    fill: none;\n    stroke: #000;\n}\n\n.dx-hero-dots {\n    position: absolute;\n    z-index: 3;\n    right: var(--dx-gutter);\n    bottom: calc(6vw + 4.75rem);\n    display: flex;\n    gap: 0.4rem;\n}\n\n.dx-hero-dot {\n    position: relative;\n    width: 1.6rem;\n    height: 3px;\n    border-radius: 3px;\n    background: rgba(255, 255, 255, 0.25);\n    cursor: pointer;\n    overflow: hidden;\n    transition: width 0.4s var(--dx-ease-out), background-color 0.2s;\n}\n\n.dx-hero-dot:hover,\n.dx-hero-dot:focus-visible {\n    background: rgba(255, 255, 255, 0.45);\n}\n\n.dx-hero-dot.is-active {\n    width: 3.2rem;\n}\n\n.dx-hero-dot.is-active::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: #fff;\n    transform-origin: left;\n    animation: dx-progress var(--dx-hero-interval, 9s) linear both;\n}\n\n.dx-hero.is-static .dx-hero-dot.is-active::after {\n    animation: none;\n}\n\n@keyframes dx-progress {\n    from { transform: scaleX(0); }\n    to { transform: scaleX(1); }\n}\n\n/* LITE MODE (slower TV boxes): the billboard holds still. Its slow zoom repainted the whole screen\n   every frame — about 20 fps of work on a Fire TV Stick even with nothing pressed — which left less\n   for the remote. The active dot fills at once instead of counting down. */\nhtml[data-dx-lite] .dx-hero-backdrop.kb {\n    animation: none;\n}\n\n/* …and doesn't keep each full-screen backdrop on a GPU layer of its own: a Fire TV Stick's graphics\n   driver crashed (dx.bi closed) moving from Home to Settings with ~300 MB of memory left */\nhtml[data-dx-lite] .dx-hero-backdrop {\n    will-change: auto;\n}\n\nhtml[data-dx-lite] .dx-hero-dot.is-active::after {\n    animation: none;\n    transform: none;\n}\n\n/* Rows that follow the billboard sit above its fade */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) > .dx-hero ~ * {\n    position: relative;\n    z-index: 2;\n}\n\n/* Shared rating / meta pills */\n.dx-imdb {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.35rem;\n    font-weight: 700;\n    color: #fff;\n}\n\n.dx-imdb i {\n    font-style: normal;\n    font-size: 0.68em;\n    font-weight: 900;\n    letter-spacing: -0.01em;\n    line-height: 1;\n    padding: 0.18em 0.32em;\n    border-radius: 3px;\n    background: #f5c518;\n    color: #000;\n}\n\n.dx-match {\n    font-weight: 700;\n    color: #46d369;\n}\n\n.dx-pill {\n    display: inline-flex;\n    align-items: center;\n    height: 1.35rem;\n    padding: 0 0.45rem;\n    border: 1px solid rgba(255, 255, 255, 0.4);\n    border-radius: 3px;\n    font-size: 0.75rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n}\n\n.dx-sep {\n    width: 4px;\n    height: 4px;\n    border-radius: 50%;\n    background: var(--dx-text-3);\n}\n\n/* =====================================================================\n   7. CAROUSEL ARROWS + PREVIEW CARD + RATING BADGES (plugin parts)\n   ===================================================================== */\n\n.dx-arrow {\n    position: absolute;\n    z-index: 4;\n    bottom: 0.75rem;\n    width: calc(var(--dx-gutter) - 0.35rem);\n    min-width: 2.75rem;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    color: #fff;\n    cursor: pointer;\n    opacity: 0;\n    transition: opacity 0.25s, background-color 0.25s;\n}\n\n.dx-arrow svg {\n    width: 2rem;\n    height: 2rem;\n    transform: scale(var(--dx-arrow-scale, 1));\n    transition: transform 0.25s var(--dx-ease-out);\n}\n\n.dx-arrow-prev {\n    left: 0;\n    background: linear-gradient(90deg, rgba(11, 11, 13, 0.92), rgba(11, 11, 13, 0.4));\n}\n\n.dx-arrow-next {\n    right: 0;\n    background: linear-gradient(270deg, rgba(11, 11, 13, 0.92), rgba(11, 11, 13, 0.4));\n}\n\n[class*=\"meta-row\"]:hover > .dx-arrow:not(.is-hidden) {\n    opacity: 1;\n}\n\n.dx-arrow:hover,\n.dx-arrow:focus-visible {\n    --dx-arrow-scale: 1.25;\n}\n\n.dx-arrow.is-hidden {\n    pointer-events: none;\n}\n\n/* Row page indicator */\n.dx-row-pages {\n    position: absolute;\n    top: 0.95rem;\n    right: var(--dx-gutter);\n    display: flex;\n    gap: 3px;\n    opacity: 0;\n    transition: opacity 0.3s;\n}\n\n[class*=\"meta-row\"]:hover > .dx-row-pages,\n[class*=\"meta-row\"]:focus-visible > .dx-row-pages {\n    opacity: 1;\n}\n\n.dx-row-pages span {\n    width: 0.8rem;\n    height: 2px;\n    background: rgba(255, 255, 255, 0.25);\n}\n\n.dx-row-pages span.is-active {\n    background: rgba(255, 255, 255, 0.85);\n}\n\n/* Header pushes \"See all\" left of the page dots */\n#app [class*=\"meta-row\"]:has(> .dx-row-pages) > [class*=\"header-container\"] {\n    padding-right: calc(var(--dx-gutter) + 6rem) !important;\n}\n\n/* IMDb badge on posters */\n.dx-badge {\n    position: absolute;\n    z-index: 4;\n    top: 0.45rem;\n    left: 0.45rem;\n    display: inline-flex;\n    align-items: center;\n    gap: 0.3rem;\n    height: 1.35rem;\n    padding: 0 0.4rem 0 0.25rem;\n    border-radius: 4px;\n    background: rgba(0, 0, 0, 0.72);\n    backdrop-filter: blur(6px);\n    font-size: 0.72rem;\n    font-weight: 700;\n    color: #fff;\n    pointer-events: none;\n    animation: dx-fade 0.4s both;\n}\n\n.dx-badge i {\n    font-style: normal;\n    font-size: 0.6rem;\n    font-weight: 900;\n    padding: 0.12rem 0.22rem;\n    border-radius: 2px;\n    background: #f5c518;\n    color: #000;\n    line-height: 1;\n}\n\n/* Anime scores (Kitsu / AniList) get their own colour so they never read as IMDb */\n.dx-badge.is-anime i {\n    background: #3db4f2;\n    color: #fff;\n}\n\n/* Continue Watching as wide cards */\n.dx-wide-art {\n    position: absolute;\n    inset: 0;\n    z-index: 1;\n    background-size: cover;\n    background-position: center;\n    pointer-events: none;\n}\n\n.dx-wide-art::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: linear-gradient(0deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.1) 45%, transparent 70%);\n}\n\n.dx-wide-logo {\n    position: absolute;\n    z-index: 2;\n    left: 0.85rem;\n    bottom: 1.15rem;\n    max-width: 55%;\n    max-height: 32%;\n    object-fit: contain;\n    object-position: left bottom;\n    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));\n}\n\n.dx-wide-name {\n    position: absolute;\n    z-index: 2;\n    left: 0.85rem;\n    right: 0.85rem;\n    bottom: 1.1rem;\n    font-size: 1rem;\n    font-weight: 700;\n    color: #fff;\n    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"poster-container\"] {\n    padding-top: 56.25% !important;\n}\n\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"poster-image-layer\"] {\n    opacity: 0;\n}\n\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"progress-bar-layer\"],\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"play-icon-layer\"],\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"new-videos\"],\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"watched-icon-layer\"] {\n    z-index: 3;\n}\n\n/* Hover preview — unfolds out of the card like Netflix's mini-modal. The outer box carries the\n   shadow (it follows the clipped shape), the inner layer is revealed from the card's outline. */\n/* The title under an open hover card: hidden once the card has grown over it, back at once as it closes */\n#app [data-dx-covered] [class*=\"poster-container\"] {\n    opacity: 0;\n    transition: opacity 0.15s 0.2s;\n}\n\n.dx-preview {\n    position: fixed;\n    z-index: 900;\n    opacity: 0;\n    visibility: hidden;\n    pointer-events: none;\n    will-change: transform, opacity;\n    transition:\n        transform 0.2s ease,\n        opacity 0.2s ease,\n        visibility 0s linear 0.2s;\n}\n\n.dx-preview.is-open {\n    opacity: 1;\n    visibility: visible;\n    pointer-events: auto;\n    transition: opacity 0.1s ease, visibility 0s;\n}\n\n.dx-preview.is-closing {\n    visibility: visible;\n    opacity: 0;\n    transform: scale(0.97) !important;\n    transition: transform 0.2s ease, opacity 0.2s ease;\n}\n\n.dx-preview-inner {\n    position: relative;\n    min-height: inherit;\n    display: flex;\n    flex-direction: column;\n    border-radius: 8px;\n    background: #181818;\n    overflow: hidden;\n    transition: clip-path 0.48s cubic-bezier(0.2, 0.85, 0.25, 1);\n    will-change: clip-path;\n}\n\n/* fine hairline so the panel's edge reads crisp against the page */\n.dx-preview-inner::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    z-index: 6;\n    border-radius: inherit;\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);\n    pointer-events: none;\n}\n\n/* Aura: the title's own colours glowing softly around the panel once it has opened,\n   with a deep shadow underneath for lift */\n.dx-preview-aura {\n    position: absolute;\n    z-index: -1;\n    inset: -14px -18px -22px;\n    border-radius: 22px;\n    background: #181818 center / cover no-repeat;\n    filter: blur(30px) saturate(1.5) brightness(0.9);\n    opacity: 0;\n    transform: scale(0.92);\n    transition: opacity 0.55s ease 0.16s, transform 0.6s cubic-bezier(0.2, 0.85, 0.25, 1) 0.1s;\n    pointer-events: none;\n    will-change: opacity, transform;\n}\n\n.dx-preview::before {\n    content: \"\";\n    position: absolute;\n    z-index: -2;\n    inset: 10% 6% -4%;\n    border-radius: 18px;\n    background: rgba(0, 0, 0, 0.85);\n    filter: blur(28px);\n    opacity: 0;\n    transition: opacity 0.4s ease 0.12s;\n    pointer-events: none;\n}\n\n.dx-preview.is-open .dx-preview-aura {\n    opacity: 0.55;\n    transform: none;\n}\n\n.dx-preview.is-open::before {\n    opacity: 1;\n}\n\n.dx-preview.is-closing .dx-preview-aura,\n.dx-preview.is-closing::before {\n    transition-delay: 0s;\n}\n\n/* the card's own artwork, fading into the panel as it unfolds */\n.dx-preview-ghost {\n    position: absolute;\n    z-index: 5;\n    /* the same corners as the poster it grows out of */\n    border-radius: var(--dx-radius);\n    background: #222 center / cover no-repeat;\n    pointer-events: none;\n    opacity: 1;\n    /* fades only once the panel's artwork is showing around it: no see-through moment */\n    transition: opacity 0.3s ease 0.16s;\n    will-change: opacity;\n}\n\n.dx-preview.is-open .dx-preview-ghost {\n    opacity: 0;\n}\n\n/* details settle in just after the panel has opened */\n.dx-preview .dx-preview-body {\n    opacity: 0;\n    transform: translateY(8px);\n    transition: opacity 0.3s ease 0.16s, transform 0.4s cubic-bezier(0.2, 0.85, 0.25, 1) 0.14s;\n}\n\n.dx-preview.is-open .dx-preview-body {\n    opacity: 1;\n    transform: none;\n}\n\n.dx-preview-media {\n    position: relative;\n    aspect-ratio: 16 / 9;\n    background: #2a2a2a center / cover no-repeat;\n    cursor: pointer;\n}\n\n/* its own rounded top as well: the zooming artwork and the trailer are layers of their own, and\n   the panel's rounded clip alone can let their corners show square while the card unfolds */\n.dx-preview-media {\n    overflow: hidden;\n    border-radius: var(--dx-radius) var(--dx-radius) 0 0;\n}\n\n.dx-preview-media::before {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: inherit;\n    transform-origin: 60% 40%;\n}\n\n.dx-preview.is-open .dx-preview-media::before {\n    animation: dx-preview-zoom 6s ease-out both;\n}\n\n@keyframes dx-preview-zoom {\n    from { transform: scale(1); }\n    to { transform: scale(1.08); }\n}\n\n.dx-preview-media::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: linear-gradient(0deg, #181818 0%, rgba(24, 24, 24, 0.35) 22%, transparent 45%);\n}\n\n.dx-preview-media img {\n    position: absolute;\n    z-index: 1;\n    left: 0.9rem;\n    bottom: 0.7rem;\n    max-width: 58%;\n    max-height: 40%;\n    object-fit: contain;\n    object-position: left bottom;\n    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8));\n}\n\n.dx-preview-name {\n    position: absolute;\n    z-index: 1;\n    left: 0.9rem;\n    right: 0.9rem;\n    bottom: 0.7rem;\n    font-size: 1.2rem;\n    font-weight: 800;\n    line-height: 1.15;\n    color: #fff;\n    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);\n}\n\n.dx-preview-media.has-logo .dx-preview-name {\n    display: none;\n}\n\n\n.dx-preview-body {\n    flex: 1;\n    padding: 0.85rem 1rem 1.1rem;\n    display: flex;\n    flex-direction: column;\n    gap: 0.75rem;\n}\n\n.dx-preview-actions {\n    display: flex;\n    align-items: center;\n    gap: 0.5rem;\n}\n\n.dx-round {\n    position: relative;\n    width: 2.5rem;\n    height: 2.5rem;\n    flex: none;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: 50%;\n    border: 2px solid rgba(255, 255, 255, 0.5);\n    background: rgba(42, 42, 42, 0.6);\n    color: #fff;\n    cursor: pointer;\n    transition: border-color 0.15s, background-color 0.15s;\n}\n\n.dx-round:hover,\n.dx-round:focus-visible {\n    border-color: #fff;\n    background: rgba(255, 255, 255, 0.1);\n}\n\n.dx-round svg {\n    width: 1.2rem;\n    height: 1.2rem;\n}\n\n.dx-round.is-primary {\n    background: #fff;\n    border-color: #fff;\n    color: #000;\n}\n\n.dx-round.is-primary:hover,\n.dx-round.is-primary:focus-visible {\n    background: rgba(255, 255, 255, 0.8);\n}\n\n.dx-round.is-primary svg {\n    margin-left: 2px;\n}\n\n.dx-round.is-end {\n    margin-left: auto;\n}\n\n/* Remove from Continue Watching: quieter than the others until pointed at */\n.dx-round.dx-remove {\n    border-color: rgba(255, 255, 255, 0.28);\n    color: rgba(255, 255, 255, 0.8);\n}\n\n.dx-round.dx-remove:hover,\n.dx-round.dx-remove:focus-visible {\n    border-color: var(--dx-accent);\n    background: color-mix(in srgb, var(--dx-accent) 22%, transparent);\n    color: #fff;\n}\n\n.dx-round.dx-remove + .dx-round {\n    margin-left: 0.5rem;\n}\n\n/* the last button's tooltip opens leftwards so the card's edge never cuts it off */\n.dx-preview-actions .dx-round:last-child[data-tip]::after {\n    left: auto;\n    right: 0;\n    transform: translate(0, 4px);\n}\n\n.dx-preview-actions .dx-round:last-child[data-tip]:hover::after,\n.dx-preview-actions .dx-round:last-child[data-tip]:focus-visible::after {\n    transform: none;\n}\n\n.dx-round.is-pop {\n    animation: dx-pop-btn 0.35s var(--dx-ease-out);\n}\n\n@keyframes dx-pop-btn {\n    40% { transform: scale(1.2); }\n}\n\n/* Small tooltip above the round buttons */\n.dx-round[data-tip]::after {\n    content: attr(data-tip);\n    position: absolute;\n    bottom: calc(100% + 0.6rem);\n    left: 50%;\n    transform: translate(-50%, 4px);\n    padding: 0.35rem 0.6rem;\n    border-radius: 4px;\n    background: #e6e6e6;\n    color: #111;\n    font-size: 0.78rem;\n    font-weight: 700;\n    white-space: nowrap;\n    opacity: 0;\n    pointer-events: none;\n    transition: opacity 0.15s, transform 0.15s;\n}\n\n.dx-round[data-tip]:hover::after,\n.dx-round[data-tip]:focus-visible::after {\n    opacity: 1;\n    transform: translate(-50%, 0);\n}\n\n.dx-round.is-end[data-tip]::after {\n    left: auto;\n    right: 0;\n    transform: translate(0, 4px);\n}\n\n.dx-round.is-end[data-tip]:hover::after,\n.dx-round.is-end[data-tip]:focus-visible::after {\n    transform: none;\n}\n\n.dx-preview-facts {\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    gap: 0.3rem 0.55rem;\n    font-size: 0.88rem;\n    font-weight: 500;\n    color: #bcbcbc;\n}\n\n.dx-preview-facts .dx-match {\n    color: #46d369;\n    font-weight: 700;\n}\n\n.dx-hd {\n    padding: 0 0.3rem;\n    border: 1px solid rgba(255, 255, 255, 0.4);\n    border-radius: 3px;\n    font-size: 0.68rem;\n    font-weight: 700;\n    line-height: 1.3;\n    color: rgba(255, 255, 255, 0.85);\n}\n\n.dx-preview-genres {\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    gap: 0.25rem 0.45rem;\n    font-size: 0.88rem;\n    color: #fff;\n}\n\n.dx-preview-genres span + span::before {\n    content: \"•\";\n    margin-right: 0.45rem;\n    color: #646464;\n}\n\n/* ---------- Intro (pre-rendered film, see plugin) ---------- */\n.dx-splash {\n    position: fixed;\n    inset: 0;\n    z-index: 100000;\n    background: #000;\n    cursor: pointer;\n    transition: opacity 0.6s ease, visibility 0.6s;\n}\n\n.dx-splash.is-done {\n    opacity: 0;\n    visibility: hidden;\n}\n\n.dx-splash-video {\n    position: absolute;\n    inset: 0;\n    width: 100%;\n    height: 100%;\n    object-fit: cover;\n    background: #000;\n}\n\n/* Fallback when video can't play: opacity/transform only, so it stays on the compositor */\n.dx-splash-mark {\n    position: absolute;\n    left: 50%;\n    top: 50%;\n    font-family: \"Bebas Neue\", \"Inter\", sans-serif;\n    font-size: clamp(5rem, 16vw, 18rem);\n    line-height: 1;\n    color: var(--dx-accent);\n    transform: translate(-50%, -50%);\n    animation: dx-intro-fallback 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;\n    will-change: transform, opacity;\n}\n\n@keyframes dx-intro-fallback {\n    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }\n    30% { opacity: 1; transform: translate(-50%, -50%) scale(1); }\n    75% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }\n    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }\n}\n\n/* =====================================================================\n   8. DETAIL PAGE\n   ===================================================================== */\n\n#app [class*=\"metadetails-container\"] > [class*=\"background-image-layer\"] {\n    opacity: 1;\n}\n\n#app [class*=\"metadetails-container\"] > [class*=\"background-image-layer\"] img {\n    opacity: 1 !important;\n    filter: none !important;\n    object-fit: cover;\n    object-position: center 20%;\n    animation: dx-fade 0.9s var(--dx-ease) both;\n}\n\n#app [class*=\"metadetails-container\"] > [class*=\"background-image-layer\"]::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background:\n        linear-gradient(90deg, rgba(11, 11, 13, 0.94) 0%, rgba(11, 11, 13, 0.7) 32%, rgba(11, 11, 13, 0.12) 60%, rgba(11, 11, 13, 0.35) 100%),\n        linear-gradient(0deg, rgba(11, 11, 13, 0.9) 0%, transparent 38%),\n        linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 18%);\n}\n\n#app [class*=\"metadetails-container\"] > nav[class*=\"horizontal-nav-bar\"] {\n    height: var(--dx-nav-h);\n    padding: 0 var(--dx-gutter) 0 calc(var(--dx-gutter) - 0.6rem);\n    background: transparent;\n}\n\n#app [class*=\"metadetails-container\"] > nav [class*=\"back-button-container\"],\n#app [class*=\"player-container\"] nav [class*=\"back-button-container\"] {\n    height: 2.5rem;\n    width: 2.5rem;\n    margin: 0;\n    border-radius: 50%;\n    background: rgba(0, 0, 0, 0.45);\n    backdrop-filter: blur(8px);\n    transition: background-color 0.2s, transform 0.2s;\n}\n\n#app [class*=\"metadetails-container\"] > nav [class*=\"back-button-container\"]:hover,\n#app [class*=\"player-container\"] nav [class*=\"back-button-container\"]:hover,\n#app [class*=\"metadetails-container\"] > nav [class*=\"back-button-container\"]:focus-visible,\n#app [class*=\"player-container\"] nav [class*=\"back-button-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.16);\n    transform: translateX(-2px);\n}\n\n#app [class*=\"metadetails-content\"] {\n    padding-left: var(--dx-gutter);\n}\n\n#app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] {\n    padding-top: 1rem;\n    padding-bottom: 8vh;\n    justify-content: flex-end;\n}\n\n#app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] > [class*=\"meta-info-container\"] {\n    flex: 0 1 auto;\n}\n\n#app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] > [class*=\"action-buttons-container\"] {\n    margin-top: 1.75rem;\n}\n\n/* Meta preview (detail + discover side panel) */\n#app [class*=\"meta-preview-container\"] [class*=\"meta-info-container\"] {\n    padding-right: 1rem;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"logo\"] {\n    filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.6));\n    animation: dx-rise 0.6s var(--dx-ease-out) both;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"logo-placeholder\"] {\n    font-size: clamp(2rem, 3.4vw, 3.4rem);\n    font-weight: 800;\n    letter-spacing: -0.02em;\n    line-height: 1.05;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"runtime-release-info-container\"] {\n    gap: 1.1rem;\n    flex-wrap: wrap;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"runtime-label\"],\n#app [class*=\"meta-preview-container\"] [class*=\"release-info-label\"] {\n    font-size: 1rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n    margin: 0;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"] {\n    height: 1.9rem;\n    padding: 0 0.6rem;\n    gap: 0.45rem;\n    border-radius: var(--dx-radius-s);\n    background: rgba(245, 197, 24, 0.12);\n    border: 1px solid rgba(245, 197, 24, 0.35);\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"]:focus-visible {\n    background: rgba(245, 197, 24, 0.22);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"] [class*=\"label\"] {\n    font-weight: 800;\n    color: #fff;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"] svg {\n    color: #f5c518;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"meta-links-container\"] [class*=\"label-container\"] {\n    font-size: 0.72rem;\n    font-weight: 700;\n    letter-spacing: 0.14em;\n    text-transform: uppercase;\n    color: var(--dx-text-3);\n    opacity: 1;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"link-container\"] {\n    display: inline-flex !important;\n    align-items: center;\n    justify-content: center;\n    height: 2rem;\n    /* optical centring: the font reserves descender space below, so nudge capitals down */\n    padding: 0.15em 0.85rem 0 !important;\n    line-height: 1 !important;\n    vertical-align: middle;\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid var(--dx-line);\n    font-size: 0.85rem;\n    font-weight: 500;\n    color: var(--dx-text);\n    transition: background-color 0.2s, border-color 0.2s;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"link-container\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"link-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.14);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"description-container\"] {\n    font-size: 1.02rem;\n    line-height: 1.6;\n    color: rgba(255, 255, 255, 0.86);\n    max-width: 48rem;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"description-container\"] [class*=\"label-container\"] {\n    display: none;\n}\n\n/* Action buttons: first (Play/Trailer) is a solid button, the rest are round */\n#app [class*=\"meta-preview-container\"] [class*=\"action-buttons-container\"] {\n    gap: 0.6rem;\n    align-items: center;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"],\n#app [class*=\"meta-preview-container\"] [class*=\"group-container\"] {\n    height: 3rem;\n    min-width: 3rem;\n    border-radius: 999px;\n    background: rgba(42, 42, 48, 0.65);\n    border: 1.5px solid rgba(255, 255, 255, 0.28);\n    backdrop-filter: blur(10px);\n    transition: background-color 0.2s, border-color 0.2s, transform 0.2s var(--dx-ease-out);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"]:focus-visible {\n    border-color: #fff;\n    background: rgba(255, 255, 255, 0.12);\n    transform: translateY(-1px);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"group-container\"] [class*=\"icon-container\"] {\n    border-radius: 999px;\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"group-container\"] [class*=\"icon-container\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"group-container\"] [class*=\"icon-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.12);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"] {\n    padding: 0 1.5rem 0 1.15rem;\n    border-radius: var(--dx-radius);\n    background: #fff;\n    border-color: #fff;\n    color: #000;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"] * {\n    color: #000 !important;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"] [class*=\"label\"] {\n    font-weight: 700;\n    font-size: 1rem;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.84);\n}\n\n/* Episodes / streams panel */\n#app [class*=\"metadetails-content\"] [class*=\"videos-list-container\"],\n#app [class*=\"metadetails-content\"] [class*=\"streams-list-container\"] {\n    flex: 0 0 clamp(28rem, 31vw, 42rem) !important;\n    width: clamp(28rem, 31vw, 42rem);\n    margin: 0.75rem var(--dx-gutter) 1.5rem 0;\n    border-radius: var(--dx-radius-l);\n    background: rgba(19, 19, 23, 0.82);\n    border: 1px solid var(--dx-line);\n    backdrop-filter: blur(24px) saturate(140%);\n    box-shadow: var(--dx-shadow-2);\n    animation: dx-slide-in 0.5s var(--dx-ease-out) both;\n}\n\n@keyframes dx-slide-in {\n    from { opacity: 0; transform: translateX(24px); }\n    to { opacity: 1; transform: none; }\n}\n\n#app [class*=\"seasons-bar-container\"] {\n    padding: 0.5rem 0.75rem;\n    border-bottom: 1px solid var(--dx-line);\n}\n\n#app [class*=\"seasons-bar-container\"] [class*=\"button-container\"] {\n    border-radius: var(--dx-radius);\n}\n\n#app [class*=\"seasons-bar-container\"] [class*=\"button-container\"]:hover,\n#app [class*=\"seasons-bar-container\"] [class*=\"button-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app [class*=\"seasons-popup-label-container\"] [class*=\"button-container\"] {\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid var(--dx-line);\n    font-weight: 700;\n}\n\n#app [class*=\"videos-list-container\"] [class*=\"search-bar-container\"] {\n    margin: 0.75rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.05);\n    border: 1px solid var(--dx-line);\n}\n\n#app [class*=\"video-container\"] {\n    margin: 0 0.5rem;\n    border-radius: var(--dx-radius);\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"video-container\"]:hover,\n#app [class*=\"video-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.06);\n}\n\n#app [class*=\"video-container\"][class*=\"selected\"] {\n    background: rgba(255, 255, 255, 0.09);\n    box-shadow: inset 3px 0 0 var(--dx-accent);\n}\n\n#app [class*=\"video-container\"] [class*=\"thumbnail-container\"] {\n    border-radius: var(--dx-radius-s);\n    overflow: hidden;\n}\n\n#app [class*=\"video-container\"] [class*=\"title-container\"] {\n    font-weight: 600;\n    color: var(--dx-text);\n}\n\n#app [class*=\"video-container\"] [class*=\"released-container\"] {\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"video-container\"] [class*=\"upcoming-watched-container\"] > * {\n    border-radius: var(--dx-radius-s);\n}\n\n#app [class*=\"video-container\"] [class*=\"watched-container\"] {\n    background: rgba(70, 211, 105, 0.15);\n    color: #46d369;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"select-choices-wrapper\"] {\n    padding: 0.5rem 0.75rem;\n    border-bottom: 1px solid var(--dx-line);\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"] {\n    margin: 0.2rem 0.5rem;\n    border-radius: var(--dx-radius);\n    transition: background-color 0.2s, transform 0.2s var(--dx-ease-out);\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"]:hover,\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.07);\n    transform: translateX(3px);\n}\n\n/* A stream's right-click menu lives inside its card: lift that card above the ones after it,\n   otherwise they paint over the menu */\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"]:has([class*=\"menu-container\"]) {\n    position: relative;\n    z-index: 40;\n    transform: none;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"] [class*=\"menu-container\"] {\n    z-index: 41;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [class*=\"stream-container\"] {\n    align-self: stretch;\n    width: auto !important;\n    padding: 0.8rem 1rem;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"] [class*=\"info-container\"] {\n    width: 8.5rem;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"] [class*=\"description-container\"] {\n    max-width: none !important;\n    flex: 1 1 0 !important;\n    white-space: pre-wrap !important;\n    overflow-wrap: anywhere;\n    max-height: none !important;\n    font-size: 0.85rem;\n    line-height: 1.45;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"addon-name\"] {\n    font-weight: 700;\n    color: var(--dx-text);\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"description-container\"] {\n    color: var(--dx-text-2);\n}\n\n/* =====================================================================\n   9. DISCOVER / LIBRARY / SEARCH / CALENDAR\n   ===================================================================== */\n\n#app [class*=\"discover-content\"],\n#app [class*=\"library-content\"],\n#app [class*=\"search-content\"] {\n    padding-top: 0.75rem;\n}\n\n#app [class*=\"search-content\"] {\n    padding-left: 0 !important;\n    padding-right: 0 !important;\n}\n\n#app [class*=\"discover-content\"] [class*=\"catalog-container\"] {\n    padding-left: calc(var(--dx-gutter) - 0.35rem);\n}\n\n#app [class*=\"library-content\"] {\n    padding-left: calc(var(--dx-gutter) - 0.35rem);\n    padding-right: calc(var(--dx-gutter) - 0.35rem);\n}\n\n#app [class*=\"selectable-inputs-container\"] {\n    gap: 0.6rem;\n    padding: 0 0.35rem 0.75rem;\n}\n\n/* Dropdowns / filters / chips */\n#app [class*=\"multiselect-menu\"] > [class*=\"button-container\"],\n#app [class*=\"select-input\"] > [class*=\"button-container\"],\n#app [class*=\"filter-button\"],\n#app [class*=\"selectable-inputs\"] [class*=\"button-container\"] {\n    height: 2.5rem;\n    border-radius: var(--dx-radius);\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n    transition: background-color 0.2s, border-color 0.2s;\n}\n\n#app [class*=\"multiselect-menu\"] > [class*=\"button-container\"]:hover,\n#app [class*=\"filter-button\"]:hover,\n#app [class*=\"multiselect-menu\"] > [class*=\"button-container\"]:focus-visible,\n#app [class*=\"filter-button\"]:focus-visible {\n    background: var(--dx-surface-2);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"multiselect-menu\"] [class*=\"text\"] {\n    font-size: 0.9rem;\n    font-weight: 600;\n}\n\n#app [class*=\"chips\"] [class*=\"chip\"] {\n    height: 2.2rem;\n    padding: 0 1rem;\n    border-radius: 999px;\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n    font-size: 0.85rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n    transition: background-color 0.2s, color 0.2s, border-color 0.2s;\n}\n\n#app [class*=\"chips\"] [class*=\"chip\"]:hover,\n#app [class*=\"chips\"] [class*=\"chip\"]:focus-visible {\n    color: var(--dx-text);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"chips\"] [class*=\"chip\"][class*=\"active\"] {\n    background: #fff;\n    border-color: #fff;\n    color: #000;\n}\n\n/* Grids */\n#app [class*=\"discover-content\"] [class*=\"meta-items-container\"],\n#app [class*=\"library-content\"] [class*=\"meta-items-container\"] {\n    grid-template-columns: repeat(auto-fill, minmax(clamp(9.5rem, 11vw, 13rem), 1fr)) !important;\n    gap: 0.35rem 0;\n    padding-bottom: 3rem;\n}\n\n/* Discover side preview */\n#app [class*=\"discover-content\"] > [class*=\"meta-preview-container\"] {\n    margin: 0 var(--dx-gutter) 1.25rem 0.75rem;\n    border-radius: var(--dx-radius-l);\n    background: var(--dx-bg-raised);\n    border: 1px solid var(--dx-line);\n    overflow: hidden;\n    box-shadow: var(--dx-shadow-2);\n}\n\n#app [class*=\"discover-content\"] > [class*=\"meta-preview-container\"] [class*=\"background-image-layer\"] img {\n    opacity: 0.55;\n    filter: none;\n}\n\n#app [class*=\"discover-content\"] > [class*=\"meta-preview-container\"] [class*=\"background-image-layer\"]::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: linear-gradient(0deg, var(--dx-bg-raised) 20%, rgba(19, 19, 23, 0.55) 60%, rgba(19, 19, 23, 0.3) 100%);\n}\n\n/* Empty / message states */\n#app [class*=\"message-container\"],\n#app [class*=\"placeholder-label\"] {\n    color: var(--dx-text-3);\n}\n\n/* Calendar */\n#app [class*=\"calendar\"] [class*=\"selector\"] {\n    gap: 1rem;\n}\n\n#app [class*=\"calendar\"] [class*=\"selector\"] [class*=\"button-container\"] {\n    border-radius: var(--dx-radius);\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n}\n\n#app [class*=\"calendar\"] [class*=\"cell\"] {\n    border-radius: var(--dx-radius);\n    background: var(--dx-bg-raised);\n    border: 1px solid var(--dx-line);\n    transition: background-color 0.2s, border-color 0.2s;\n}\n\n#app [class*=\"calendar\"] [class*=\"cell\"]:hover,\n#app [class*=\"calendar\"] [class*=\"cell\"]:focus-visible {\n    background: var(--dx-surface);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"calendar\"] [class*=\"cell\"][class*=\"today\"] {\n    border-color: var(--dx-accent);\n    box-shadow: inset 0 0 0 1px var(--dx-accent);\n}\n\n#app [class*=\"calendar\"] [class*=\"cell\"][class*=\"today\"] [class*=\"day\"] {\n    color: #fff;\n    font-weight: 800;\n}\n\n#app [class*=\"calendar\"] [class*=\"list-\"] [class*=\"item-\"] {\n    border-radius: var(--dx-radius);\n}\n\n#app [class*=\"calendar\"] [class*=\"episode-\"] {\n    border-radius: var(--dx-radius);\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"calendar\"] [class*=\"episode-\"]:hover,\n#app [class*=\"calendar\"] [class*=\"episode-\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.06);\n}\n\n#app [class*=\"calendar\"] [class*=\"artwork-container\"] {\n    border-radius: var(--dx-radius-s);\n    overflow: hidden;\n}\n\n/* =====================================================================\n   10. ADDONS + SETTINGS\n   ===================================================================== */\n\n#app [class*=\"addons-content\"] {\n    padding: 0.75rem calc(var(--dx-gutter) - 0.35rem) 0;\n}\n\n#app [class*=\"addons-content\"] [class*=\"add-button-container\"] {\n    height: 2.5rem;\n    padding: 0 1.1rem;\n    border-radius: var(--dx-radius);\n    background: var(--dx-accent);\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"addons-content\"] [class*=\"add-button-container\"]:hover,\n#app [class*=\"addons-content\"] [class*=\"add-button-container\"]:focus-visible {\n    background: var(--dx-accent-hover);\n}\n\n#app [class*=\"addons-content\"] [class*=\"add-button-container\"] * {\n    color: #fff !important;\n    font-weight: 700;\n}\n\n#app [class*=\"addons-content\"] label[class*=\"search-bar-container\"] {\n    height: 2.5rem;\n    border-radius: var(--dx-radius);\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n}\n\n#app [class*=\"addons-list-container\"] {\n    gap: 0.75rem;\n    padding-bottom: 2rem;\n}\n\n#app [class*=\"addons-list-container\"] [class*=\"addon-container\"] {\n    margin: 0 0 0.75rem 0;\n    padding: 1.1rem 1.25rem;\n    border-radius: var(--dx-radius-l);\n    background: var(--dx-bg-raised);\n    border: 1px solid var(--dx-line);\n    transition: background-color 0.25s, border-color 0.25s, transform 0.25s var(--dx-ease-out);\n}\n\n#app [class*=\"addons-list-container\"] [class*=\"addon-container\"]:hover,\n#app [class*=\"addons-list-container\"] [class*=\"addon-container\"]:focus-visible {\n    background: var(--dx-surface);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"addon-container\"] [class*=\"logo-container\"] {\n    border-radius: var(--dx-radius);\n    background: var(--dx-surface-2);\n    overflow: hidden;\n}\n\n#app [class*=\"addon-container\"] [class*=\"name-container\"] {\n    font-weight: 700;\n}\n\n#app [class*=\"addon-container\"] [class*=\"version-container\"],\n#app [class*=\"addon-container\"] [class*=\"types-container\"] {\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"addon-container\"] [class*=\"description-container\"] {\n    color: var(--dx-text-2);\n}\n\n/* Install / uninstall / configure / share */\n#app [class*=\"install-button-container\"],\n#app [class*=\"configure-button-container\"] {\n    border-radius: var(--dx-radius) !important;\n    background: var(--dx-accent) !important;\n    border: 0 !important;\n    transition: background-color 0.2s, opacity 0.2s;\n}\n\n#app [class*=\"install-button-container\"]:hover,\n#app [class*=\"configure-button-container\"]:hover,\n#app [class*=\"install-button-container\"]:focus-visible,\n#app [class*=\"configure-button-container\"]:focus-visible {\n    background: var(--dx-accent-hover) !important;\n}\n\n#app [class*=\"install-button-container\"] *,\n#app [class*=\"configure-button-container\"] * {\n    color: #fff !important;\n}\n\n#app [class*=\"uninstall-button-container\"],\n#app [class*=\"share-button-container\"] {\n    border-radius: var(--dx-radius) !important;\n    background: var(--dx-surface-2) !important;\n    border: 1px solid var(--dx-line) !important;\n    outline: none !important;\n}\n\n#app [class*=\"uninstall-button-container\"]:hover,\n#app [class*=\"share-button-container\"]:hover,\n#app [class*=\"uninstall-button-container\"]:focus-visible,\n#app [class*=\"share-button-container\"]:focus-visible {\n    background: var(--dx-surface-3) !important;\n}\n\n#app [class*=\"uninstall-button-container\"] *,\n#app [class*=\"share-button-container\"] * {\n    color: var(--dx-text) !important;\n}\n\n/* Settings */\n#app [class*=\"settings-content\"] {\n    padding: 0.75rem var(--dx-gutter) 0;\n    gap: 2rem;\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] {\n    padding: 0.5rem;\n    border-radius: var(--dx-radius-l);\n    background: var(--dx-bg-raised);\n    border: 1px solid var(--dx-line);\n    height: fit-content;\n    max-height: 100%;\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] > [class*=\"button\"],\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] > div > [class*=\"button\"] {\n    height: 2.75rem;\n    margin: 0.1rem 0;\n    padding: 0 1rem;\n    border-radius: var(--dx-radius);\n    font-weight: 600;\n    color: var(--dx-text-2);\n    opacity: 1;\n    transition: background-color 0.2s, color 0.2s;\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"button\"]:hover,\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"button\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.06);\n    color: var(--dx-text);\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"button\"][class*=\"selected\"] {\n    background: rgba(255, 255, 255, 0.1);\n    color: #fff;\n    box-shadow: inset 3px 0 0 var(--dx-accent);\n}\n\n#app [class*=\"settings-content\"] [class*=\"section-\"] {\n    border-bottom: 1px solid var(--dx-line);\n}\n\n#app [class*=\"settings-content\"] [class*=\"heading-\"] {\n    font-weight: 700;\n}\n\n/* Sections use the room there is (Stremio caps them at ~490px, which left half the page empty),\n   and every control sits on the right edge: toggles used to float in the middle of a centred box,\n   out of line with the dropdowns and buttons above and below them */\n#app [class*=\"settings-content\"] [class*=\"sections-container\"] > [class*=\"section-\"] {\n    max-width: 46rem;\n}\n\n#app [class*=\"settings-content\"] [class*=\"option-\"] > [class*=\"content-\"] {\n    justify-content: flex-end;\n}\n\n/* Each section's title, set like the rest of dx.bi's headings (it was a thin, light weight) */\n#app [class*=\"settings-content\"] [class*=\"sections-container\"] > [class*=\"section-\"] > [class*=\"label-\"] {\n    font-size: 1.6rem;\n    font-weight: 700;\n    letter-spacing: -0.01em;\n    color: var(--dx-text);\n}\n\n/* The app's notes under its own options */\n#app [class*=\"settings-content\"] .dxbi-note {\n    margin: -0.2rem 0 1rem;\n    font-size: 0.85rem;\n    line-height: 1.55;\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"settings-content\"] .dxbi-note b {\n    color: var(--dx-text-2);\n    font-weight: 600;\n}\n\n/* App, build and server versions under the menu: small print, not menu-sized text */\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"version-label\"] {\n    padding: 0.15rem 1rem;\n    font-size: 0.75rem;\n    line-height: 1.4;\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"spacing\"] {\n    margin-top: 0.5rem;\n    border-top: 1px solid var(--dx-line);\n}\n\n#app [class*=\"settings-content\"] [class*=\"option-\"] [class*=\"content-\"] [class*=\"button-container\"],\n#app [class*=\"settings-content\"] [class*=\"multiselect-menu\"] > [class*=\"button-container\"] {\n    border-radius: var(--dx-radius);\n}\n\n#app [class*=\"settings-content\"] [class*=\"user-info-content\"] [class*=\"avatar\"],\n#app [class*=\"settings-content\"] [class*=\"user-info-content\"] img {\n    border-radius: var(--dx-radius) !important;\n}\n\n/* Toggles and checkboxes */\n#app [class*=\"toggle-container\"] [class*=\"toggle\"] {\n    background: var(--dx-surface-3);\n}\n\n#app [class*=\"toggle-container\"].checked [class*=\"toggle\"],\n#app .checked > [class*=\"toggle\"] {\n    background: var(--dx-accent) !important;\n}\n\n#app [class*=\"checkbox-container\"].checked [class*=\"checkbox\"],\n#app [class*=\"checkbox\"].checked {\n    background: var(--dx-accent) !important;\n    border-color: var(--dx-accent) !important;\n}\n\n/* Keyboard: a selected switch or choice glows softly and grows a touch (they have no hover look\n   to borrow) */\n#app [class*=\"toggle-container\"]:focus-visible,\n#app [class*=\"radio-container\"]:focus-visible,\n#app [class*=\"checkbox-container\"]:focus-visible {\n    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));\n    transform: scale(1.08);\n    transition: transform 0.2s var(--dx-ease-out), filter 0.2s;\n}\n\n/* Text inputs */\n#app input[class*=\"text-input\"],\n#app [class*=\"text-input\"] input {\n    border-radius: var(--dx-radius);\n}\n\n/* =====================================================================\n   11. POPUPS, MENUS, MODALS, TOASTS, TOOLTIPS\n   ===================================================================== */\n\n#app [class*=\"menu-container\"][class*=\"menu-direction\"]:not([class*=\"context-menu\"]),\n#app [class*=\"nav-menu-container\"] {\n    border-radius: var(--dx-radius-l) !important;\n    background: rgba(22, 22, 27, 0.97) !important;\n    border: 1px solid var(--dx-line-strong) !important;\n    box-shadow: var(--dx-shadow-2) !important;\n    backdrop-filter: blur(20px);\n    overflow: hidden;\n}\n\n/* Animate the menu's content, never the container: other plugins hide containers with inline opacity */\n#app [class*=\"menu-container\"][class*=\"menu-direction\"] > * {\n    animation: dx-pop 0.18s var(--dx-ease-out) both;\n}\n\n@keyframes dx-pop {\n    from { opacity: 0; transform: translateY(-4px) scale(0.98); }\n    to { opacity: 1; transform: none; }\n}\n\n#app [class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"],\n#app [class*=\"menu-container\"] [class*=\"option-container\"] {\n    border-radius: var(--dx-radius);\n    transition: background-color 0.15s;\n}\n\n#app [class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"]:hover,\n#app [class*=\"menu-container\"] [class*=\"option-container\"]:hover,\n#app [class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"]:focus-visible,\n#app [class*=\"menu-container\"] [class*=\"option-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.08) !important;\n}\n\n#app [class*=\"menu-container\"] [class*=\"option-container\"][class*=\"selected\"] {\n    background: rgba(255, 255, 255, 0.1) !important;\n}\n\n#app [class*=\"nav-menu-container\"] [class*=\"nav-menu-section\"] {\n    border-color: var(--dx-line) !important;\n}\n\n#app [class*=\"modal-container\"] {\n    background: rgba(0, 0, 0, 0.7);\n    backdrop-filter: blur(6px);\n    animation: dx-fade 0.2s both;\n}\n\n#app [class*=\"modal-dialog-container\"] {\n    border-radius: var(--dx-radius-l) !important;\n    background: var(--dx-surface) !important;\n    border: 1px solid var(--dx-line) !important;\n    box-shadow: var(--dx-shadow-2) !important;\n}\n\n/* The content sits inside the dialog: one card only, not a second inset one */\n#app [class*=\"modal-dialog-container\"] [class*=\"modal-dialog-content\"] {\n    border-radius: 0 !important;\n    background: transparent !important;\n    border: 0 !important;\n    box-shadow: none !important;\n}\n\n#app [class*=\"modal-dialog-container\"] {\n    animation: dx-pop 0.25s var(--dx-ease-out) both;\n}\n\n#app [class*=\"modal-dialog-container\"] [class*=\"action-button\"],\n#app [class*=\"modal-dialog-container\"] [class*=\"button-container\"][class*=\"action\"] {\n    border-radius: var(--dx-radius) !important;\n}\n\n#app [class*=\"toasts-container\"] [class*=\"toast-item-container\"] {\n    border-radius: var(--dx-radius) !important;\n    background: var(--dx-surface-2) !important;\n    border: 1px solid var(--dx-line) !important;\n    border-left: 3px solid var(--dx-accent) !important;\n    box-shadow: var(--dx-shadow-2) !important;\n    animation: dx-slide-in 0.35s var(--dx-ease-out) both;\n}\n\n#app [class*=\"toasts-container\"] [class*=\"toast-item-container\"][class*=\"success\"] {\n    border-left-color: #46d369 !important;\n}\n\n#app [class*=\"toasts-container\"] [class*=\"toast-item-container\"][class*=\"error\"] {\n    border-left-color: #ff5a5f !important;\n}\n\n#app [class*=\"tooltip-container\"] {\n    border-radius: var(--dx-radius-s) !important;\n    background: #fff !important;\n    color: #000 !important;\n    font-weight: 600;\n    font-size: 0.8rem;\n}\n\n/* =====================================================================\n   12. PLAYER — Netflix-style controls and panels\n   ===================================================================== */\n\n/* Top bar: just a large back arrow (title moves to the bottom when the plugin is on) */\n#app [class*=\"player-container\"] [class*=\"nav-bar-layer\"] {\n    background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, transparent 100%) !important;\n    height: 7rem;\n}\n\n#app [class*=\"player-container\"] [class*=\"player-nav\"] {\n    padding: 1.5rem var(--dx-gutter) 0 calc(var(--dx-gutter) - 0.75rem) !important;\n    align-items: center;\n}\n\n#app [class*=\"player-container\"] [class*=\"player-nav\"] [class*=\"player-button\"] {\n    width: 3.25rem;\n    height: 3.25rem;\n    border-radius: 50%;\n    background: transparent !important;\n    transition: transform 0.2s var(--dx-ease-out);\n}\n\n#app [class*=\"player-container\"] [class*=\"player-nav\"] [class*=\"player-button\"]:hover,\n#app [class*=\"player-container\"] [class*=\"player-nav\"] [class*=\"player-button\"]:focus-visible {\n    transform: scale(1.15);\n}\n\n/* Some Windows installs drew the back arrow unsized: a black chevron across the whole video that\n   sent every click back to the streams list. Keep top-bar icons small and click-through always. */\n#app [class*=\"player-container\"] [class*=\"nav-bar-layer\"] svg {\n    max-width: 3rem !important;\n    max-height: 3rem !important;\n    pointer-events: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"player-nav\"] [class*=\"player-button\"] svg {\n    width: 2.1rem;\n    height: 2.1rem;\n    color: #fff;\n}\n\n#app [class*=\"player-container\"] [class*=\"player-title\"] {\n    font-size: 1.15rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n}\n\nbody[data-dx-ptitle] #app [class*=\"player-container\"] [class*=\"player-title-container\"],\nbody[data-dx-ptitle] #app [class*=\"player-container\"] [class*=\"nav-bar-layer\"] > [class^=\"title-\"] {\n    visibility: hidden;\n}\n\n/* Bottom bar */\n#app [class*=\"player-container\"] [class*=\"control-bar-layer\"] {\n    padding: 5rem var(--dx-gutter) 1.4rem !important;\n    background: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-layer\"] [class*=\"seek-bar-container\"] {\n    height: 2.25rem;\n    gap: 1rem;\n}\n\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"label\"] {\n    font-size: 0.95rem;\n    font-weight: 600;\n    font-variant-numeric: tabular-nums;\n    color: var(--dx-text);\n    opacity: 1;\n}\n\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] > [class*=\"button-container\"] {\n    background: transparent !important;\n    padding: 0 0.25rem;\n}\n\n#app [class*=\"slider-container\"] [class*=\"track\"] {\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.25) !important;\n}\n\n#app [class*=\"slider-container\"] [class*=\"track-before\"] {\n    background: rgba(255, 255, 255, 0.45) !important;\n}\n\n#app [class*=\"slider-container\"] [class*=\"track-after\"] {\n    background: var(--dx-accent) !important;\n}\n\n#app [class*=\"slider-container\"] [class*=\"thumb\"] {\n    background: var(--dx-accent) !important;\n    box-shadow: none !important;\n    transition: transform 0.15s var(--dx-ease-out);\n    transform-origin: center;\n}\n\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"slider-container\"] {\n    --track-size: calc(4px + 3px * var(--dx-seek-hot, 0));\n    --thumb-size: 16px;\n}\n\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"]:hover,\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"]:focus-visible {\n    --dx-seek-hot: 1;\n}\n\n/* Stremio centres the knob with translateX(-50%) — keep that, only add the scale */\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"thumb\"] {\n    transform: translateX(-50%) scale(calc(1.15 * var(--dx-seek-hot, 0)));\n}\n\nhtml[class*=\"active-slider-within\"] #app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"thumb\"] {\n    transform: translateX(-50%) scale(1.15);\n}\n\n/* Button row */\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] {\n    position: relative;\n    gap: 0.35rem;\n    margin-top: 0.35rem;\n    border-radius: 0 !important;\n    background: transparent !important;\n    transform: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > * {\n    order: 3;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"control-bar-button-\"]:first-child {\n    order: 0;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-seek-back {\n    order: 1;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-seek-fwd {\n    order: 2;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-container\"] {\n    gap: 0.35rem;\n    border-radius: 0 !important;\n    background: transparent !important;\n}\n\n/* Narrow windows: Stremio folds these buttons into a pop-up behind \"⋯\", which needs its panel */\n@media only screen and (max-width: 640px) {\n    #app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-container\"] {\n        background: rgb(22, 22, 27) !important;\n        border-radius: 12px !important;\n    }\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-button\"],\n#app [class*=\"player-container\"] .dxp-player-btn,\n.dx-seek {\n    width: 3.5rem !important;\n    height: 3.5rem !important;\n    border-radius: 50% !important;\n    background: transparent !important;\n    transform: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"] svg,\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-button\"] svg,\n#app [class*=\"player-container\"] .dxp-player-btn svg,\n.dx-seek svg {\n    width: 2.15rem !important;\n    height: 2.15rem !important;\n    color: #fff;\n    opacity: 1 !important;\n    transform: scale(var(--dx-btn-scale, 1));\n    transition: transform 0.18s var(--dx-ease-out);\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"]:hover:not(.disabled),\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-button\"]:hover,\n.dx-seek:hover,\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"]:focus-visible,\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-button\"]:focus-visible,\n#app [class*=\"player-container\"] .dxp-player-btn:hover,\n#app [class*=\"player-container\"] .dxp-player-btn:focus-visible,\n.dx-seek:focus-visible {\n    --dx-btn-scale: 1.22;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"].disabled svg {\n    opacity: 0.3 !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"].active svg,\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"][class*=\"active\"] svg {\n    color: #fff;\n    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));\n}\n\n.dx-seek {\n    position: relative;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    color: #fff;\n    cursor: pointer;\n}\n\n/* Volume: slider slides out when you point at the speaker */\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"volume-slider\"] {\n    flex: 0 0 0 !important;\n    width: 0;\n    margin: 0 !important;\n    opacity: 0;\n    --track-size: 4px;\n    --thumb-size: 14px;\n    transition: flex-basis 0.3s var(--dx-ease-out), opacity 0.2s, margin 0.3s;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"]:hover + [class*=\"volume-slider\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"volume-slider\"]:hover,\nhtml[class*=\"active-slider-within\"] #app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"volume-slider\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"]:focus-visible + [class*=\"volume-slider\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"volume-slider\"]:focus-visible {\n    flex-basis: 8rem !important;\n    margin: 0 0.75rem 0 0.25rem !important;\n    opacity: 1;\n}\n\n/* Title in the bar (plugin): in the free space between the left and right buttons. It shortens\n   with \"…\" as the space shrinks (episode name first) and steps aside when there's no room left. */\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"spacing\"] {\n    min-width: 0;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    overflow: hidden;\n    container-type: inline-size;\n}\n\n.dx-player-title {\n    display: flex;\n    align-items: baseline;\n    justify-content: center;\n    gap: 0.6rem;\n    min-width: 0;\n    max-width: 100%;\n    padding: 0 1rem;\n    box-sizing: border-box;\n    white-space: nowrap;\n    pointer-events: none;\n}\n\n.dx-player-title b {\n    flex: 0 1 auto;\n    min-width: 0;\n    font-size: 1.2rem;\n    font-weight: 700;\n    color: #fff;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n.dx-player-title span {\n    flex: 0 1000 auto;\n    min-width: 0;\n    font-size: 1.05rem;\n    font-weight: 500;\n    color: var(--dx-text-2);\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n@container (max-width: 180px) {\n    .dx-player-title {\n        display: none;\n    }\n}\n\n/* Play / pause / seek feedback in the centre */\n.dx-player-flash {\n    position: absolute;\n    z-index: 5;\n    left: 50%;\n    top: 50%;\n    width: 6rem;\n    height: 6rem;\n    margin: -3rem 0 0 -3rem;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: 50%;\n    background: rgba(0, 0, 0, 0.45);\n    color: #fff;\n    pointer-events: none;\n    opacity: 0;\n}\n\n.dx-player-flash svg {\n    width: 2.8rem;\n    height: 2.8rem;\n}\n\n.dx-player-flash b {\n    position: absolute;\n    bottom: -2rem;\n    font-size: 1rem;\n    font-weight: 700;\n    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);\n}\n\n.dx-player-flash.is-on {\n    animation: dx-flash 0.65s var(--dx-ease-out) both;\n}\n\n@keyframes dx-flash {\n    0% { opacity: 0; transform: scale(0.6); }\n    25% { opacity: 1; transform: scale(1); }\n    100% { opacity: 0; transform: scale(1.35); }\n}\n\n/* ---------- Panels (subtitles, audio, speed, info, more) ---------- */\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] {\n    bottom: 7.5rem !important;\n    right: var(--dx-gutter) !important;\n    border-radius: 6px !important;\n    background: rgba(38, 38, 38, 0.97) !important;\n    border: 0 !important;\n    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;\n    backdrop-filter: none !important;\n    overflow: hidden;\n    /* Must stay a transition: Stremio unmounts menus on transitionend */\n    transition: opacity 0.18s ease, transform 0.24s var(--dx-ease-out) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"].fade-enter {\n    transform: translateY(10px);\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"].fade-enter.fade-active {\n    transform: none;\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"].fade-exit.fade-active {\n    transform: translateY(6px);\n}\n\n@keyframes dx-panel {\n    from { opacity: 0; transform: translateY(8px); }\n    to { opacity: 1; transform: none; }\n}\n\n/* Headings */\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"languages-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"variants-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"settings-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] > [class^=\"title-\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"speed-title\"] {\n    padding: 1.35rem 1.5rem 0.75rem !important;\n    font-size: 1.3rem !important;\n    font-weight: 700 !important;\n    color: #fff !important;\n    opacity: 1 !important;\n    text-align: left !important;\n}\n\n/* Subtitles: three columns separated by hairlines */\n#app [class*=\"subtitles-menu-container\"] {\n    min-width: 0;\n}\n\n#app [class*=\"subtitles-menu-container\"] [class*=\"languages-container\"] {\n    width: 15rem;\n}\n\n#app [class*=\"subtitles-menu-container\"] [class*=\"variants-container\"] {\n    width: 17rem;\n}\n\n#app [class*=\"subtitles-menu-container\"] [class*=\"subtitles-settings-container\"] {\n    width: 15rem;\n    padding: 0 !important;\n}\n\n/* Short, Netflix-style column titles */\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"languages-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"variants-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"settings-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"audio-menu-container\"] [class*=\"languages-header\"] {\n    font-size: 0 !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"languages-header\"]::after,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"variants-header\"]::after,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"settings-header\"]::after,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"audio-menu-container\"] [class*=\"languages-header\"]::after {\n    font-size: 1.3rem;\n    font-weight: 700;\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"languages-header\"]::after { content: \"Subtitles\"; }\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"variants-header\"]::after { content: \"Source\"; }\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"settings-header\"]::after { content: \"Adjust\"; }\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"audio-menu-container\"] [class*=\"languages-header\"]::after { content: \"Audio\"; }\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"languages-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"variants-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"settings-header\"] {\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] {\n    width: 100%;\n    padding: 0 !important;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] [class*=\"content\"] {\n    width: 100%;\n    justify-content: space-between;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] [class*=\"value\"] {\n    white-space: nowrap;\n}\n\n#app [class*=\"subtitles-menu-container\"] > * {\n    border-right: 1px solid rgba(255, 255, 255, 0.08);\n}\n\n#app [class*=\"subtitles-menu-container\"] > *:last-child {\n    border-right: 0;\n}\n\n/* Option rows with a tick on the selected one */\n#app [class*=\"player-container\"] [class*=\"language-option\"],\n#app [class*=\"player-container\"] [class*=\"variant-option\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"] {\n    position: relative;\n    min-height: 3rem;\n    margin: 0 !important;\n    padding: 0.55rem 1.5rem 0.55rem 3rem !important;\n    border-radius: 0 !important;\n    background: transparent !important;\n    box-shadow: none !important;\n    transition: background-color 0.15s;\n}\n\n#app [class*=\"player-container\"] [class*=\"language-option\"]:hover,\n#app [class*=\"player-container\"] [class*=\"variant-option\"]:hover,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"]:hover,\n#app [class*=\"player-container\"] [class*=\"language-option\"]:focus-visible,\n#app [class*=\"player-container\"] [class*=\"variant-option\"]:focus-visible,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.06) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"language-label\"],\n#app [class*=\"player-container\"] [class*=\"variant-label\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"] [class*=\"label\"] {\n    font-size: 1.08rem !important;\n    font-weight: 500 !important;\n    color: var(--dx-text-2) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"variant-origin\"] {\n    font-size: 0.82rem;\n    color: var(--dx-text-3) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"language-option\"].selected [class*=\"language-label\"],\n#app [class*=\"player-container\"] [class*=\"variant-option\"].selected [class*=\"variant-label\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"].selected [class*=\"label\"] {\n    color: #fff !important;\n    font-weight: 700 !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"language-option\"].selected::before,\n#app [class*=\"player-container\"] [class*=\"variant-option\"].selected::before {\n    content: \"\";\n    position: absolute;\n    left: 1.2rem;\n    top: 50%;\n    width: 1.1rem;\n    height: 1.1rem;\n    margin-top: -0.55rem;\n    background: #fff;\n    -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12.5l5 5L20 6.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\") center / contain no-repeat;\n    mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12.5l5 5L20 6.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\") center / contain no-repeat;\n}\n\n/* Stock \"selected\" dot is replaced by the tick */\n#app [class*=\"player-container\"] [class*=\"language-option\"] > [class*=\"icon\"],\n#app [class*=\"player-container\"] [class*=\"variant-option\"] > [class*=\"icon\"] {\n    display: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"languages-list\"],\n#app [class*=\"player-container\"] [class*=\"variants-list\"] {\n    padding-bottom: 0.75rem;\n}\n\n/* Delay / size / position steppers */\n#app [class*=\"subtitles-settings-container\"] [class*=\"settings-list\"] {\n    padding: 0 1.5rem 1.25rem;\n    gap: 0.9rem;\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"header\"] {\n    font-size: 0.85rem;\n    font-weight: 600;\n    color: var(--dx-text-3);\n    text-transform: uppercase;\n    letter-spacing: 0.08em;\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"content\"] {\n    height: 2.75rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"button\"] {\n    width: 2.75rem;\n    height: 2.75rem;\n    border-radius: var(--dx-radius);\n    background: transparent !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"button\"]:hover,\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"button\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.1) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"value\"] {\n    font-size: 1rem;\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n}\n\n/* Playback speed: one line, dots, current speed highlighted */\n#app [class*=\"speed-menu-container\"] {\n    width: 36rem;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"top-container\"] {\n    display: none !important;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"options-container\"] {\n    position: relative;\n    display: flex !important;\n    justify-content: space-between;\n    padding: 1.25rem 1.5rem 1.6rem !important;\n    gap: 0 !important;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"options-container\"]::before {\n    content: \"\";\n    position: absolute;\n    left: 2.75rem;\n    right: 2.75rem;\n    top: 2.05rem;\n    height: 2px;\n    background: rgba(255, 255, 255, 0.3);\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"] {\n    position: relative;\n    flex: 1 1 0;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 0.9rem;\n    height: auto !important;\n    padding: 0 !important;\n    background: transparent !important;\n    border-radius: 0 !important;\n    font-size: 1rem;\n    font-weight: 500;\n    color: var(--dx-text-2);\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"]::before {\n    content: \"\";\n    order: -1;\n    width: 0.9rem;\n    height: 0.9rem;\n    margin: 0.35rem 0;\n    border-radius: 50%;\n    background: rgba(255, 255, 255, 0.55);\n    transition: transform 0.2s var(--dx-ease-out), background-color 0.2s;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"]:hover::before,\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"]:focus-visible::before {\n    transform: scale(1.3);\n    background: #fff;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"][class*=\"active\"] {\n    color: #fff;\n    font-weight: 700;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"][class*=\"active\"]::before {\n    transform: scale(1.75);\n    background: #fff;\n    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);\n}\n\n/* Stream info */\n#app [class*=\"statistics-menu-container\"] {\n    min-width: 24rem;\n    padding-bottom: 1rem;\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"stats\"] {\n    padding: 0 1.5rem;\n    gap: 1.5rem;\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"stat-\"] [class*=\"label\"],\n#app [class*=\"statistics-menu-container\"] [class*=\"detail\"] [class*=\"label\"] {\n    font-size: 0.78rem;\n    font-weight: 700;\n    letter-spacing: 0.08em;\n    text-transform: uppercase;\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"value\"] {\n    font-size: 1.15rem;\n    font-weight: 700;\n    color: #fff;\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"detail\"] {\n    padding: 1rem 1.5rem 0;\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"copyable-value\"] {\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07) !important;\n}\n\n/* \"More\" options */\n#app [class*=\"options-menu-container\"] {\n    min-width: 17rem;\n    padding: 0.5rem 0;\n}\n\n#app [class*=\"options-menu-container\"] [class*=\"option-container\"] {\n    padding-left: 1.25rem !important;\n    gap: 0.9rem;\n}\n\n#app [class*=\"options-menu-container\"] [class*=\"option-container\"] svg {\n    width: 1.3rem;\n    height: 1.3rem;\n    color: var(--dx-text-2);\n}\n\n/* Episodes side drawer + its handle */\n#app [class*=\"player-container\"] [class*=\"side-drawer-button-layer\"] {\n    width: 2.5rem !important;\n    height: 6rem !important;\n    padding: 0 !important;\n    border-radius: 6px 0 0 6px !important;\n    background: rgba(38, 38, 38, 0.85) !important;\n    border: 0 !important;\n    box-shadow: none !important;\n    backdrop-filter: none !important;\n    transition: background-color 0.2s, width 0.2s;\n}\n\n#app [class*=\"player-container\"] [class*=\"side-drawer-button-layer\"]:hover,\n#app [class*=\"player-container\"] [class*=\"side-drawer-button-layer\"]:focus-visible {\n    width: 3rem !important;\n    background: rgba(60, 60, 60, 0.95) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"side-drawer-layer\"] {\n    background: rgba(24, 24, 24, 0.97) !important;\n    border-left: 1px solid rgba(255, 255, 255, 0.06) !important;\n    border-radius: 0 !important;\n    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.5) !important;\n    backdrop-filter: none !important;\n}\n\n/* Buffering: a spinner instead of Stremio's title logo (the layer only exists while buffering) */\n#app [class*=\"player-container\"] [class*=\"buffering-layer\"] img,\n#app [class*=\"player-container\"] [class*=\"buffering-layer\"] [class*=\"image\"] {\n    display: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"buffering-layer\"] {\n    display: flex !important;\n    align-items: center;\n    justify-content: center;\n    pointer-events: none;\n}\n\n#app [class*=\"player-container\"] [class*=\"buffering-layer\"]::before {\n    content: \"\";\n    width: 4.2rem;\n    height: 4.2rem;\n    border-radius: 50%;\n    border: 3px solid rgba(255, 255, 255, 0.14);\n    border-top-color: var(--dx-accent);\n    filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.6));\n    animation: dx-spin 0.85s linear infinite;\n}\n\n@keyframes dx-spin {\n    to { transform: rotate(360deg); }\n}\n\n/* Up next */\n#app [class*=\"next-video-popup-container\"] {\n    right: var(--dx-gutter) !important;\n    bottom: 8rem !important;\n    border-radius: 6px !important;\n    background: rgba(38, 38, 38, 0.97) !important;\n    border: 0;\n    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);\n    overflow: hidden;\n    animation: dx-panel 0.3s var(--dx-ease-out) both;\n}\n\n#app [class*=\"next-video-popup-container\"] [class*=\"play-button\"] {\n    background: #fff !important;\n    border-radius: var(--dx-radius) !important;\n}\n\n#app [class*=\"next-video-popup-container\"] [class*=\"play-button\"] * {\n    color: #000 !important;\n}\n\n/* =====================================================================\n   13. STREMIO ENHANCED'S OWN UI (themes/plugins list, alerts)\n   ===================================================================== */\n\n#enhanced [class*=\"option-\"] {\n    border-radius: var(--dx-radius);\n}\n\n#enhanced .install-button-container-yfcq5,\n#enhanced .uninstall-button-container-oV4Yo,\n#enhanced [id$=\".theme.css\"],\n#enhanced [id=\"Default\"] {\n    border-radius: var(--dx-radius) !important;\n}\n\n.toast-container,\n#enhanced-alert-container,\n[class*=\"enhanced-alert\"] {\n    border-radius: var(--dx-radius-l) !important;\n}\n\n/* =====================================================================\n   14. ACCESSIBILITY\n   ===================================================================== */\n\n/* Keyboard focus looks the same as pointing with the mouse (every hover style above also answers\n   to :focus-visible), never a square outline drawn around things */\n:focus-visible {\n    outline: none !important;\n}\n\n@media (prefers-reduced-motion: reduce) {\n    *,\n    *::before,\n    *::after {\n        animation-duration: 0.01ms !important;\n        animation-iteration-count: 1 !important;\n        transition-duration: 0.01ms !important;\n    }\n}\n\n/* =====================================================================\n   15. REFINEMENTS\n   ===================================================================== */\n\n/* Stock hover tooltips sit in the middle of posters — the preview card replaces them.\n   The plugin flags the tooltip box itself while a poster is pointed at: a body:has(...:hover) rule\n   (or any class on <html>/<body>) made the browser restyle the whole page on every hover. */\n.tooltips-items-container[data-dx-hide] {\n    display: none !important;\n}\n\n\n/* Wide card when no backdrop exists: blurred poster + sharp poster */\n.dx-wide-art.is-fallback {\n    background: var(--dx-surface-2) !important;\n}\n\n.dx-wide-blur {\n    position: absolute;\n    inset: -20px;\n    background-size: cover;\n    background-position: center;\n    filter: blur(22px) brightness(0.55) saturate(1.2);\n}\n\n.dx-wide-thumb {\n    position: absolute;\n    top: 0;\n    right: 0;\n    height: 100%;\n    aspect-ratio: 2 / 3;\n    object-fit: cover;\n    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 35%);\n    mask-image: linear-gradient(90deg, transparent 0%, #000 35%);\n}\n\n.dx-wide-art.is-fallback .dx-wide-name {\n    right: 40%;\n    white-space: normal;\n    display: -webkit-box;\n    -webkit-line-clamp: 2;\n    -webkit-box-orient: vertical;\n}\n\n/* Addons: actions readable; disabled stays dim */\n#app [class*=\"addon-container\"] [class*=\"uninstall-button-container\"] {\n    opacity: 1 !important;\n}\n\n#app [class*=\"addon-container\"] [class*=\"uninstall-button-container\"].disabled {\n    opacity: 0.35 !important;\n}\n\n#app [class*=\"addon-container\"] [class*=\"configure-button-container\"] {\n    background: var(--dx-surface-2) !important;\n    border: 1px solid var(--dx-line) !important;\n}\n\n#app [class*=\"addon-container\"] [class*=\"configure-button-container\"]:hover,\n#app [class*=\"addon-container\"] [class*=\"configure-button-container\"]:focus-visible {\n    background: var(--dx-surface-3) !important;\n}\n\n#app [class*=\"addon-container\"] [class*=\"configure-button-container\"] * {\n    color: var(--dx-text) !important;\n}\n\n/* Settings: links in white, not accent */\n#app [class*=\"settings-content\"] [class*=\"link-\"],\n#app [class*=\"settings-content\"] a {\n    color: var(--dx-text-2) !important;\n    transition: color 0.2s;\n}\n\n#app [class*=\"settings-content\"] [class*=\"link-\"]:hover,\n#app [class*=\"settings-content\"] a:hover,\n#app [class*=\"settings-content\"] [class*=\"link-\"]:focus-visible,\n#app [class*=\"settings-content\"] a:focus-visible {\n    color: #fff !important;\n    text-decoration: underline;\n    text-underline-offset: 3px;\n}\n\n#app [class*=\"settings-content\"] [class*=\"user-info-content\"] [class*=\"avatar\"] {\n    border: 0 !important;\n    box-shadow: 0 0 0 1px var(--dx-line-strong);\n}\n\n/* =====================================================================\n   16. COMMUNITY PLUGINS (Addon Manager, TheIntroDB, Enhanced Player)\n   ===================================================================== */\n\nhtml:root {\n    --am-accent: var(--dx-accent);\n    --am-bg: var(--dx-bg-raised);\n    --am-border-radius: var(--dx-radius-l);\n}\n\nbody .am-header-btn {\n    height: 2.5rem;\n    border-radius: var(--dx-radius);\n    border: 1px solid var(--dx-line-strong);\n    background: var(--dx-surface);\n    color: var(--dx-text);\n    font-size: 0.9rem;\n}\n\nbody .am-header-btn:hover,\nbody .am-header-btn:focus-visible {\n    background: var(--dx-surface-2);\n    transform: none;\n}\n\nbody .am-header-btn.active {\n    background: var(--dx-accent);\n    border-color: var(--dx-accent);\n    color: #fff;\n}\n\nbody .am-modal {\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n    border-radius: var(--dx-radius-l);\n}\n\n/* Skip intro / recap button from TheIntroDB */\nbody #tidb-active-btn,\nbody #skiprange-active-btn,\nbody #skiprange-upgrade-btn {\n    padding: 0.85rem 1.5rem 0.85rem 1.25rem !important;\n    border-radius: var(--dx-radius) !important;\n    border: 1.5px solid rgba(255, 255, 255, 0.75) !important;\n    background: rgba(18, 18, 22, 0.72) !important;\n    backdrop-filter: blur(10px) !important;\n    font-family: \"Inter\", sans-serif !important;\n    font-size: 1rem !important;\n    font-weight: 700 !important;\n    letter-spacing: 0.01em;\n    box-shadow: var(--dx-shadow-2);\n}\n\nbody #tidb-active-btn:hover,\nbody #skiprange-active-btn:hover,\nbody #skiprange-upgrade-btn:hover,\nbody #tidb-active-btn:focus-visible,\nbody #skiprange-active-btn:focus-visible,\nbody #skiprange-upgrade-btn:focus-visible {\n    background: #fff !important;\n    color: #000 !important;\n    border-color: #fff !important;\n}\n\n\n/* Enhanced Player title above the seek bar */\n#app .custom-series-name {\n    font-size: 0.8rem;\n    font-weight: 700;\n    letter-spacing: 0.08em;\n    text-transform: uppercase;\n    color: var(--dx-text-2);\n}\n\n#app .custom-episode-title {\n    font-size: 1.05rem;\n    font-weight: 700;\n    color: #fff;\n}\n\n/* Plugin settings dialogs: label above its description, not squeezed beside it */\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"heading-\"] {\n    display: flex !important;\n    flex-direction: column !important;\n    align-items: flex-start !important;\n    justify-content: center;\n    gap: 0.2rem;\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"heading-\"] > [class*=\"label-\"] {\n    font-weight: 600;\n    color: var(--dx-text);\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"heading-\"] > div:not([class]) {\n    color: var(--dx-text-3) !important;\n    margin-top: 0 !important;\n}\n\n[class*=\"modal-dialog-container\"] select {\n    border-radius: var(--dx-radius) !important;\n    background-color: var(--dx-surface-2) !important;\n    border: 1px solid var(--dx-line) !important;\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"buttons-container\"] [class*=\"action-button\"] {\n    border-radius: var(--dx-radius) !important;\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"heading-\"] {\n    flex: 1 1 auto !important;\n    max-width: none !important;\n    width: auto !important;\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"content-\"]:has([class*=\"toggle-container\"]) {\n    flex: 0 0 auto !important;\n    width: auto !important;\n    max-width: none !important;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] + [class*=\"stepper\"] {\n    margin-top: 1rem !important;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] [class*=\"header\"] {\n    margin-bottom: 0.45rem !important;\n}\n\n::-webkit-scrollbar-button {\n    display: none;\n    width: 0;\n    height: 0;\n}\n\n/* =====================================================================\n   17. CONTEXT MENU FIX compatibility\n   That plugin clones the account button (and other menus) into\n   .context-menu-portal outside #app, so give the clones the same look.\n   ===================================================================== */\n\n.context-menu-portal [class*=\"menu-button-container\"] {\n    display: flex !important;\n    align-items: center;\n    gap: 0.4rem;\n    height: 2.5rem !important;\n    padding: 0 0.4rem !important;\n    border-radius: var(--dx-radius) !important;\n    background: rgba(255, 255, 255, 0.08) !important;\n    overflow: visible !important;\n}\n\n.context-menu-portal [class*=\"menu-button-container\"] > [class*=\"avatar\"] {\n    flex: none;\n    width: 2rem !important;\n    height: 2rem !important;\n    border: 0 !important;\n    border-radius: var(--dx-radius-s) !important;\n    overflow: hidden;\n}\n\n.context-menu-portal [class*=\"menu-button-container\"] > [class*=\"avatar\"] img {\n    width: 100% !important;\n    height: 100% !important;\n    object-fit: cover;\n}\n\n.context-menu-portal [class*=\"menu-button-container\"] > svg {\n    flex: none;\n    width: 1.1rem !important;\n    height: 1.1rem !important;\n    color: var(--dx-text);\n}\n\n.context-menu-portal [class*=\"menu-container\"][class*=\"menu-direction\"],\n.context-menu-portal [class*=\"nav-menu-container\"] {\n    border-radius: var(--dx-radius-l) !important;\n    background: rgba(22, 22, 27, 0.97) !important;\n    border: 1px solid var(--dx-line-strong) !important;\n    box-shadow: var(--dx-shadow-2) !important;\n    overflow: hidden;\n}\n\n.context-menu-portal [class*=\"menu-container\"][class*=\"menu-direction\"] [class*=\"nav-menu-container\"] {\n    border: 0 !important;\n    box-shadow: none !important;\n}\n\n/* Account menu (both in-app and cloned) */\n[class*=\"nav-menu-container\"] [class*=\"user-info-container\"] [class*=\"avatar\"],\n[class*=\"nav-menu-container\"] [class*=\"avatar\"] {\n    border: 0 !important;\n    border-radius: var(--dx-radius) !important;\n    box-shadow: 0 0 0 1px var(--dx-line-strong);\n}\n\n[class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"] {\n    border-radius: var(--dx-radius);\n    transition: background-color 0.15s;\n}\n\n[class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"]:hover,\n[class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.08) !important;\n}\n\n[class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"] svg {\n    color: var(--dx-text-2);\n}\n\n\n/* =====================================================================\n   18. ENHANCED VIDEO PLAYER compatibility (subtitle style panel + title)\n   ===================================================================== */\n\n/* dx.bi shows the title in the control bar; hide the duplicate */\nbody[data-dx-ptitle] #app .custom-series-name,\nbody[data-dx-ptitle] #app .custom-episode-title {\n    display: none !important;\n}\n\n#app [class*=\"subtitles-menu-container\"] .enhanced-subtitle-customize-section {\n    width: 22rem;\n    max-height: 100%;\n    padding: 0 1.5rem 1.25rem;\n    overflow-y: auto;\n    border-left: 1px solid rgba(255, 255, 255, 0.08);\n    font-size: 0.9rem;\n    color: var(--dx-text-2);\n}\n\n#app .enhanced-subtitle-customize-header {\n    display: flex;\n    align-items: center;\n    padding: 1.35rem 0 0.75rem;\n    font-size: 0 !important;\n}\n\n#app .enhanced-subtitle-customize-header > * {\n    display: none !important;\n}\n\n#app .enhanced-subtitle-customize-header::after {\n    content: \"Style\";\n    font-size: 1.3rem;\n    font-weight: 700;\n    color: #fff;\n}\n\n#app .enhanced-subtitle-presets-bar {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 0.4rem;\n    margin-bottom: 1rem;\n}\n\n#app .enhanced-subtitle-preset-btn {\n    height: 2rem;\n    padding: 0 0.85rem;\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid transparent;\n    font-size: 0.82rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n    cursor: pointer;\n    transition: background-color 0.15s, color 0.15s;\n}\n\n#app .enhanced-subtitle-preset-btn:hover,\n#app .enhanced-subtitle-preset-btn:focus-visible {\n    background: rgba(255, 255, 255, 0.12);\n    color: #fff;\n}\n\n#app .enhanced-subtitle-preset-btn.selected {\n    background: #fff;\n    color: #000;\n}\n\n#app .enhanced-subtitle-preview-section {\n    margin-bottom: 1rem;\n}\n\n#app .enhanced-subtitle-preview-label,\n#app .enhanced-stepper-header,\n#app .enhanced-select-header,\n#app .enhanced-color-header,\n#app .enhanced-text-header {\n    margin-bottom: 0.4rem;\n    font-size: 0.72rem;\n    font-weight: 700;\n    letter-spacing: 0.08em;\n    text-transform: uppercase;\n    color: var(--dx-text-3);\n}\n\n#app .enhanced-subtitle-preview-box {\n    display: flex;\n    align-items: flex-end;\n    justify-content: center;\n    height: 5.5rem;\n    padding: 0.75rem;\n    border-radius: var(--dx-radius);\n    background:\n        linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35)),\n        url(\"https://images.metahub.space/background/medium/tt1375666/img\") center / cover,\n        #333;\n    overflow: hidden;\n}\n\n#app .enhanced-subtitle-preview-text {\n    max-width: 100%;\n    text-align: center;\n    white-space: normal;\n}\n\n#app .enhanced-settings-grid {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 0.85rem 0.75rem;\n}\n\n#app .enhanced-stepper-content {\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    height: 2.5rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app .enhanced-stepper-button {\n    width: 2.5rem;\n    height: 2.5rem;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: var(--dx-radius);\n    background: transparent;\n    color: #fff;\n    cursor: pointer;\n}\n\n#app .enhanced-stepper-button:hover,\n#app .enhanced-stepper-button:focus-visible {\n    background: rgba(255, 255, 255, 0.1);\n}\n\n#app .enhanced-stepper-button svg {\n    width: 0.9rem;\n    height: 0.9rem;\n}\n\n#app .enhanced-stepper-value {\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n    color: #fff;\n}\n\n#app .enhanced-select,\n#app .enhanced-text-input {\n    width: 100%;\n    height: 2.5rem;\n    padding: 0 0.75rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid transparent;\n    color: #fff;\n    font-size: 0.85rem;\n    appearance: auto;\n}\n\n#app .enhanced-select:focus,\n#app .enhanced-text-input:focus {\n    border-color: rgba(255, 255, 255, 0.5);\n}\n\n#app .enhanced-select option {\n    background: #262626;\n    color: #fff;\n}\n\n#app .enhanced-color-content {\n    display: flex;\n    align-items: center;\n    gap: 0.6rem;\n    height: 2.5rem;\n    padding: 0 0.5rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app .enhanced-color-input {\n    width: 1.6rem;\n    height: 1.6rem;\n    padding: 0;\n    border: 0;\n    border-radius: 50%;\n    overflow: hidden;\n    cursor: pointer;\n    appearance: none;\n}\n\n#app .enhanced-color-input::-webkit-color-swatch-wrapper {\n    padding: 0;\n}\n\n#app .enhanced-color-input::-webkit-color-swatch {\n    border: 2px solid rgba(255, 255, 255, 0.5);\n    border-radius: 50%;\n}\n\n#app .enhanced-color-value {\n    font-size: 0.8rem;\n    font-variant-numeric: tabular-nums;\n    color: var(--dx-text-2);\n}\n\n/* =====================================================================\n   19. STREAM PLUGINS compatibility (Stream Keyword Filter, Stream Finder,\n   FilterStreams, Stream Quality Picker…). Anything a plugin inserts next to\n   the streams/episodes panel is stacked on top of it as one column.\n   ===================================================================== */\n\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) {\n    display: grid !important;\n    grid-template-columns: minmax(0, 1fr) clamp(28rem, 31vw, 42rem);\n    grid-template-rows: auto auto auto minmax(0, 1fr);\n    column-gap: 1.5rem;\n    padding-right: var(--dx-gutter) !important;\n}\n\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) > [class*=\"meta-preview\"] {\n    grid-column: 1;\n    grid-row: 1 / -1;\n    min-height: 0;\n}\n\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) > [class*=\"spacing\"] {\n    display: none !important;\n}\n\n#app [class*=\"metadetails-content\"] > :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"]) {\n    grid-column: 2;\n    width: auto !important;\n    max-width: none !important;\n    margin: 0 !important;\n    padding: 0.85rem 1rem !important;\n    background: rgba(19, 19, 23, 0.86) !important;\n    border: 1px solid var(--dx-line);\n    border-bottom: 0;\n    backdrop-filter: blur(24px) saturate(140%);\n    z-index: 2;\n}\n\n#app [class*=\"metadetails-content\"] > :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"]):first-of-type,\n#app [class*=\"metadetails-content\"] > [class*=\"spacing\"] + :not([class*=\"streams-list\"]):not([class*=\"videos-list\"]) {\n    margin-top: 0.75rem !important;\n    border-radius: var(--dx-radius-l) var(--dx-radius-l) 0 0;\n}\n\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) > [class*=\"streams-list\"],\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) > [class*=\"videos-list\"] {\n    grid-column: 2;\n    grid-row: 4;\n    width: auto !important;\n    flex: none !important;\n    min-height: 0;\n    margin: 0 0 1.5rem 0 !important;\n    border-top-left-radius: 0 !important;\n    border-top-right-radius: 0 !important;\n    animation: none;\n}\n\n/* Chips / inputs that stream plugins add: match dx.bi */\n#app [class*=\"metadetails-content\"] [class*=\"chip\"]:not([class*=\"chips\"]) {\n    border-radius: 999px;\n}\n\n/* AniSkip shows its buttons inside Stremio's \"up next\" popup */\n#app [id^=\"skip-\"][id$=\"-button\"] {\n    border-radius: var(--dx-radius) !important;\n    background: #fff !important;\n}\n\n#app [id^=\"skip-\"][id$=\"-button\"] * {\n    color: #000 !important;\n}\n\n/* =====================================================================\n   19b. CLEAN STREAM LIST (plugin): one Netflix-style row per stream\n   ===================================================================== */\n\n#app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [data-dxv] {\n    position: relative;\n    margin: 0;\n    padding: 0.9rem 1.1rem !important;\n    display: flex !important;\n    align-items: center;\n    flex: none !important;\n    height: auto !important;\n    min-height: 5.5rem;\n    border-radius: 0;\n    border-bottom: 1px solid var(--dx-line);\n    --dxv-tile: rgba(255, 255, 255, 0.09);\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [data-dxv]:hover,\n#app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [data-dxv]:focus-visible {\n    background: rgba(255, 255, 255, 0.08);\n    transform: none;\n    --dxv-tile: var(--dx-accent);\n}\n\n/* Not drawn until dx.bi's row is ready, and loading rows match the finished ones */\nhtml[data-dx-rows] [class*=\"streams-container\"] > [class*=\"stream-container\"]:not([data-dxv]) {\n    visibility: hidden;\n}\n\nhtml[data-dx-rows] [class*=\"streams-list-container\"] [class*=\"stream-placeholder-container\"] {\n    min-height: 5.5rem;\n    margin: 0;\n    border-radius: 0;\n    border-bottom: 1px solid var(--dx-line);\n    background: none;\n}\n\nhtml[data-dx-rows] [class*=\"streams-list-container\"] [class*=\"stream-placeholder-container\"] > * {\n    visibility: hidden;\n}\n\n/* A title can have 500 streams but only a handful are on screen: off-screen rows skip style and\n   layout until they scroll into view (this cut the title page's longest freeze by most of a second).\n   A hovered or focused row renders fully, so its menu is never clipped. */\n[data-dxv] {\n    content-visibility: auto;\n    contain-intrinsic-size: auto 96px;\n}\n\n[data-dxv]:hover,\n[data-dxv]:focus-within {\n    content-visibility: visible;\n}\n\n[data-dxv] > :not(.dxv-row):not([class*=\"menu-container\"]):not(.dxd-stream) {\n    position: absolute !important;\n    width: 1px !important;\n    height: 1px !important;\n    overflow: hidden !important;\n    opacity: 0 !important;\n    pointer-events: none !important;\n}\n\n.dxv-row {\n    display: flex;\n    align-items: center;\n    gap: 1rem;\n    width: 100%;\n    min-width: 0;\n    pointer-events: none;\n}\n\n.dxv-q {\n    flex: none;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    gap: 0.2rem;\n    width: 6.25rem;\n    height: 3.55rem;\n    border-radius: var(--dx-radius-s);\n    background: var(--dxv-tile);\n    transition: background-color 0.18s;\n}\n\n.dxv-q b {\n    font: 800 1.15rem/1 Inter, system-ui, sans-serif !important;\n    color: #fff;\n}\n\n.dxv-q i {\n    font: 600 0.66rem/1 Inter, system-ui, sans-serif !important;\n    color: rgba(255, 255, 255, 0.82);\n    white-space: nowrap;\n}\n\n.dxv-main {\n    flex: 1 1 0;\n    display: flex;\n    flex-direction: column;\n    gap: 0.22rem;\n    min-width: 0;\n}\n\n.dxv-main strong {\n    font: 700 1rem/1.25 Inter, system-ui, sans-serif !important;\n    color: var(--dx-text);\n}\n\n.dxv-top {\n    display: flex;\n    align-items: baseline;\n    justify-content: space-between;\n    gap: 0.75rem;\n    min-width: 0;\n}\n\n/* Seeds, provider and size are never cut off: they wrap instead */\n.dxv-main small {\n    font: 500 0.82rem/1.3 Inter, system-ui, sans-serif !important;\n    color: var(--dx-text-2);\n    overflow-wrap: anywhere;\n}\n\n.dxv-main u {\n    font: 400 0.72rem/1.3 Inter, system-ui, sans-serif !important;\n    color: var(--dx-text-3);\n    text-decoration: none;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n}\n\n.dxv-best {\n    display: none;\n    font: 800 0.68rem/1 Inter, system-ui, sans-serif !important;\n    letter-spacing: 0.04em;\n    text-transform: uppercase;\n    color: var(--dx-accent);\n}\n\n[data-dx-best] .dxv-best {\n    display: block;\n}\n\n.dxv-state {\n    flex: none;\n    font: 600 0.74rem/1 Inter, system-ui, sans-serif !important;\n    color: var(--dx-text-3);\n    white-space: nowrap;\n}\n\n.dxv-state.is-ready {\n    color: #46d369;\n}\n\n.dxq-play:not([data-dx-native]) {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.5rem;\n    height: 3rem;\n    margin: 0 0.75rem 1rem 0;\n    padding: 0 1.75rem 0 1.25rem;\n    border: 0;\n    border-radius: var(--dx-radius);\n    background: #fff;\n    color: #000;\n    cursor: pointer;\n    transition: background-color 0.15s;\n}\n\n.dxq-play:not([data-dx-native]):hover,\n.dxq-play:not([data-dx-native]):focus-visible {\n    background: rgba(255, 255, 255, 0.78);\n}\n\n.dxq-play:not([data-dx-native]) svg {\n    width: 1.4rem;\n    height: 1.4rem;\n}\n\n.dxq-play:not([data-dx-native]) span {\n    font: 700 1rem/1 Inter, system-ui, sans-serif !important;\n}\n\n.dxq-status {\n    flex: none;\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    gap: 1rem;\n    padding: 0.8rem 1.1rem;\n    border-bottom: 1px solid var(--dx-line);\n    font: 600 0.9rem/1.2 Inter, system-ui, sans-serif;\n    color: var(--dx-text);\n}\n\n.dxq-status button,\n.dxq-pill button {\n    border: 0;\n    background: none;\n    color: var(--dx-text-2);\n    font: 700 0.85rem/1 Inter, system-ui, sans-serif;\n    cursor: pointer;\n}\n\n.dxq-pill {\n    position: absolute;\n    left: 2rem;\n    top: 5rem;\n    z-index: 30;\n    display: flex;\n    align-items: center;\n    gap: 1rem;\n    padding: 0.7rem 1rem;\n    border-radius: var(--dx-radius);\n    background: rgba(0, 0, 0, 0.72);\n    color: #fff;\n    font: 600 0.9rem/1 Inter, system-ui, sans-serif;\n}\n\n.dxq-pill button {\n    color: #fff;\n    text-decoration: underline;\n}\n\n/* =====================================================================\n   20. STREAM SORT & FILTER BAR (plugin)\n   ===================================================================== */\n\n/* Sorting uses CSS order, so the list must be a flex column */\n#app [class*=\"streams-container\"].dx-sortable {\n    display: flex !important;\n    flex-direction: column;\n}\n\n/* Stremio's Install addons button stays after every stream, however they're sorted */\n#app [class*=\"streams-container\"].dx-sortable > :not([class*=\"stream-container\"]) {\n    order: 99999;\n}\n\n#app [class*=\"streams-container\"].dx-sortable > [data-dx-hide] {\n    display: none !important;\n}\n\n/* Stremio's title page from November 2026: streams sit in addon groups inside a panel. The same\n   clean rows, and while sorted the groups run as one list (their headings hidden) */\n#app section[class*=\"streams-\"] [class*=\"group-\"] > [data-dxv] {\n    position: relative;\n    margin: 0;\n    padding: 0.9rem 1.1rem !important;\n    display: flex !important;\n    align-items: center;\n    height: auto !important;\n    min-height: 5.5rem;\n    border-radius: 0;\n    border-bottom: 1px solid var(--dx-line);\n    background: none;\n    --dxv-tile: rgba(255, 255, 255, 0.09);\n}\n\n#app section[class*=\"streams-\"] [class*=\"group-\"] > [data-dxv]:hover,\n#app section[class*=\"streams-\"] [class*=\"group-\"] > [data-dxv]:focus-visible {\n    background: rgba(255, 255, 255, 0.08);\n    transform: none;\n    --dxv-tile: var(--dx-accent);\n}\n\nhtml[data-dx-rows] section[class*=\"streams-\"] [class*=\"group-\"] > a[class*=\"stream-\"]:not([data-dxv]) {\n    visibility: hidden;\n}\n\n#app [class*=\"groups-\"].dx-sortable {\n    display: flex !important;\n    flex-direction: column;\n}\n\n#app [class*=\"groups-\"].dx-sortable > [class*=\"group-\"] {\n    display: contents;\n}\n\n#app [class*=\"groups-\"].dx-sortable.dx-sorted [class*=\"group-label\"] {\n    display: none;\n}\n\n#app [class*=\"groups-\"].dx-sortable > :not([class*=\"group-\"]) {\n    order: 99999;\n}\n\n#app [class*=\"groups-\"].dx-sortable [data-dx-hide] {\n    display: none !important;\n}\n\n/* the new panel's addon tabs and episode rows in dx.bi's accent */\n#app section[class*=\"panel-\"] [role=\"tab\"][class*=\"selected-\"] [class*=\"label-\"],\n#app section[class*=\"panel-\"] [role=\"tab\"][class*=\"selected-\"] [class*=\"count-\"] {\n    color: #fff;\n}\n\n#app section[class*=\"panel-\"] [role=\"tablist\"] [class*=\"indicator-\"] {\n    background: var(--dx-accent) !important;\n}\n\n.dx-tv #app section[class*=\"streams-\"] [class*=\"group-\"] > [data-dxv] {\n    content-visibility: auto;\n    contain-intrinsic-size: auto 5.5rem;\n}\n\n.dx-streambar {\n    flex: none;\n    padding: 0.85rem 0.85rem 0.75rem;\n    border-bottom: 1px solid var(--dx-line);\n    overflow: visible !important;\n}\n\n.dx-streambar[hidden] {\n    display: none;\n}\n\n.dx-sb-row {\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    gap: 0.4rem;\n    overflow: visible !important;\n}\n\n.dx-sb-btn {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.35rem;\n    height: 2rem;\n    padding: 0.12em 0.7rem 0 0.8rem;\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid var(--dx-line);\n    color: var(--dx-text-2);\n    font-size: 0.82rem;\n    font-weight: 600;\n    line-height: 1;\n    white-space: nowrap;\n    cursor: pointer;\n    transition: background-color 0.15s, color 0.15s, border-color 0.15s;\n}\n\n.dx-sb-btn:hover,\n.dx-sb-btn:focus-visible {\n    background: rgba(255, 255, 255, 0.12);\n    color: #fff;\n}\n\n.dx-sb-btn svg {\n    width: 0.85rem;\n    height: 0.85rem;\n    flex: none;\n    margin-top: -0.12em;\n    transition: transform 0.2s var(--dx-ease-out);\n}\n\n.dx-sb-btn.is-open svg:last-child {\n    transform: rotate(180deg);\n}\n\n.dx-sb-btn.is-on {\n    background: #fff;\n    border-color: #fff;\n    color: #000;\n}\n\n.dx-sb-sort {\n    padding-left: 0.7rem;\n    color: #fff;\n}\n\n.dx-sb-sort svg:first-child {\n    width: 0.95rem;\n    height: 0.95rem;\n}\n\n.dx-sb-toggle {\n    padding-right: 0.8rem;\n}\n\n.dx-sb-div {\n    width: 1px;\n    height: 1.2rem;\n    margin: 0 0.15rem;\n    background: var(--dx-line-strong);\n}\n\n.dx-sb-count {\n    margin-left: auto;\n    padding-left: 0.5rem;\n    font-size: 0.78rem;\n    font-weight: 600;\n    font-variant-numeric: tabular-nums;\n    color: var(--dx-text-3);\n    white-space: nowrap;\n}\n\n.dx-sb-reset {\n    padding: 0.2rem 0.1rem;\n    background: none;\n    border: 0;\n    color: var(--dx-text-2);\n    font-size: 0.78rem;\n    font-weight: 700;\n    cursor: pointer;\n    text-decoration: underline;\n    text-underline-offset: 3px;\n}\n\n.dx-sb-reset:hover,\n.dx-sb-reset:focus-visible {\n    color: #fff;\n}\n\n/* The open menu unfolds in place (no clipping inside the panel) */\n.dx-sb-menu {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 0.35rem;\n    margin-top: 0.65rem;\n    padding: 0.6rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.04);\n    border: 1px solid var(--dx-line);\n    animation: dx-fade 0.18s ease both;\n}\n\n.dx-sb-opt {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.4rem;\n    height: 2rem;\n    padding: 0.12em 0.75rem 0 0.55rem;\n    border-radius: var(--dx-radius-s);\n    background: transparent;\n    border: 1px solid transparent;\n    color: var(--dx-text-2);\n    font-size: 0.84rem;\n    font-weight: 500;\n    line-height: 1;\n    cursor: pointer;\n    transition: background-color 0.15s, color 0.15s;\n}\n\n.dx-sb-opt:hover,\n.dx-sb-opt:focus-visible {\n    background: rgba(255, 255, 255, 0.08);\n    color: #fff;\n}\n\n.dx-sb-opt.is-on {\n    background: rgba(255, 255, 255, 0.12);\n    border-color: rgba(255, 255, 255, 0.25);\n    color: #fff;\n    font-weight: 700;\n}\n\n/* the newer title page sets its own size on spans in its panel: keep the menu's */\n.dx-sb-menu .dx-sb-label,\n.dx-sb-menu .dx-sb-n {\n    font-size: inherit !important;\n}\n\n.dx-sb-menu .dx-sb-n {\n    font-size: 0.72rem !important;\n}\n\n.dx-sb-check {\n    display: inline-flex;\n    width: 0.95rem;\n    height: 0.95rem;\n    flex: none;\n    border-radius: 3px;\n    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.35);\n    margin-top: -0.12em;\n}\n\n.dx-sb-opt.is-on .dx-sb-check {\n    background: var(--dx-accent);\n    box-shadow: none;\n    color: #fff;\n}\n\n.dx-sb-check svg {\n    width: 100%;\n    height: 100%;\n    padding: 1px;\n}\n\n.dx-sb-n {\n    font-size: 0.72rem;\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n    color: var(--dx-text-3);\n}\n\n.dx-stream-empty {\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 0.75rem;\n    padding: 2.5rem 1rem;\n    color: var(--dx-text-2);\n    font-size: 0.95rem;\n    text-align: center;\n}\n\n.dx-stream-empty button {\n    height: 2.2rem;\n    padding: 0 1rem;\n    border-radius: var(--dx-radius);\n    background: #fff;\n    color: #000;\n    font-weight: 700;\n    cursor: pointer;\n}\n\n/* =====================================================================\n   21. SEEK BAR PREVIEW + NEXT EPISODE (plugin)\n   ===================================================================== */\n\n.dx-scrub {\n    position: absolute;\n    inset: 0;\n    z-index: 2;\n    pointer-events: none;\n    overflow: visible !important;\n}\n\n/* lighter fill from the playhead to the cursor */\n.dx-scrub-fill {\n    position: absolute;\n    top: 50%;\n    height: var(--track-size, 4px);\n    transform: translateY(-50%);\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.35);\n    opacity: 0;\n    transition: opacity 0.15s;\n}\n\n.dx-scrub.is-on .dx-scrub-fill {\n    opacity: 1;\n}\n\n.dx-scrub-tip {\n    position: absolute;\n    bottom: calc(100% + 1.1rem);\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 0.45rem;\n    transform: translateX(-50%) translateY(6px);\n    opacity: 0;\n    transition: opacity 0.15s ease, transform 0.15s ease;\n}\n\n.dx-scrub.is-on .dx-scrub-tip {\n    opacity: 1;\n    transform: translateX(-50%);\n}\n\n.dx-scrub-frame {\n    display: none;\n    width: 16rem;\n    border: 2px solid rgba(255, 255, 255, 0.9);\n    border-radius: 6px;\n    background: #000;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);\n    overflow: hidden !important;\n}\n\n.dx-scrub.has-frame .dx-scrub-frame,\n.dx-scrub.is-loading .dx-scrub-frame {\n    display: block;\n}\n\n/* loading: a 16:9 dark box with a soft moving sheen until the frame arrives */\n.dx-scrub.is-loading:not(.has-frame) .dx-scrub-frame {\n    position: relative;\n    aspect-ratio: 16 / 9;\n    background: #141414;\n}\n\n.dx-scrub.is-loading:not(.has-frame) .dx-scrub-frame canvas {\n    visibility: hidden;\n}\n\n.dx-scrub.is-loading:not(.has-frame) .dx-scrub-frame::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.08) 50%, transparent 70%);\n    animation: dx-scrub-sheen 1.1s linear infinite;\n}\n\n@keyframes dx-scrub-sheen {\n    from { transform: translateX(-100%); }\n    to { transform: translateX(100%); }\n}\n\n.dx-scrub-frame canvas {\n    display: block;\n    width: 100%;\n    height: auto;\n}\n\n.dx-scrub-time {\n    padding: 0.3rem 0.6rem;\n    border-radius: 4px;\n    background: rgba(0, 0, 0, 0.75);\n    font-size: 0.95rem;\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n    color: #fff;\n    white-space: nowrap;\n}\n\n/* Next Episode sits at the start of the right-hand group, like Netflix */\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"spacing\"] {\n    order: 3;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-next,\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-pip,\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-external {\n    order: 4;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"control-bar-buttons-menu-container\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"control-bar-buttons-menu-button\"] {\n    order: 5;\n}\n\n/* Let the preview card rise above the bar (Stremio clips overflow on these) */\n#app [class*=\"player-container\"] [class*=\"control-bar-layer\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-container\"],\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"],\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"slider-wrapper\"],\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"slider-container\"] {\n    overflow: visible !important;\n}\n\n/* dx.bi's card already shows the time — hide Stremio's small tooltip while it's there */\nbody[data-dx-route=\"player\"] > [class*=\"seek-tooltip\"] {\n    display: none !important;\n}\n\n/* =====================================================================\n   22. PICTURE ENHANCEMENT (plugin): upscaled canvas over the video\n   ===================================================================== */\n\n.dx-enhance {\n    position: absolute;\n    z-index: 0;\n    pointer-events: none;\n    image-rendering: auto;\n}\n\n/* The video's own subtitle lines would sit under the canvas — dx.bi redraws them on top */\n#app [class*=\"player-container\"] video[data-dx-enhanced]::cue {\n    visibility: hidden !important;\n}\n\n.dx-enhance-subs {\n    position: absolute;\n    z-index: 2;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 0.15em;\n    pointer-events: none;\n    text-align: center;\n}\n\n.dx-enhance-cue {\n    display: inline-block;\n    max-width: 90%;\n    padding: 0.05em 0.35em;\n    line-height: 1.3;\n    white-space: pre-line;\n}\n\n.dx-enh-btn.is-on svg {\n    color: var(--dx-accent) !important;\n    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--dx-accent) 60%, transparent));\n}\n\n.dx-player-toast {\n    position: absolute;\n    z-index: 6;\n    top: 6rem;\n    left: 50%;\n    padding: 0.6rem 1.1rem;\n    border-radius: 999px;\n    background: rgba(20, 20, 20, 0.85);\n    color: #fff;\n    font-size: 0.95rem;\n    font-weight: 600;\n    pointer-events: none;\n    opacity: 0;\n    transform: translate(-50%, -6px);\n    transition: opacity 0.2s ease, transform 0.2s ease;\n}\n\n.dx-player-toast.is-on {\n    opacity: 1;\n    transform: translate(-50%, 0);\n}\n\n/* =====================================================================\n   WINDOWS AND TV: no blurred glass behind scrolling panels\n   ===================================================================== */\n\n/* Chromium on Windows can leave stale copies of a scrolled panel on screen when it has a blurred\n   (backdrop-filter) background: the streams list then looks like rows drawn over each other.\n   Solid backgrounds instead (dx.bi's plugin adds .dx-win on Windows). TVs (.dx-tv, dx.bi TV) get the\n   same, since their graphics are far weaker than a computer's. */\n/* (keep this rule whole: in 2.24 another rule was dropped into the middle of its selector list, and\n   Windows and TVs got their blurs back, 39 TV badges each became a GPU layer of its own) */\n.dx-win #app *,\n.dx-win body > *,\n.dx-tv #app *,\n.dx-tv body > * {\n    backdrop-filter: none !important;\n}\n\n/* No big soft shadows on a TV: each is a blur painted again whenever what it surrounds changes, the\n   selected poster's at every press of the remote. A fine line instead (from Nathflix, by Lavagnou) */\nhtml.dx-tv {\n    --dx-shadow-1: 0 0 0 1px rgba(255, 255, 255, 0.06);\n    --dx-shadow-2: 0 0 0 1px rgba(255, 255, 255, 0.08);\n}\n\n.dx-tv body #app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"][data-dx-scrolled] {\n    box-shadow: 0 1px 0 var(--dx-line);\n}\n\n.dx-tv .dx-btn:focus-visible,\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"] {\n    box-shadow: none;\n}\n\n.dx-tv .dx-hero-title,\n.dx-tv .dx-hero-desc {\n    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);\n}\n\n.dx-win #app [class*=\"metadetails-content\"] [class*=\"streams-list-container\"],\n.dx-tv #app [class*=\"metadetails-content\"] [class*=\"streams-list-container\"] {\n    background: rgb(19, 19, 23) !important;\n}\n\n.dx-win #app [class*=\"menu-container\"]:not([class*=\"buttons-menu-container\"]),\n.dx-win .context-menu-portal [class*=\"menu-container\"],\n.dx-tv #app [class*=\"menu-container\"]:not([class*=\"buttons-menu-container\"]) {\n    background: rgb(22, 22, 27) !important;\n}\n\n/* THE DX.BI APP: the top bar's fullscreen button repeats the window's own buttons (F11 still\n   toggles full screen, and the player keeps its fullscreen button) */\n.dx-app #app [class*=\"horizontal-nav-bar\"] [title*=\"ullscreen\"] {\n    display: none !important;\n}\n\n/* TV: what the remote is on must be plain to see from the sofa. A white ring on everything but\n   titles (they lift and open their card). See All always shows: it's at the end of each row. */\n.dx-tv #app :is(a, button, input, [tabindex]):not([class*=\"meta-item-link\"]):focus-visible {\n    outline: 3px solid var(--dx-focus, #fff) !important;\n    outline-offset: 3px;\n    /* the ring follows each control's own shape (pills stay pills) and shows at once: the controls'\n       own transitions faded it in, and a forced corner radius squared off the pills */\n    transition: none !important;\n    /* above its neighbours, so none of them paints over the ring (z-index needs no position here:\n       the controls are flex items) */\n    z-index: 2;\n}\n\n/* A dark band between the ring and the control: the white ring stays plain to see on white\n   buttons and on bright artwork */\n.dx-tv #app :is(a, button, input, [tabindex]):not([class*=\"meta-item-link\"]):focus-visible {\n    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.85) !important;\n}\n\n/* Where a box around it would cut the ring off (the plugin's ringRoom marks those), the ring is\n   drawn just inside the control, with the dark band inside it */\n.dx-tv #app [data-dx-ring-in]:focus-visible {\n    outline-offset: -3px !important;\n    box-shadow: inset 0 0 0 6px rgba(0, 0, 0, 0.7) !important;\n}\n\n/* controls drawn square get softened corners, so their ring isn't boxy */\n.dx-tv #app :is([class*=\"nav-tab-button\"], [class*=\"horizontal-nav-bar\"] [class*=\"button-container\"], [class*=\"horizontal-nav-bar\"] [class*=\"submit-button-container\"], [class*=\"label-container\"]):focus-visible {\n    border-radius: var(--dx-radius-s);\n}\n\n/* the sort chips sit in a scroll box, which cut their ring off: room for it inside the box */\n.dx-tv #app [class*=\"selectable-inputs-container\"] [class*=\"horizontal-scroll\"] {\n    padding: 7px !important;\n    margin: -7px !important;\n}\n\n/* the billboard clips its text and buttons to its box: the ring may reach a little past it */\n.dx-tv .dx-hero-content,\n.dx-tv .dx-hero-actions {\n    overflow: clip !important;\n    overflow-clip-margin: 8px;\n}\n\n.dx-tv #app .dxl-tools {\n    padding-top: 7px !important;\n    margin-top: -7px !important;\n}\n\n.dx-tv #app [class*=\"meta-row\"] [class*=\"see-all-container\"] {\n    --dx-row-hot: 1;\n}\n\n/* TV titles: the selection moves at once, with a ring in the highlight colour. Lifts and zooms\n   that faded in and out left the last title looking selected for a moment on slower sticks. */\n.dx-tv #app [class*=\"meta-item-container\"],\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-container\"],\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-container\"]::after,\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-image-layer\"] {\n    transition: none !important;\n}\n\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-image-layer\"] {\n    transform: none !important;\n}\n\n/* the ring in the highlight colour with a dark band inside it, so it still shows on white or very\n   bright artwork */\n.dx-tv #app [class*=\"meta-item-container\"]:focus-within [class*=\"poster-container\"]::after,\n.dx-tv body #app [class*=\"discover-content\"] [class*=\"meta-item-container\"].selected:focus-within:not(.hovered):not(.active) [class*=\"poster-container\"]::after {\n    box-shadow: inset 0 0 0 3px var(--dx-focus, #fff), inset 0 0 0 6px rgba(0, 0, 0, 0.8);\n}\n\n/* TV title page: the genre and cast names, the IMDb score and the like / library buttons sit in\n   boxes that clip what spills out, which cut their rings off. Those boxes still clip, a ring's\n   width further out; the round buttons get a round ring just inside their own space. */\n.dx-tv #app [class*=\"metadetails-container\"] :is([class*=\"links-container\"], [class*=\"runtime-release-info-container\"]),\n.dx-tv #app [class*=\"meta-row\"] [class*=\"header-container\"],\n.dx-tv #app [class*=\"user-info-content\"],\n.dx-tv #app [class*=\"user-info-content\"] [class*=\"email-logout-container\"],\n.dx-tv #app [class*=\"user-info-content\"] [class*=\"buttons-container\"],\n.dx-tv #app [class*=\"session-actions\"] {\n    overflow: clip !important;\n    overflow-clip-margin: 8px;\n}\n\n.dx-tv #app [class*=\"metadetails-container\"] [class*=\"meta-info-container\"] {\n    padding-left: 8px !important;\n    margin-left: -8px !important;\n}\n\n.dx-tv #app [class*=\"metadetails-container\"] [class*=\"action-buttons-container\"] [class*=\"group-container\"] {\n    overflow: visible !important;\n}\n\n.dx-tv #app [class*=\"metadetails-container\"] [class*=\"group-container\"] > [class*=\"icon-container\"]:focus-visible {\n    border-radius: 50% !important;\n    outline-offset: -5px !important;\n    box-shadow: inset 0 0 0 8px rgba(0, 0, 0, 0.55) !important;\n}\n\n.dx-tv #app [class*=\"streams-list-container\"] [class*=\"streams-container\"] {\n    padding-top: 7px !important;\n}\n\n/* TV: the row the remote moves into settles just under the top bar (60px), heading and all (the\n   plugin's keyNav scrolls the row to its start) */\n.dx-tv #app :is([class*=\"board-row\"], [class*=\"search-row\"], [class*=\"meta-row-container\"]),\n.dx-tv .dxe-airing {\n    scroll-margin-top: 72px;\n}\n\n/* TV: a stick's graphics chip redraws whatever moves or is blurred, every frame, and the remote\n   waits behind it. The billboard's slow zoom, the rows' faded edges (each row drawn twice) and the\n   blurred Continue Watching backdrops are left out. */\n.dx-tv .dx-hero-backdrop {\n    animation: none !important;\n}\n\n/* TV: only the billboard picture on show (and one fading out) is kept on the graphics chip: each of\n   the others was a full-screen layer held in memory. The top bar turns solid at once, as its fade\n   was redrawn in full on every frame of the jump down into the rows. */\n.dx-tv .dx-hero-backdrop {\n    will-change: auto;\n}\n\n.dx-tv #app nav[class*=\"horizontal-nav-bar\"] {\n    transition: none !important;\n}\n\n/* TV: Home rows well out of view aren't drawn at all until you get near them. Every frame that\n   changed anything reworked all twenty-odd rows, which held the jump from row to row back. */\n.dx-tv #app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) > [class*=\"board-row\"] {\n    content-visibility: auto;\n    contain-intrinsic-size: auto 380px;\n}\n\n/* TV: the stream list. Stremio's own text in each row stays in the page under dx.bi's row (the\n   plugin reads it), but squeezed into a 1px box its long file names wrapped a letter to a line:\n   thousands of lines laid out again whenever the list changed, the freeze while streams arrive.\n   On a TV it isn't laid out at all, and rows out of view aren't drawn until they're near. */\n.dx-tv [data-dxv] > :not(.dxv-row):not([class*=\"menu-container\"]):not(.dxd-stream) {\n    display: none !important;\n}\n\n.dx-tv #app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [data-dxv] {\n    content-visibility: auto;\n    contain-intrinsic-size: auto 5.5rem;\n}\n\n.dx-tv #app [class*=\"meta-row\"] > [class*=\"meta-items-container\"] {\n    -webkit-mask-image: none !important;\n    mask-image: none !important;\n}\n\n/* TV: a title's lift (a 3D move) and the rows' rise kept every poster and row on a layer of its\n   own, well over 200 on Home, all reworked with each press: flat cards and rows instead (the\n   selected title keeps its ring) */\n.dx-tv #app .animation-fade-in {\n    animation: none !important;\n}\n\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-container\"] {\n    transform: none !important;\n    scale: none !important;\n}\n\n/* TV: badges appear as they are, rather than fading in together (a row's worth at a time) */\n.dx-tv .dx-badge {\n    animation: none;\n}\n\n.dx-tv .dx-wide-blur {\n    filter: brightness(0.45);\n}\n\n/* TV: the page jumps instead of gliding, so the selection never waits off screen for a slow scroll\n   (rows still glide sideways: the plugin asks for that itself) */\n.dx-tv #app * {\n    scroll-behavior: auto !important;\n}\n\n/* TV: the hover card's glow and soft shadow are big blurred layers redrawn as it opens */\n.dx-tv .dx-preview-aura,\n.dx-tv .dx-preview::before {\n    display: none;\n}\n\n/* TV: the card fades and grows in place rather than unfolding from the poster's outline (a moving\n   clip the stick redrew in full on every frame), and its artwork holds still */\n.dx-tv .dx-preview {\n    scale: 0.94;\n    transition: scale 0.18s ease, opacity 0.18s ease, visibility 0s linear 0.18s;\n}\n\n.dx-tv .dx-preview.is-open {\n    scale: 1;\n    transition: scale 0.18s ease, opacity 0.18s ease, visibility 0s;\n}\n\n.dx-tv .dx-preview-inner {\n    clip-path: none !important;\n    transition: none;\n    will-change: auto;\n}\n\n.dx-tv .dx-preview-ghost {\n    display: none;\n}\n\n.dx-tv .dx-preview.is-open .dx-preview-media::before {\n    animation: none;\n}\n\n/* Kids profiles and hidden titles (plugin): titles that mustn't show, and rows left with none, are\n   out; titles still being checked keep their place but stay unseen. A kids profile has no Addons or\n   Settings tabs (the parental PIN opens them). */\n#app [data-dx-off] {\n    display: none !important;\n}\n\n#app [data-dx-pending] {\n    visibility: hidden !important;\n}\n\nbody[data-dx-kids] #app [class*=\"horizontal-nav-bar\"] a[href=\"#/addons\"],\nbody[data-dx-kids] #app [class*=\"horizontal-nav-bar\"] a[href=\"#/settings\"],\nbody[data-dx-kids] #app [class*=\"vertical-nav-bar\"] a[href=\"#/addons\"],\nbody[data-dx-kids] #app [class*=\"vertical-nav-bar\"] a[href=\"#/settings\"] {\n    display: none !important;\n}\n\n/* Phones held upright: laid out at the phone's own width, with the tabs in a bar under the thumb */\n.dx-upright #app [class*=\"main-nav-bars-container\"] > nav[class*=\"vertical-nav-bar\"],\n.dx-upright #app nav[class*=\"vertical-nav-bar\"] {\n    position: fixed !important;\n    inset: auto 0 0 0 !important;\n    z-index: 50 !important;\n    display: flex !important;\n    flex-direction: row !important;\n    justify-content: space-around !important;\n    align-items: stretch !important;\n    width: 100% !important;\n    max-width: none !important;\n    height: 3.75rem !important;\n    padding: 0 !important;\n    transform: none !important;\n    background: rgb(16, 16, 20) !important;\n    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;\n}\n\n.dx-upright #app nav[class*=\"vertical-nav-bar\"] > * {\n    flex: 1 1 0 !important;\n    width: auto !important;\n    height: 100% !important;\n    margin: 0 !important;\n    min-width: 0 !important;\n}\n\n.dx-upright #app nav[class*=\"horizontal-nav-bar\"] {\n    padding: 0 0.75rem !important;\n}\n\n/* The billboard: a tall picture, with everything centred over the bottom of it */\n.dx-upright .dx-hero {\n    height: min(128vw, 68vh);\n    min-height: 0;\n    margin-bottom: 0.5rem;\n}\n\n.dx-upright .dx-hero-content {\n    position: absolute;\n    inset: auto 0 1.75rem 0 !important;\n    top: auto !important;\n    width: 100% !important;\n    max-width: none !important;\n    padding: 0 1.25rem !important;\n    align-items: center !important;\n    text-align: center;\n}\n\n.dx-upright .dx-hero-kicker,\n.dx-upright .dx-hero-desc {\n    display: none !important;\n}\n\n.dx-upright .dx-hero-content > .dx-hero-logo {\n    max-width: 70% !important;\n    max-height: 7rem !important;\n    margin: 0 auto 0.6rem !important;\n    object-position: center bottom !important;\n}\n\n.dx-upright .dx-hero-meta {\n    justify-content: center !important;\n    flex-wrap: wrap;\n}\n\n.dx-upright .dx-hero-actions {\n    width: 100% !important;\n    justify-content: center !important;\n    flex-wrap: nowrap !important;\n    gap: 0.6rem !important;\n    overflow: visible !important;\n}\n\n.dx-upright .dx-hero-actions > * {\n    flex: 1 1 0 !important;\n    min-width: 0 !important;\n    justify-content: center !important;\n    padding-left: 0.5rem !important;\n    padding-right: 0.5rem !important;\n    white-space: nowrap;\n}\n\n.dx-upright .dx-hero-dots {\n    left: 0 !important;\n    right: 0 !important;\n    bottom: 0.6rem !important;\n    justify-content: center !important;\n}\n\n.dx-upright #app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) {\n    scrollbar-width: none;\n}\n\n.dx-upright #app [class*=\"board-content-\"]:not([class*=\"board-content-container\"])::-webkit-scrollbar {\n    display: none;\n}\n\n/* Three titles across, as Android streaming apps have them */\n.dx-upright #app [class*=\"discover-content\"] [class*=\"meta-items-container\"],\n.dx-upright #app [class*=\"library-content\"] [class*=\"meta-items-container\"] {\n    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;\n    gap: 0.75rem 0.6rem !important;\n    padding: 0 0.75rem 1.5rem !important;\n}\n\n.dx-upright #app [class*=\"metadetails-container\"] [class*=\"runtime-release-info-container\"] {\n    flex-wrap: wrap !important;\n    justify-content: flex-start !important;\n    gap: 0.5rem 1rem !important;\n}\n\n/* Text sits on the picture: keep it readable over bright ones */\n.dx-upright #app [class*=\"metadetails-container\"] [class*=\"meta-preview-container\"]::before {\n    content: \"\";\n    position: fixed;\n    inset: 0;\n    z-index: 0;\n    background: rgba(0, 0, 0, 0.45);\n    pointer-events: none;\n}\n\n.dx-upright #app [class*=\"metadetails-container\"] [class*=\"meta-preview-container\"] > * {\n    position: relative;\n    z-index: 1;\n}\n\n/* A phone is touched, not steered: no remote rings */\n.dx-phone #app :is(a, button, input, [tabindex]):not([class*=\"meta-item-link\"]):focus-visible {\n    outline: none !important;\n}\n\n.dx-phone #app [class*=\"meta-item-container\"]:focus-within [class*=\"poster-container\"]::after {\n    box-shadow: none !important;\n}\n\n/* Phones on their side: the profile menu scrolls when it's taller than the screen */\n.dx-phone #app [class*=\"nav-menu-container\"] {\n    max-height: calc(100vh - 4.5rem) !important;\n    overflow-y: auto !important;\n}\n\n/* Addons page on a phone on its side: the search box gives way to the Order & backup button */\n.dx-phone .dxe-addon-btn {\n    flex: none;\n    white-space: nowrap;\n}\n\n/* =====================================================================\n   Phones held upright: the layout is one column, so what it needs is less\n   desktop spacing, a top bar that stays readable and the list closer to hand\n   ===================================================================== */\n@media only screen and (max-width: 640px) and (orientation: portrait) {\n    /* Stremio leaves room for its taller bottom bar: a band of nothing above this one */\n    :root {\n        --vertical-nav-bar-size: 3.7rem !important;\n    }\n\n    /* \"See All\" sits at the screen's edge and is always there: phones have no hover */\n    html body #app [class*=\"board-row\"] > [class*=\"header-container\"],\n    html body #app [class*=\"meta-row\"] > [class*=\"header-container\"],\n    html body #app [class*=\"meta-row\"]:has(> .dx-row-pages) > [class*=\"header-container\"] {\n        padding-right: 0.8rem !important;\n    }\n    #app .dx-row-pages {\n        display: none !important;\n    }\n    #app [class*=\"board-row\"] [class*=\"see-all-container\"],\n    #app [class*=\"meta-row\"] [class*=\"see-all-container\"] {\n        margin-left: auto !important;\n        opacity: 1 !important;\n        transform: none !important;\n    }\n\n    /* Movie and series pages: the bar stays readable over what scrolls under it */\n    #app [class*=\"metadetails-container\"] > nav[class*=\"nav-bar\"] {\n        background: linear-gradient(to bottom, rgba(10, 10, 12, 0.95) 55%, rgba(10, 10, 12, 0)) !important;\n        z-index: 3;\n    }\n    #app [class*=\"metadetails-content\"] {\n        padding-left: 0 !important;\n    }\n    #app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] {\n        width: 100% !important;\n        padding-top: 0 !important;\n        padding-bottom: 0.75rem !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-info-container\"] {\n        padding: 0 1rem !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-info-container\"] [class*=\"logo\"] {\n        max-height: 5.5rem !important;\n        margin: 0 auto 0.75rem 0 !important;\n        object-position: left center;\n    }\n    /* Genres and cast: one line each that slides, so the page isn't mostly labels */\n    #app [class*=\"metadetails-content\"] [class*=\"meta-links\"] {\n        margin-top: 0.75rem !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-links\"] [class*=\"links-container\"] {\n        flex-wrap: nowrap !important;\n        max-height: none !important;\n        overflow-x: auto;\n        scrollbar-width: none;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-links\"] [class*=\"links-container\"]::-webkit-scrollbar {\n        display: none;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-links\"] [class*=\"link-container\"] {\n        flex: none !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"description-container\"] {\n        margin-top: 0.75rem !important;\n    }\n    #app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] > [class*=\"action-buttons-container\"] {\n        gap: 0.6rem !important;\n        margin-top: 0.9rem !important;\n        padding: 0 1rem !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"action-buttons-container\"] > * {\n        margin: 0 !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"videos-list\"],\n    #app [class*=\"metadetails-content\"] [class*=\"streams-list\"] {\n        width: auto !important;\n        margin: 0 0.5rem 1rem !important;\n    }\n\n    /* Search: the box gives way so the profile stays on screen */\n    #app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar\"] {\n        flex: 1 1 auto !important;\n        width: auto !important;\n        min-width: 0 !important;\n        max-width: none !important;\n        margin: 0 !important;\n    }\n    #app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] {\n        flex: none !important;\n    }\n\n    /* Discover: Filters clear of the edge */\n    #app [class*=\"discover-content\"] {\n        padding-right: 0.5rem !important;\n    }\n}\n";
+    return /*@bundled-theme*/"/* dx.bi — Copyright (C) 2026 dx.bi. Free software under the GNU General Public License, version 3\n   or later (see LICENSE and NOTICE.md at github.com/notdxbi/dxbi-stremio). Versions up to 2.15.9: MIT. */\n\n@import url(\"https://fonts.googleapis.com/css2?family=Inter:wght@300..800&family=Bebas+Neue&display=swap\");\n\n/* Country flags drawn the same on every OS: Windows has no flag emoji and shows letters (\"GB\")\n   instead. A flag-only font (Twemoji Country Flags, 78 KB), downloaded only when a flag is on screen. */\n@font-face {\n    font-family: \"Twemoji Country Flags\";\n    unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067, U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;\n    src: url(\"https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.8/dist/TwemojiCountryFlags.woff2\") format(\"woff2\");\n    font-display: swap;\n}\n\n/* =====================================================================\n   1. TOKENS\n   ===================================================================== */\n\n:root {\n    /* Accent is overridable by the plugin (Settings → dx.bi) */\n    --dx-accent: #e50914;\n    --dx-accent-hover: color-mix(in srgb, var(--dx-accent) 85%, white);\n    --dx-accent-soft: color-mix(in srgb, var(--dx-accent) 18%, transparent);\n\n    --dx-bg: #0b0b0d;\n    --dx-bg-raised: #131317;\n    --dx-surface: #18181d;\n    --dx-surface-2: #212128;\n    --dx-surface-3: #2b2b33;\n    --dx-line: rgba(255, 255, 255, 0.08);\n    --dx-line-strong: rgba(255, 255, 255, 0.16);\n\n    --dx-text: #f4f4f5;\n    --dx-text-2: #c4c4cc;\n    --dx-text-3: #8a8a96;\n\n    --dx-radius-s: 4px;\n    --dx-radius: 8px;\n    --dx-radius-l: 14px;\n\n    --dx-gutter: clamp(1.25rem, 4vw, 4.5rem);\n    --dx-nav-h: 4.25rem;\n    --dx-cols: 7;\n\n    --dx-ease: cubic-bezier(0.22, 0.61, 0.36, 1);\n    --dx-ease-out: cubic-bezier(0.16, 1, 0.3, 1);\n    --dx-shadow-1: 0 2px 10px rgba(0, 0, 0, 0.35);\n    --dx-shadow-2: 0 18px 50px rgba(0, 0, 0, 0.6);\n\n    /* Stremio's own variables — recolours every stock component at once */\n    --primary-background-color: var(--dx-bg);\n    --secondary-background-color: var(--dx-bg);\n    --primary-foreground-color: var(--dx-text);\n    --secondary-foreground-color: var(--dx-bg);\n    --primary-accent-color: var(--dx-accent);\n    --secondary-accent-color: var(--dx-accent);\n    --tertiary-accent-color: #f5c518;\n    --overlay-color: rgba(255, 255, 255, 0.07);\n    --modal-background-color: var(--dx-surface);\n    --outer-glow: 0 0 0 transparent;\n    --border-radius: var(--dx-radius);\n    --horizontal-nav-bar-size: var(--dx-nav-h);\n    --color-placeholder: rgba(255, 255, 255, 0.05);\n    --color-placeholder-background: rgba(255, 255, 255, 0.04);\n}\n\n@media (max-width: 2200px) { :root { --dx-cols: 7; --dx-wide-cols: 4.6; } }\n@media (max-width: 1800px) { :root { --dx-cols: 6; --dx-wide-cols: 4.2; } }\n@media (max-width: 1400px) { :root { --dx-cols: 5; --dx-wide-cols: 3.6; } }\n@media (max-width: 1050px) { :root { --dx-cols: 4; --dx-wide-cols: 2.6; } }\n@media (min-width: 2201px) { :root { --dx-cols: 8; --dx-wide-cols: 5.4; } }\n\n/* =====================================================================\n   2. BASE\n   ===================================================================== */\n\nhtml,\nhtml body {\n    background: var(--dx-bg) !important;\n    font-family: \"Twemoji Country Flags\", \"Inter\", \"PlusJakartaSans\", system-ui, sans-serif !important;\n    -webkit-font-smoothing: antialiased;\n    text-rendering: optimizeLegibility;\n}\n\n#app,\n#app * {\n    font-family: \"Twemoji Country Flags\", \"Inter\", \"PlusJakartaSans\", system-ui, sans-serif;\n}\n\n::selection {\n    background: var(--dx-accent);\n    color: #fff;\n}\n\n* {\n    scrollbar-width: thin;\n    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;\n}\n\n::-webkit-scrollbar {\n    width: 8px;\n    height: 8px;\n}\n\n::-webkit-scrollbar-thumb {\n    background: rgba(255, 255, 255, 0.14);\n    border-radius: 8px;\n}\n\n::-webkit-scrollbar-track {\n    background: transparent;\n}\n\n/* Smooth page entry */\n#app .animation-fade-in {\n    animation: dx-rise 0.5s var(--dx-ease-out) both !important;\n}\n\n@keyframes dx-rise {\n    from { opacity: 0; transform: translateY(10px); }\n    to { opacity: 1; transform: none; }\n}\n\n@keyframes dx-fade {\n    from { opacity: 0; }\n    to { opacity: 1; }\n}\n\n/* =====================================================================\n   3. TOP NAVIGATION (main pages)\n   ===================================================================== */\n\n#app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"] {\n    z-index: 5;\n    height: var(--dx-nav-h);\n    padding: 0 var(--dx-gutter);\n    gap: 1.25rem;\n    justify-content: flex-start;\n    background: var(--dx-bg);\n    transition: background-color 0.35s var(--dx-ease), box-shadow 0.35s var(--dx-ease);\n}\n\n/* Board: header floats over the billboard and turns solid on scroll */\nbody[data-dx-route=\"board\"] #app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"] {\n    background: linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);\n}\n\nbody.dx-scrolled #app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"],\nbody #app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"][data-dx-scrolled] {\n    background-color: rgba(11, 11, 13, 0.97);\n    box-shadow: 0 1px 0 var(--dx-line), 0 10px 30px rgba(0, 0, 0, 0.35);\n}\n\n/* Wordmark */\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"logo-container\"] {\n    flex: none;\n    margin-right: auto;\n    width: 6.5rem;\n    height: var(--dx-nav-h);\n    justify-content: flex-start;\n    order: 0;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"logo-container\"] img {\n    display: none !important;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"logo-container\"]::before {\n    content: \"DX.BI\";\n    font-family: \"Bebas Neue\", \"Inter\", sans-serif;\n    font-size: 2.35rem;\n    line-height: 1;\n    letter-spacing: 0.05em;\n    color: var(--dx-accent);\n    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);\n    transform: translateY(2px);\n}\n\n/* Tabs: the stock vertical bar becomes a row of text links beside the logo */\n#app [class*=\"main-nav-bars-container\"] > nav[class*=\"vertical-nav-bar\"] {\n    top: 0;\n    bottom: auto;\n    left: calc(var(--dx-gutter) + 6.5rem + 1.5rem);\n    z-index: 6;\n    width: auto;\n    height: var(--dx-nav-h);\n    padding: 0;\n    flex-direction: row;\n    align-items: center;\n    gap: 1.75rem;\n    background: transparent;\n    overflow: visible;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] {\n    position: relative;\n    width: auto;\n    height: auto;\n    min-height: 0;\n    padding: 0.4rem 0;\n    flex-direction: row;\n    border-radius: 0;\n    background: transparent !important;\n    overflow: visible;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] svg {\n    display: none;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] [class*=\"label\"] {\n    display: block;\n    max-height: none;\n    padding: 0;\n    margin: 0;\n    font-size: 0.92rem;\n    font-weight: 500;\n    letter-spacing: 0.01em;\n    text-transform: capitalize;\n    color: var(--dx-nav-label, var(--dx-text-2));\n    opacity: 1;\n    overflow: visible;\n    white-space: nowrap;\n    transition: color 0.25s var(--dx-ease);\n}\n\n/* Hover effects below set a variable on the hovered element itself, never \"hovered [class*=x]\":\n   that shape makes the browser restyle the whole page on every hover change. */\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"]:hover,\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"]:focus-visible {\n    --dx-nav-label: var(--dx-text);\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"].selected [class*=\"label\"] {\n    color: #fff;\n    font-weight: 700;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"]::after {\n    content: \"\";\n    position: absolute;\n    left: 0;\n    right: 0;\n    bottom: -0.15rem;\n    height: 2px;\n    border-radius: 2px;\n    background: var(--dx-accent);\n    transform: scaleX(0);\n    transform-origin: left;\n    transition: transform 0.35s var(--dx-ease-out);\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"].selected::after {\n    transform: scaleX(1);\n}\n\n/* \"Board\" reads as \"Home\" */\n#app nav[class*=\"vertical-nav-bar\"] a[href=\"#/\"] [class*=\"label\"] {\n    font-size: 0 !important;\n}\n\n#app nav[class*=\"vertical-nav-bar\"] a[href=\"#/\"] [class*=\"label\"]::after {\n    content: \"Home\";\n    font-size: 0.92rem;\n}\n\n/* Search: compact field on the right */\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] {\n    flex: none;\n    order: 1;\n    width: 15rem;\n    height: 2.4rem;\n    padding: 0 0.35rem 0 0.9rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.06);\n    border: 1px solid var(--dx-line);\n    transition: width 0.4s var(--dx-ease-out), background-color 0.25s, border-color 0.25s;\n}\n\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"]:hover,\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.09);\n}\n\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"]:focus-within,\n#app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"].active {\n    width: 22rem;\n    background: rgba(0, 0, 0, 0.85);\n    border-color: rgba(255, 255, 255, 0.55);\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] [class*=\"search-input\"],\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] input {\n    font-size: 0.9rem;\n    color: var(--dx-text);\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] [class*=\"placeholder-label\"] {\n    font-size: 0.9rem;\n    color: var(--dx-text-3);\n    opacity: 1;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] [class*=\"submit-button-container\"] {\n    width: 2rem;\n    height: 2rem;\n    padding: 0;\n    border-radius: var(--dx-radius-s);\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] svg {\n    width: 1.1rem;\n    height: 1.1rem;\n    color: var(--dx-text-2);\n    opacity: 1;\n}\n\n/* Right-hand buttons */\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] {\n    flex: none;\n    order: 2;\n    gap: 0.35rem;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] > [class*=\"button-container\"] {\n    height: 2.5rem;\n    min-width: 2.5rem;\n    border-radius: var(--dx-radius);\n    background: transparent;\n    transition: background-color 0.2s;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] > [class*=\"button-container\"]:hover,\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] > [class*=\"button-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.08);\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] svg {\n    width: 1.3rem;\n    height: 1.3rem;\n    color: var(--dx-text);\n    opacity: 0.9;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"avatar\"] {\n    width: 2rem;\n    height: 2rem;\n    border: 0 !important;\n    border-radius: var(--dx-radius-s) !important;\n}\n\n#app nav[class*=\"horizontal-nav-bar\"] [class*=\"avatar\"] img {\n    border-radius: var(--dx-radius-s) !important;\n}\n\n/* Content starts under the header; full width (no sidebar) */\n#app [class*=\"main-nav-bars-container\"] > [class*=\"nav-content-container\"] {\n    top: var(--dx-nav-h);\n    left: 0;\n}\n\nbody[data-dx-route=\"board\"] #app [class*=\"board-container\"] [class*=\"nav-content-container\"] {\n    top: 0;\n}\n\n/* Narrower windows */\n@media (max-width: 1450px) {\n    #app [class*=\"main-nav-bars-container\"] > nav[class*=\"vertical-nav-bar\"] {\n        gap: 1.25rem;\n    }\n\n    #app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] {\n        width: 2.6rem;\n        padding: 0 0.25rem;\n        background: transparent;\n        border-color: transparent;\n    }\n\n    #app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"] [class*=\"search-input\"] {\n        opacity: var(--dx-search-open, 0);\n    }\n\n    #app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"]:focus-within,\n    #app [class*=\"main-nav-bars-container\"] nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar-container\"].active {\n        position: relative;\n        z-index: 7;\n        width: 18rem;\n        padding: 0 0.35rem 0 0.9rem;\n        --dx-search-open: 1;\n    }\n}\n\n@media (max-width: 1000px) {\n    #app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] [class*=\"label\"] {\n        display: none;\n    }\n\n    #app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"] svg {\n        display: block;\n        width: 1.35rem;\n        height: 1.35rem;\n        color: var(--dx-text-2);\n    }\n\n    #app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"].selected svg {\n        color: #fff;\n    }\n}\n\n/* =====================================================================\n   4. BOARD — rows become carousels\n   ===================================================================== */\n\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) {\n    padding: 0 0 4rem 0 !important;\n    overflow-x: hidden;\n    scroll-behavior: smooth;\n}\n\n/* No billboard (plugin off): keep rows clear of the floating header */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]):not(:has(> .dx-hero)) {\n    padding-top: calc(var(--dx-nav-h) + 1rem) !important;\n}\n\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"board-row\"],\n#app [class*=\"search-content\"] [class*=\"search-row\"] {\n    position: relative;\n    margin: 0 0 1.4rem 0 !important;\n}\n\n/* Rows that only show an addon error are noise — hide them */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"board-row\"]:has(> [class*=\"message-container\"]),\n#app [class*=\"search-content\"] [class*=\"search-row\"]:has(> [class*=\"message-container\"]) {\n    display: none !important;\n}\n\n#app [class*=\"meta-row\"] > [class*=\"header-container\"] {\n    padding: 0 var(--dx-gutter) !important;\n    margin: 0 0 0.1rem 0;\n    height: 2.5rem;\n}\n\n#app [class*=\"meta-row\"] > [class*=\"header-container\"] [class*=\"title-container\"] {\n    font-size: clamp(1.05rem, 1.25vw, 1.45rem) !important;\n    font-weight: 700 !important;\n    letter-spacing: -0.005em;\n    color: var(--dx-text);\n    max-height: none;\n}\n\n#app [class*=\"meta-row\"] > [class*=\"header-container\"] [class*=\"title-container\"] [class*=\"title\"] {\n    font-size: inherit !important;\n    font-weight: inherit !important;\n}\n\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"] {\n    height: 2rem;\n    padding: 0 0.4rem 0 0.75rem;\n    border-radius: var(--dx-radius-s);\n    opacity: var(--dx-row-hot, 0);\n    transform: translateX(calc(6px * (var(--dx-row-hot, 0) - 1)));\n    transition: opacity 0.3s, transform 0.3s var(--dx-ease-out), background-color 0.2s;\n}\n\n#app [class*=\"meta-row\"]:hover,\n#app [class*=\"meta-row\"]:focus-visible {\n    --dx-row-hot: 1;\n}\n\n/* (set on See All alone: on the whole row it would restyle every title in it at each key press) */\n#app [class*=\"meta-row\"]:focus-within [class*=\"see-all-container\"] {\n    --dx-row-hot: 1;\n}\n\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"]:hover,\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"] [class*=\"label\"] {\n    font-size: 0.82rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n}\n\n#app [class*=\"meta-row\"] [class*=\"see-all-container\"] svg {\n    height: 1rem;\n    color: var(--dx-text-2);\n}\n\n/* Rows fade softly into the screen edges: titles that slide aside for a hover card (or peek in\n   from a scrolled row) glide out of view instead of being sliced off at the edge */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"],\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] {\n    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 calc(var(--dx-gutter) - 0.6rem), #000 calc(100% - var(--dx-gutter) + 0.6rem), transparent 100%);\n    mask-image: linear-gradient(90deg, transparent 0, #000 calc(var(--dx-gutter) - 0.6rem), #000 calc(100% - var(--dx-gutter) + 0.6rem), transparent 100%);\n}\n\n/* The track */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"],\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] {\n    display: flex !important;\n    flex-wrap: nowrap;\n    overflow-x: auto !important;\n    overflow-y: hidden !important;\n    scroll-behavior: smooth;\n    scroll-snap-type: x proximity;\n    scroll-padding-inline: var(--dx-gutter);\n    scrollbar-width: none;\n    padding: 0.9rem calc(var(--dx-gutter) - 0.35rem) 1.1rem;\n    margin: -0.65rem 0 -0.35rem;\n    overscroll-behavior-x: contain;\n}\n\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"]::-webkit-scrollbar,\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"]::-webkit-scrollbar {\n    display: none;\n}\n\n/* Show every item (stock hides some by screen width) */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > *,\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > * {\n    display: block !important;\n    flex: 0 0 calc(100% / var(--dx-cols)) !important;\n    max-width: none !important;\n    padding: 0 0.35rem !important;\n    scroll-snap-align: start;\n}\n\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > *:empty,\n#app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > *:empty {\n    display: none !important;\n}\n\n/* Landscape rows (and Continue Watching, made landscape by the plugin) */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"board-row-landscape\"] > [class*=\"meta-items-container\"] > *,\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"continue-watching-row\"][data-dx-wide-row] > [class*=\"meta-items-container\"] > * {\n    flex-basis: calc(100% / var(--dx-wide-cols, 4)) !important;\n}\n\n/* =====================================================================\n   5. POSTER CARDS (everywhere)\n   ===================================================================== */\n\n#app [class*=\"meta-item-container\"] {\n    padding: 0.5rem 0.35rem;\n    transition: transform 0.35s var(--dx-ease-out);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-container\"] {\n    border-radius: var(--dx-radius) !important;\n    background: var(--dx-surface);\n    box-shadow: none !important;\n    overflow: hidden;\n    transform: translate3d(0, calc(-4px * var(--dx-card-focus, 0)), 0) scale(calc(1 + 0.035 * var(--dx-card-focus, 0)));\n    transition: transform 0.35s var(--dx-ease-out), box-shadow 0.35s var(--dx-ease-out) !important;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-container\"]::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    border-radius: inherit;\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);\n    pointer-events: none;\n    z-index: 5;\n    transition: box-shadow 0.3s;\n}\n\n#app [class*=\"meta-item-container\"]:is(.hovered, .active, .selected) [class*=\"poster-container\"] {\n    box-shadow: var(--dx-shadow-2) !important;\n    transform: translateY(-4px) scale(1.035);\n}\n\n/* Titles on anime artwork (plugin): the name over a soft shade at the bottom of the card */\n.dx-anime-title {\n    position: absolute;\n    z-index: 4;\n    left: 0;\n    right: 0;\n    bottom: 0;\n    padding: 2.2rem 0.6rem 0.55rem;\n    background: linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.55) 55%, transparent);\n    color: #fff;\n    font-size: 0.92rem;\n    font-weight: 700;\n    line-height: 1.2;\n    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);\n    display: -webkit-box;\n    -webkit-line-clamp: 2;\n    -webkit-box-orient: vertical;\n    overflow: hidden;\n    pointer-events: none;\n}\n\n/* Discover selects its first title by itself (to fill its side panel): no lift or ring for that one\n   until a title is picked (the plugin sets the flag) */\nbody:not(.dx-discover-picked) #app [class*=\"discover-content\"] [class*=\"meta-item-container\"].selected:not(.hovered):not(.active) [class*=\"poster-container\"] {\n    box-shadow: none !important;\n    transform: none;\n}\n\nbody:not(.dx-discover-picked) #app [class*=\"discover-content\"] [class*=\"meta-item-container\"].selected:not(.hovered):not(.active) [class*=\"poster-container\"]::after {\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);\n}\n\n/* keyboard highlight: the poster lifts like it does under the mouse, and the hover card shows\n   what's selected: no outline or ring around the card */\n#app [class*=\"meta-item-link\"]:focus-visible {\n    --dx-card-focus: 1;\n    outline: none !important;\n}\n\n#app [class*=\"meta-item-container\"]:active:not(.active) {\n    --dx-card-press: 1;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-container\"] {\n    scale: calc(1 - 0.03 * var(--dx-card-press, 0));\n}\n\n#app [class*=\"meta-item-container\"]:is(.hovered, .active, .selected) [class*=\"poster-container\"]::after {\n    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-image-layer\"] {\n    transition: transform 0.6s var(--dx-ease-out) !important;\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"poster-image-layer\"] {\n    transform: scale(1.04) !important;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"poster-image\"] {\n    object-fit: cover;\n}\n\n\n/* Library: no ring, lift or zoom under the mouse (a grid of posters reads calmer); the poster\n   just brightens a little */\n#app [class*=\"library-content\"] [class*=\"meta-item-container\"]:is(.hovered, .active, .selected) [class*=\"poster-container\"] {\n    box-shadow: none !important;\n    transform: none;\n}\n\n#app [class*=\"library-content\"] [class*=\"meta-item-container\"]:is(.hovered, .active, .selected) [class*=\"poster-container\"]::after {\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);\n}\n\n#app [class*=\"library-content\"] [class*=\"meta-item-container\"] [class*=\"poster-image-layer\"] {\n    transition: filter 0.25s var(--dx-ease) !important;\n}\n\n#app [class*=\"library-content\"] [class*=\"meta-item-container\"].hovered [class*=\"poster-image-layer\"] {\n    transform: none !important;\n    filter: brightness(1.12);\n}\n\n/* Titles under cards: quiet, single line */\n#app [class*=\"meta-item-container\"] [class*=\"title-bar-container\"] {\n    height: auto;\n    min-height: 0;\n    padding: 0.55rem 0.15rem 0 0.15rem;\n    justify-content: flex-start;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"title-bar-container\"] [class*=\"title-label\"] {\n    padding: 0;\n    font-size: 0.85rem;\n    font-weight: 500;\n    color: var(--dx-text-2);\n    text-align: left;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n    max-height: 1.3em;\n    transition: color 0.2s;\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"title-bar-container\"] [class*=\"title-label\"] {\n    color: var(--dx-text);\n}\n\n/* Rows on Home/Search: artwork only, like the real thing (titles live in the preview card) */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] [class*=\"meta-item-container\"] [class*=\"title-bar-container\"],\n#app [class*=\"search-content\"] [class*=\"meta-row\"] [class*=\"meta-item-container\"] [class*=\"title-bar-container\"] {\n    display: none;\n}\n\n/* Progress */\n#app [class*=\"meta-item-container\"] [class*=\"progress-bar-layer\"] {\n    left: 0.6rem;\n    right: 0.6rem;\n    bottom: 0.6rem;\n    height: 3px;\n    border-radius: 3px;\n    overflow: hidden;\n}\n\n#app [class*=\"progress-bar-layer\"] [class*=\"progress-bar-background\"] {\n    background: rgba(255, 255, 255, 0.28) !important;\n    opacity: 1 !important;\n}\n\n#app [class*=\"progress-bar-layer\"] [class*=\"progress-bar\"]:not([class*=\"background\"]),\n#app [class*=\"progress-bar-container\"] [class*=\"progress-bar\"]:not([class*=\"background\"]) {\n    background: var(--dx-accent) !important;\n}\n\n/* Play overlay on Continue Watching */\n#app [class*=\"meta-item-container\"] [class*=\"play-icon-layer\"] {\n    opacity: 0;\n    transition: opacity 0.25s;\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"play-icon-layer\"] {\n    opacity: 1;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"play-icon-background\"] {\n    background: rgba(0, 0, 0, 0.55) !important;\n    border: 2px solid rgba(255, 255, 255, 0.9);\n    opacity: 1 !important;\n    backdrop-filter: blur(6px);\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"play-icon-background\"] {\n    background: var(--dx-accent) !important;\n    border-color: var(--dx-accent);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"play-icon-outer\"] {\n    display: none;\n}\n\n/* Watched tick */\n#app [class*=\"meta-item-container\"] [class*=\"watched-icon-layer\"] {\n    background: rgba(0, 0, 0, 0.7);\n    border-radius: 50%;\n    backdrop-filter: blur(4px);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"watched-icon\"] {\n    color: #fff;\n}\n\n/* \"New episodes\" stack */\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] [class*=\"layer\"]:last-child {\n    background: var(--dx-accent) !important;\n    border-radius: var(--dx-radius-s);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] [class*=\"layer\"]:not(:last-child) {\n    background: color-mix(in srgb, var(--dx-accent) 55%, black) !important;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] [class*=\"label\"],\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] svg {\n    color: #fff !important;\n}\n\n/* Dismiss on Continue Watching: a slim glass tab that opens out into \"Remove\" when pointed at.\n   It takes the corner from the \"+N new episodes\" badge while the card is hovered. */\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"] {\n    z-index: 7 !important;\n    top: 0.6rem;\n    left: auto;\n    right: 0.6rem;\n    width: auto !important;\n    height: 1.55rem !important;\n    min-width: 1.55rem;\n    padding: 0 0.42rem;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: 0.4rem;\n    background: rgba(12, 12, 14, 0.62);\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 4px 14px rgba(0, 0, 0, 0.35);\n    backdrop-filter: blur(8px);\n    opacity: 0;\n    transform: translateY(-2px);\n    transition: opacity 0.18s ease, transform 0.18s ease, background-color 0.15s ease, box-shadow 0.15s ease;\n}\n\n#app [class*=\"meta-item-container\"].hovered [class*=\"dismiss-icon-layer\"],\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:focus-visible {\n    opacity: 1;\n    transform: none;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-backdrop\"] {\n    display: none !important;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"] svg {\n    position: static !important;\n    flex: none;\n    width: 0.62rem !important;\n    height: 0.62rem !important;\n    color: #fff !important;\n    fill: currentColor !important;\n    opacity: 1;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]::before {\n    content: \"Remove\";\n    max-width: 0;\n    overflow: hidden;\n    white-space: nowrap;\n    color: #fff;\n    font: 600 0.72rem/1 Inter, system-ui, sans-serif;\n    letter-spacing: 0.02em;\n    transition: max-width 0.22s ease, margin 0.22s ease;\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:hover,\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:focus-visible {\n    background: var(--dx-accent);\n    box-shadow: 0 4px 16px color-mix(in srgb, var(--dx-accent) 45%, transparent);\n}\n\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:hover::before,\n#app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]:focus-visible::before {\n    max-width: 4.5rem;\n    margin-right: 0.4rem;\n}\n\n/* the \"+N\" badge steps aside while the remove tab is showing */\n#app [class*=\"meta-item-container\"] [class*=\"new-videos\"] {\n    transition: opacity 0.18s ease;\n}\n\n#app [class*=\"continue-watching-row\"] [class*=\"meta-item-container\"].hovered [class*=\"new-videos\"] {\n    opacity: 0;\n}\n\n/* Card menu dots */\n#app [class*=\"meta-item-container\"] [class*=\"menu-label-container\"] {\n    border-radius: var(--dx-radius-s);\n}\n\n/* Placeholders while loading */\n#app [class*=\"meta-row-placeholder-container\"] [class*=\"poster-container\"],\n#app [class*=\"meta-item-placeholder\"] [class*=\"poster-container\"],\n#app [class*=\"placeholder\"] [class*=\"poster-container\"] {\n    border-radius: var(--dx-radius) !important;\n    /* static on purpose: rows from broken addons stay placeholders forever, and an endless\n       animation on dozens of them would cost CPU the whole time Home is open */\n    background: var(--dx-surface) !important;\n    animation: none !important;\n}\n\n#app [class*=\"meta-row-placeholder-container\"] [class*=\"title-bar-container\"],\n#app [class*=\"meta-row-placeholder-container\"] [class*=\"title-label\"] {\n    display: none;\n}\n\n#app [class*=\"meta-row-placeholder-container\"] [class*=\"header-container\"] [class*=\"title-container\"] {\n    width: 14rem;\n    height: 1.1rem;\n    border-radius: var(--dx-radius-s);\n    background: var(--dx-surface);\n    color: transparent !important;\n}\n\n\n/* =====================================================================\n   6. BILLBOARD (built by the plugin)\n   ===================================================================== */\n\n.dx-hero {\n    position: relative;\n    width: 100%;\n    height: min(82vh, 56.25vw);\n    min-height: 26rem;\n    margin-bottom: -6vw;\n    overflow: hidden;\n    background: var(--dx-bg);\n    isolation: isolate;\n    animation: dx-fade 0.8s var(--dx-ease) both;\n}\n\n.dx-hero-slide {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n}\n\n.dx-hero-slide.is-active {\n    pointer-events: auto;\n}\n\n/* Only the pictures cross-fade; the text is handled separately so it never looks washed out */\n.dx-hero-backdrop {\n    position: absolute;\n    inset: 0;\n    opacity: 0;\n    background-size: cover;\n    background-position: center 20%;\n    transform: scale(1.06);\n    transform-origin: 70% 40%;\n    transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);\n    will-change: transform, opacity;\n}\n\n.dx-hero-slide.is-active .dx-hero-backdrop {\n    opacity: 1;\n}\n\n/* The slow zoom keeps running on the outgoing picture until it has faded (class managed by the plugin) */\n.dx-hero-backdrop.kb {\n    animation: dx-kenburns 16s linear both;\n}\n\n@keyframes dx-kenburns {\n    from { transform: scale(1.06) translate3d(0, 0, 0); }\n    to { transform: scale(1.14) translate3d(-1.2%, -1%, 0); }\n}\n\n.dx-hero-shade {\n    position: absolute;\n    inset: 0;\n    z-index: 1;\n    pointer-events: none;\n    background:\n        linear-gradient(90deg, rgba(11, 11, 13, 0.92) 0%, rgba(11, 11, 13, 0.6) 28%, rgba(11, 11, 13, 0.08) 58%, transparent 75%),\n        linear-gradient(0deg, var(--dx-bg) 0%, rgba(11, 11, 13, 0.75) 14%, rgba(11, 11, 13, 0) 42%),\n        linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, transparent 18%);\n}\n\n.dx-hero-content {\n    position: absolute;\n    z-index: 2;\n    left: var(--dx-gutter);\n    bottom: calc(6vw + 4.5rem);\n    /* never higher than just under the top bar: on short screens (phones on their side, small\n       windows) the logo gives way first, so nothing slides up under the bar or off the screen */\n    top: calc(var(--dx-nav-h) + 0.75rem);\n    width: min(36rem, 42vw);\n    display: flex;\n    flex-direction: column;\n    justify-content: flex-end;\n    align-items: flex-start;\n    gap: min(1rem, 1.8vh);\n}\n\n.dx-hero-content > * {\n    flex-shrink: 0;\n}\n\n.dx-hero-content > .dx-hero-logo {\n    flex: 0 1 auto;\n    min-height: 2.75rem;\n}\n\n/* Shorter screens: a two-line description, then none, so the logo keeps a sensible size */\n@media (max-height: 680px) {\n    .dx-hero-desc {\n        -webkit-line-clamp: 2;\n    }\n}\n\n@media (max-height: 540px) {\n    .dx-hero-desc {\n        display: none !important;\n    }\n}\n\n/* Old text fades out first, then the new text fades in — never both at once, never moving,\n   so it stays crisp the whole time */\n.dx-hero-slide .dx-hero-content {\n    opacity: 0;\n    visibility: hidden;\n    transition: opacity 0.3s ease, visibility 0s linear 0.3s;\n}\n\n.dx-hero-slide.is-active .dx-hero-content {\n    opacity: 1;\n    visibility: visible;\n    transition: opacity 0.6s ease 0.45s, visibility 0s linear 0.45s;\n}\n\n/* First appearance on load: no waiting */\n.dx-hero.is-first .dx-hero-slide.is-active .dx-hero-content {\n    transition-delay: 0s;\n}\n\n.dx-hero-kicker {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.5rem;\n    font-size: 0.78rem;\n    font-weight: 700;\n    letter-spacing: 0.22em;\n    text-transform: uppercase;\n    color: var(--dx-text-2);\n}\n\n.dx-hero-kicker b {\n    font-family: \"Bebas Neue\", sans-serif;\n    font-size: 1.25rem;\n    font-weight: 400;\n    letter-spacing: 0.06em;\n    color: var(--dx-accent);\n}\n\n.dx-hero-logo {\n    display: block;\n    max-width: min(30rem, 100%);\n    max-height: 11rem;\n    object-fit: contain;\n    object-position: left bottom;\n    filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.55));\n}\n\n.dx-hero-title {\n    font-size: clamp(2.2rem, 4vw, 4rem);\n    font-weight: 800;\n    line-height: 1.02;\n    letter-spacing: -0.02em;\n    color: #fff;\n    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);\n}\n\n.dx-hero-meta {\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    gap: 0.35rem 0.85rem;\n    font-size: 0.95rem;\n    font-weight: 500;\n    color: var(--dx-text-2);\n}\n\n.dx-hero-desc {\n    font-size: clamp(0.95rem, 1.05vw, 1.15rem);\n    line-height: 1.5;\n    color: rgba(255, 255, 255, 0.88);\n    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);\n    display: -webkit-box;\n    -webkit-line-clamp: 3;\n    -webkit-box-orient: vertical;\n    overflow: hidden;\n}\n\n.dx-hero-actions {\n    display: flex;\n    gap: 0.75rem;\n    margin-top: 0.35rem;\n}\n\n.dx-btn {\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    gap: 0.6rem;\n    height: 2.9rem;\n    padding: 0 1.6rem 0 1.3rem;\n    border-radius: var(--dx-radius);\n    font-size: 1.02rem;\n    font-weight: 700;\n    cursor: pointer;\n    white-space: nowrap;\n    transition: background-color 0.2s, transform 0.2s var(--dx-ease-out), box-shadow 0.2s;\n}\n\n.dx-btn:active {\n    transform: scale(0.97);\n}\n\n.dx-btn svg {\n    width: 1.35rem;\n    height: 1.35rem;\n    flex: none;\n}\n\n.dx-btn-primary {\n    background: #fff;\n    color: #000;\n}\n\n.dx-btn-primary svg {\n    fill: #000;\n}\n\n.dx-btn-primary:hover {\n    background: rgba(255, 255, 255, 0.82);\n}\n\n.dx-btn-secondary {\n    background: rgba(109, 109, 118, 0.55);\n    color: #fff;\n    backdrop-filter: blur(8px);\n}\n\n.dx-btn-secondary svg {\n    fill: none;\n    stroke: #fff;\n}\n\n.dx-btn-secondary:hover {\n    background: rgba(109, 109, 118, 0.38);\n}\n\n/* Keyboard: the selected button comes forward in white, like a TV menu (dimming it the way the\n   mouse hover does read as \"off\" when nothing points at it) */\n.dx-btn:focus-visible {\n    background: #fff;\n    color: #000;\n    transform: scale(1.06);\n    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);\n}\n\n.dx-btn:focus-visible svg {\n    fill: #000;\n}\n\n.dx-btn-secondary:focus-visible svg {\n    fill: none;\n    stroke: #000;\n}\n\n.dx-hero-dots {\n    position: absolute;\n    z-index: 3;\n    right: var(--dx-gutter);\n    bottom: calc(6vw + 4.75rem);\n    display: flex;\n    gap: 0.4rem;\n}\n\n.dx-hero-dot {\n    position: relative;\n    width: 1.6rem;\n    height: 3px;\n    border-radius: 3px;\n    background: rgba(255, 255, 255, 0.25);\n    cursor: pointer;\n    overflow: hidden;\n    transition: width 0.4s var(--dx-ease-out), background-color 0.2s;\n}\n\n.dx-hero-dot:hover,\n.dx-hero-dot:focus-visible {\n    background: rgba(255, 255, 255, 0.45);\n}\n\n.dx-hero-dot.is-active {\n    width: 3.2rem;\n}\n\n.dx-hero-dot.is-active::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: #fff;\n    transform-origin: left;\n    animation: dx-progress var(--dx-hero-interval, 9s) linear both;\n}\n\n.dx-hero.is-static .dx-hero-dot.is-active::after {\n    animation: none;\n}\n\n@keyframes dx-progress {\n    from { transform: scaleX(0); }\n    to { transform: scaleX(1); }\n}\n\n/* LITE MODE (slower TV boxes): the billboard holds still. Its slow zoom repainted the whole screen\n   every frame — about 20 fps of work on a Fire TV Stick even with nothing pressed — which left less\n   for the remote. The active dot fills at once instead of counting down. */\nhtml[data-dx-lite] .dx-hero-backdrop.kb {\n    animation: none;\n}\n\n/* …and doesn't keep each full-screen backdrop on a GPU layer of its own: a Fire TV Stick's graphics\n   driver crashed (dx.bi closed) moving from Home to Settings with ~300 MB of memory left */\nhtml[data-dx-lite] .dx-hero-backdrop {\n    will-change: auto;\n}\n\nhtml[data-dx-lite] .dx-hero-dot.is-active::after {\n    animation: none;\n    transform: none;\n}\n\n/* Rows that follow the billboard sit above its fade */\n#app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) > .dx-hero ~ * {\n    position: relative;\n    z-index: 2;\n}\n\n/* Shared rating / meta pills */\n.dx-imdb {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.35rem;\n    font-weight: 700;\n    color: #fff;\n}\n\n.dx-imdb i {\n    font-style: normal;\n    font-size: 0.68em;\n    font-weight: 900;\n    letter-spacing: -0.01em;\n    line-height: 1;\n    padding: 0.18em 0.32em;\n    border-radius: 3px;\n    background: #f5c518;\n    color: #000;\n}\n\n.dx-match {\n    font-weight: 700;\n    color: #46d369;\n}\n\n.dx-pill {\n    display: inline-flex;\n    align-items: center;\n    height: 1.35rem;\n    padding: 0 0.45rem;\n    border: 1px solid rgba(255, 255, 255, 0.4);\n    border-radius: 3px;\n    font-size: 0.75rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n}\n\n.dx-sep {\n    width: 4px;\n    height: 4px;\n    border-radius: 50%;\n    background: var(--dx-text-3);\n}\n\n/* =====================================================================\n   7. CAROUSEL ARROWS + PREVIEW CARD + RATING BADGES (plugin parts)\n   ===================================================================== */\n\n.dx-arrow {\n    position: absolute;\n    z-index: 4;\n    bottom: 0.75rem;\n    width: calc(var(--dx-gutter) - 0.35rem);\n    min-width: 2.75rem;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    color: #fff;\n    cursor: pointer;\n    opacity: 0;\n    transition: opacity 0.25s, background-color 0.25s;\n}\n\n.dx-arrow svg {\n    width: 2rem;\n    height: 2rem;\n    transform: scale(var(--dx-arrow-scale, 1));\n    transition: transform 0.25s var(--dx-ease-out);\n}\n\n.dx-arrow-prev {\n    left: 0;\n    background: linear-gradient(90deg, rgba(11, 11, 13, 0.92), rgba(11, 11, 13, 0.4));\n}\n\n.dx-arrow-next {\n    right: 0;\n    background: linear-gradient(270deg, rgba(11, 11, 13, 0.92), rgba(11, 11, 13, 0.4));\n}\n\n[class*=\"meta-row\"]:hover > .dx-arrow:not(.is-hidden) {\n    opacity: 1;\n}\n\n.dx-arrow:hover,\n.dx-arrow:focus-visible {\n    --dx-arrow-scale: 1.25;\n}\n\n.dx-arrow.is-hidden {\n    pointer-events: none;\n}\n\n/* Row page indicator */\n.dx-row-pages {\n    position: absolute;\n    top: 0.95rem;\n    right: var(--dx-gutter);\n    display: flex;\n    gap: 3px;\n    opacity: 0;\n    transition: opacity 0.3s;\n}\n\n[class*=\"meta-row\"]:hover > .dx-row-pages,\n[class*=\"meta-row\"]:focus-visible > .dx-row-pages {\n    opacity: 1;\n}\n\n.dx-row-pages span {\n    width: 0.8rem;\n    height: 2px;\n    background: rgba(255, 255, 255, 0.25);\n}\n\n.dx-row-pages span.is-active {\n    background: rgba(255, 255, 255, 0.85);\n}\n\n/* Header pushes \"See all\" left of the page dots */\n#app [class*=\"meta-row\"]:has(> .dx-row-pages) > [class*=\"header-container\"] {\n    padding-right: calc(var(--dx-gutter) + 6rem) !important;\n}\n\n/* IMDb badge on posters */\n.dx-badge {\n    position: absolute;\n    z-index: 4;\n    top: 0.45rem;\n    left: 0.45rem;\n    display: inline-flex;\n    align-items: center;\n    gap: 0.3rem;\n    height: 1.35rem;\n    padding: 0 0.4rem 0 0.25rem;\n    border-radius: 4px;\n    background: rgba(0, 0, 0, 0.72);\n    backdrop-filter: blur(6px);\n    font-size: 0.72rem;\n    font-weight: 700;\n    color: #fff;\n    pointer-events: none;\n    animation: dx-fade 0.4s both;\n}\n\n.dx-badge i {\n    font-style: normal;\n    font-size: 0.6rem;\n    font-weight: 900;\n    padding: 0.12rem 0.22rem;\n    border-radius: 2px;\n    background: #f5c518;\n    color: #000;\n    line-height: 1;\n}\n\n/* Anime scores (Kitsu / AniList) get their own colour so they never read as IMDb */\n.dx-badge.is-anime i {\n    background: #3db4f2;\n    color: #fff;\n}\n\n/* Continue Watching as wide cards */\n.dx-wide-art {\n    position: absolute;\n    inset: 0;\n    z-index: 1;\n    background-size: cover;\n    background-position: center;\n    pointer-events: none;\n}\n\n.dx-wide-art::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: linear-gradient(0deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.1) 45%, transparent 70%);\n}\n\n.dx-wide-logo {\n    position: absolute;\n    z-index: 2;\n    left: 0.85rem;\n    bottom: 1.15rem;\n    max-width: 55%;\n    max-height: 32%;\n    object-fit: contain;\n    object-position: left bottom;\n    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));\n}\n\n.dx-wide-name {\n    position: absolute;\n    z-index: 2;\n    left: 0.85rem;\n    right: 0.85rem;\n    bottom: 1.1rem;\n    font-size: 1rem;\n    font-weight: 700;\n    color: #fff;\n    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"poster-container\"] {\n    padding-top: 56.25% !important;\n}\n\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"poster-image-layer\"] {\n    opacity: 0;\n}\n\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"progress-bar-layer\"],\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"play-icon-layer\"],\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"new-videos\"],\n#app [class*=\"continue-watching-row\"][data-dx-wide-row] [class*=\"watched-icon-layer\"] {\n    z-index: 3;\n}\n\n/* Hover preview — unfolds out of the card like Netflix's mini-modal. The outer box carries the\n   shadow (it follows the clipped shape), the inner layer is revealed from the card's outline. */\n/* The title under an open hover card: hidden once the card has grown over it, back at once as it closes */\n#app [data-dx-covered] [class*=\"poster-container\"] {\n    opacity: 0;\n    transition: opacity 0.15s 0.2s;\n}\n\n.dx-preview {\n    position: fixed;\n    z-index: 900;\n    opacity: 0;\n    visibility: hidden;\n    pointer-events: none;\n    will-change: transform, opacity;\n    transition:\n        transform 0.2s ease,\n        opacity 0.2s ease,\n        visibility 0s linear 0.2s;\n}\n\n.dx-preview.is-open {\n    opacity: 1;\n    visibility: visible;\n    pointer-events: auto;\n    transition: opacity 0.1s ease, visibility 0s;\n}\n\n.dx-preview.is-closing {\n    visibility: visible;\n    opacity: 0;\n    transform: scale(0.97) !important;\n    transition: transform 0.2s ease, opacity 0.2s ease;\n}\n\n.dx-preview-inner {\n    position: relative;\n    min-height: inherit;\n    display: flex;\n    flex-direction: column;\n    border-radius: 8px;\n    background: #181818;\n    overflow: hidden;\n    transition: clip-path 0.48s cubic-bezier(0.2, 0.85, 0.25, 1);\n    will-change: clip-path;\n}\n\n/* fine hairline so the panel's edge reads crisp against the page */\n.dx-preview-inner::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    z-index: 6;\n    border-radius: inherit;\n    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);\n    pointer-events: none;\n}\n\n/* Aura: the title's own colours glowing softly around the panel once it has opened,\n   with a deep shadow underneath for lift */\n.dx-preview-aura {\n    position: absolute;\n    z-index: -1;\n    inset: -14px -18px -22px;\n    border-radius: 22px;\n    background: #181818 center / cover no-repeat;\n    filter: blur(30px) saturate(1.5) brightness(0.9);\n    opacity: 0;\n    transform: scale(0.92);\n    transition: opacity 0.55s ease 0.16s, transform 0.6s cubic-bezier(0.2, 0.85, 0.25, 1) 0.1s;\n    pointer-events: none;\n    will-change: opacity, transform;\n}\n\n.dx-preview::before {\n    content: \"\";\n    position: absolute;\n    z-index: -2;\n    inset: 10% 6% -4%;\n    border-radius: 18px;\n    background: rgba(0, 0, 0, 0.85);\n    filter: blur(28px);\n    opacity: 0;\n    transition: opacity 0.4s ease 0.12s;\n    pointer-events: none;\n}\n\n.dx-preview.is-open .dx-preview-aura {\n    opacity: 0.55;\n    transform: none;\n}\n\n.dx-preview.is-open::before {\n    opacity: 1;\n}\n\n.dx-preview.is-closing .dx-preview-aura,\n.dx-preview.is-closing::before {\n    transition-delay: 0s;\n}\n\n/* the card's own artwork, fading into the panel as it unfolds */\n.dx-preview-ghost {\n    position: absolute;\n    z-index: 5;\n    /* the same corners as the poster it grows out of */\n    border-radius: var(--dx-radius);\n    background: #222 center / cover no-repeat;\n    pointer-events: none;\n    opacity: 1;\n    /* fades only once the panel's artwork is showing around it: no see-through moment */\n    transition: opacity 0.3s ease 0.16s;\n    will-change: opacity;\n}\n\n.dx-preview.is-open .dx-preview-ghost {\n    opacity: 0;\n}\n\n/* details settle in just after the panel has opened */\n.dx-preview .dx-preview-body {\n    opacity: 0;\n    transform: translateY(8px);\n    transition: opacity 0.3s ease 0.16s, transform 0.4s cubic-bezier(0.2, 0.85, 0.25, 1) 0.14s;\n}\n\n.dx-preview.is-open .dx-preview-body {\n    opacity: 1;\n    transform: none;\n}\n\n.dx-preview-media {\n    position: relative;\n    aspect-ratio: 16 / 9;\n    background: #2a2a2a center / cover no-repeat;\n    cursor: pointer;\n}\n\n/* its own rounded top as well: the zooming artwork and the trailer are layers of their own, and\n   the panel's rounded clip alone can let their corners show square while the card unfolds */\n.dx-preview-media {\n    overflow: hidden;\n    border-radius: var(--dx-radius) var(--dx-radius) 0 0;\n}\n\n.dx-preview-media::before {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: inherit;\n    transform-origin: 60% 40%;\n}\n\n.dx-preview.is-open .dx-preview-media::before {\n    animation: dx-preview-zoom 6s ease-out both;\n}\n\n@keyframes dx-preview-zoom {\n    from { transform: scale(1); }\n    to { transform: scale(1.08); }\n}\n\n.dx-preview-media::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: linear-gradient(0deg, #181818 0%, rgba(24, 24, 24, 0.35) 22%, transparent 45%);\n}\n\n.dx-preview-media img {\n    position: absolute;\n    z-index: 1;\n    left: 0.9rem;\n    bottom: 0.7rem;\n    max-width: 58%;\n    max-height: 40%;\n    object-fit: contain;\n    object-position: left bottom;\n    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8));\n}\n\n.dx-preview-name {\n    position: absolute;\n    z-index: 1;\n    left: 0.9rem;\n    right: 0.9rem;\n    bottom: 0.7rem;\n    font-size: 1.2rem;\n    font-weight: 800;\n    line-height: 1.15;\n    color: #fff;\n    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);\n}\n\n.dx-preview-media.has-logo .dx-preview-name {\n    display: none;\n}\n\n\n.dx-preview-body {\n    flex: 1;\n    padding: 0.85rem 1rem 1.1rem;\n    display: flex;\n    flex-direction: column;\n    gap: 0.75rem;\n}\n\n.dx-preview-actions {\n    display: flex;\n    align-items: center;\n    gap: 0.5rem;\n}\n\n.dx-round {\n    position: relative;\n    width: 2.5rem;\n    height: 2.5rem;\n    flex: none;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: 50%;\n    border: 2px solid rgba(255, 255, 255, 0.5);\n    background: rgba(42, 42, 42, 0.6);\n    color: #fff;\n    cursor: pointer;\n    transition: border-color 0.15s, background-color 0.15s;\n}\n\n.dx-round:hover,\n.dx-round:focus-visible {\n    border-color: #fff;\n    background: rgba(255, 255, 255, 0.1);\n}\n\n.dx-round svg {\n    width: 1.2rem;\n    height: 1.2rem;\n}\n\n.dx-round.is-primary {\n    background: #fff;\n    border-color: #fff;\n    color: #000;\n}\n\n.dx-round.is-primary:hover,\n.dx-round.is-primary:focus-visible {\n    background: rgba(255, 255, 255, 0.8);\n}\n\n.dx-round.is-primary svg {\n    margin-left: 2px;\n}\n\n.dx-round.is-end {\n    margin-left: auto;\n}\n\n/* Remove from Continue Watching: quieter than the others until pointed at */\n.dx-round.dx-remove {\n    border-color: rgba(255, 255, 255, 0.28);\n    color: rgba(255, 255, 255, 0.8);\n}\n\n.dx-round.dx-remove:hover,\n.dx-round.dx-remove:focus-visible {\n    border-color: var(--dx-accent);\n    background: color-mix(in srgb, var(--dx-accent) 22%, transparent);\n    color: #fff;\n}\n\n.dx-round.dx-remove + .dx-round {\n    margin-left: 0.5rem;\n}\n\n/* the last button's tooltip opens leftwards so the card's edge never cuts it off */\n.dx-preview-actions .dx-round:last-child[data-tip]::after {\n    left: auto;\n    right: 0;\n    transform: translate(0, 4px);\n}\n\n.dx-preview-actions .dx-round:last-child[data-tip]:hover::after,\n.dx-preview-actions .dx-round:last-child[data-tip]:focus-visible::after {\n    transform: none;\n}\n\n.dx-round.is-pop {\n    animation: dx-pop-btn 0.35s var(--dx-ease-out);\n}\n\n@keyframes dx-pop-btn {\n    40% { transform: scale(1.2); }\n}\n\n/* Small tooltip above the round buttons */\n.dx-round[data-tip]::after {\n    content: attr(data-tip);\n    position: absolute;\n    bottom: calc(100% + 0.6rem);\n    left: 50%;\n    transform: translate(-50%, 4px);\n    padding: 0.35rem 0.6rem;\n    border-radius: 4px;\n    background: #e6e6e6;\n    color: #111;\n    font-size: 0.78rem;\n    font-weight: 700;\n    white-space: nowrap;\n    opacity: 0;\n    pointer-events: none;\n    transition: opacity 0.15s, transform 0.15s;\n}\n\n.dx-round[data-tip]:hover::after,\n.dx-round[data-tip]:focus-visible::after {\n    opacity: 1;\n    transform: translate(-50%, 0);\n}\n\n.dx-round.is-end[data-tip]::after {\n    left: auto;\n    right: 0;\n    transform: translate(0, 4px);\n}\n\n.dx-round.is-end[data-tip]:hover::after,\n.dx-round.is-end[data-tip]:focus-visible::after {\n    transform: none;\n}\n\n.dx-preview-facts {\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    gap: 0.3rem 0.55rem;\n    font-size: 0.88rem;\n    font-weight: 500;\n    color: #bcbcbc;\n}\n\n.dx-preview-facts .dx-match {\n    color: #46d369;\n    font-weight: 700;\n}\n\n.dx-hd {\n    padding: 0 0.3rem;\n    border: 1px solid rgba(255, 255, 255, 0.4);\n    border-radius: 3px;\n    font-size: 0.68rem;\n    font-weight: 700;\n    line-height: 1.3;\n    color: rgba(255, 255, 255, 0.85);\n}\n\n.dx-preview-genres {\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    gap: 0.25rem 0.45rem;\n    font-size: 0.88rem;\n    color: #fff;\n}\n\n.dx-preview-genres span + span::before {\n    content: \"•\";\n    margin-right: 0.45rem;\n    color: #646464;\n}\n\n/* ---------- Intro (pre-rendered film, see plugin) ---------- */\n.dx-splash {\n    position: fixed;\n    inset: 0;\n    z-index: 100000;\n    background: #000;\n    cursor: pointer;\n    transition: opacity 0.6s ease, visibility 0.6s;\n}\n\n.dx-splash.is-done {\n    opacity: 0;\n    visibility: hidden;\n}\n\n.dx-splash-video {\n    position: absolute;\n    inset: 0;\n    width: 100%;\n    height: 100%;\n    object-fit: cover;\n    background: #000;\n}\n\n/* Fallback when video can't play: opacity/transform only, so it stays on the compositor */\n.dx-splash-mark {\n    position: absolute;\n    left: 50%;\n    top: 50%;\n    font-family: \"Bebas Neue\", \"Inter\", sans-serif;\n    font-size: clamp(5rem, 16vw, 18rem);\n    line-height: 1;\n    color: var(--dx-accent);\n    transform: translate(-50%, -50%);\n    animation: dx-intro-fallback 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;\n    will-change: transform, opacity;\n}\n\n@keyframes dx-intro-fallback {\n    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }\n    30% { opacity: 1; transform: translate(-50%, -50%) scale(1); }\n    75% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }\n    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }\n}\n\n/* =====================================================================\n   8. DETAIL PAGE\n   ===================================================================== */\n\n#app [class*=\"metadetails-container\"] > [class*=\"background-image-layer\"] {\n    opacity: 1;\n}\n\n#app [class*=\"metadetails-container\"] > [class*=\"background-image-layer\"] img {\n    opacity: 1 !important;\n    filter: none !important;\n    object-fit: cover;\n    object-position: center 20%;\n    animation: dx-fade 0.9s var(--dx-ease) both;\n}\n\n#app [class*=\"metadetails-container\"] > [class*=\"background-image-layer\"]::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background:\n        linear-gradient(90deg, rgba(11, 11, 13, 0.94) 0%, rgba(11, 11, 13, 0.7) 32%, rgba(11, 11, 13, 0.12) 60%, rgba(11, 11, 13, 0.35) 100%),\n        linear-gradient(0deg, rgba(11, 11, 13, 0.9) 0%, transparent 38%),\n        linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 18%);\n}\n\n#app [class*=\"metadetails-container\"] > nav[class*=\"horizontal-nav-bar\"] {\n    height: var(--dx-nav-h);\n    padding: 0 var(--dx-gutter) 0 calc(var(--dx-gutter) - 0.6rem);\n    background: transparent;\n}\n\n#app [class*=\"metadetails-container\"] > nav [class*=\"back-button-container\"],\n#app [class*=\"player-container\"] nav [class*=\"back-button-container\"] {\n    height: 2.5rem;\n    width: 2.5rem;\n    margin: 0;\n    border-radius: 50%;\n    background: rgba(0, 0, 0, 0.45);\n    backdrop-filter: blur(8px);\n    transition: background-color 0.2s, transform 0.2s;\n}\n\n#app [class*=\"metadetails-container\"] > nav [class*=\"back-button-container\"]:hover,\n#app [class*=\"player-container\"] nav [class*=\"back-button-container\"]:hover,\n#app [class*=\"metadetails-container\"] > nav [class*=\"back-button-container\"]:focus-visible,\n#app [class*=\"player-container\"] nav [class*=\"back-button-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.16);\n    transform: translateX(-2px);\n}\n\n#app [class*=\"metadetails-content\"] {\n    padding-left: var(--dx-gutter);\n}\n\n#app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] {\n    padding-top: 1rem;\n    padding-bottom: 8vh;\n    justify-content: flex-end;\n}\n\n#app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] > [class*=\"meta-info-container\"] {\n    flex: 0 1 auto;\n}\n\n#app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] > [class*=\"action-buttons-container\"] {\n    margin-top: 1.75rem;\n}\n\n/* Meta preview (detail + discover side panel) */\n#app [class*=\"meta-preview-container\"] [class*=\"meta-info-container\"] {\n    padding-right: 1rem;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"logo\"] {\n    filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.6));\n    animation: dx-rise 0.6s var(--dx-ease-out) both;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"logo-placeholder\"] {\n    font-size: clamp(2rem, 3.4vw, 3.4rem);\n    font-weight: 800;\n    letter-spacing: -0.02em;\n    line-height: 1.05;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"runtime-release-info-container\"] {\n    gap: 1.1rem;\n    flex-wrap: wrap;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"runtime-label\"],\n#app [class*=\"meta-preview-container\"] [class*=\"release-info-label\"] {\n    font-size: 1rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n    margin: 0;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"] {\n    height: 1.9rem;\n    padding: 0 0.6rem;\n    gap: 0.45rem;\n    border-radius: var(--dx-radius-s);\n    background: rgba(245, 197, 24, 0.12);\n    border: 1px solid rgba(245, 197, 24, 0.35);\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"]:focus-visible {\n    background: rgba(245, 197, 24, 0.22);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"] [class*=\"label\"] {\n    font-weight: 800;\n    color: #fff;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"imdb-button-container\"] svg {\n    color: #f5c518;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"meta-links-container\"] [class*=\"label-container\"] {\n    font-size: 0.72rem;\n    font-weight: 700;\n    letter-spacing: 0.14em;\n    text-transform: uppercase;\n    color: var(--dx-text-3);\n    opacity: 1;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"link-container\"] {\n    display: inline-flex !important;\n    align-items: center;\n    justify-content: center;\n    height: 2rem;\n    /* optical centring: the font reserves descender space below, so nudge capitals down */\n    padding: 0.15em 0.85rem 0 !important;\n    line-height: 1 !important;\n    vertical-align: middle;\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid var(--dx-line);\n    font-size: 0.85rem;\n    font-weight: 500;\n    color: var(--dx-text);\n    transition: background-color 0.2s, border-color 0.2s;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"link-container\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"link-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.14);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"description-container\"] {\n    font-size: 1.02rem;\n    line-height: 1.6;\n    color: rgba(255, 255, 255, 0.86);\n    max-width: 48rem;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"description-container\"] [class*=\"label-container\"] {\n    display: none;\n}\n\n/* Action buttons: first (Play/Trailer) is a solid button, the rest are round */\n#app [class*=\"meta-preview-container\"] [class*=\"action-buttons-container\"] {\n    gap: 0.6rem;\n    align-items: center;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"],\n#app [class*=\"meta-preview-container\"] [class*=\"group-container\"] {\n    height: 3rem;\n    min-width: 3rem;\n    border-radius: 999px;\n    background: rgba(42, 42, 48, 0.65);\n    border: 1.5px solid rgba(255, 255, 255, 0.28);\n    backdrop-filter: blur(10px);\n    transition: background-color 0.2s, border-color 0.2s, transform 0.2s var(--dx-ease-out);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"]:focus-visible {\n    border-color: #fff;\n    background: rgba(255, 255, 255, 0.12);\n    transform: translateY(-1px);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"group-container\"] [class*=\"icon-container\"] {\n    border-radius: 999px;\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"group-container\"] [class*=\"icon-container\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"group-container\"] [class*=\"icon-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.12);\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"] {\n    padding: 0 1.5rem 0 1.15rem;\n    border-radius: var(--dx-radius);\n    background: #fff;\n    border-color: #fff;\n    color: #000;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"] * {\n    color: #000 !important;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"] [class*=\"label\"] {\n    font-weight: 700;\n    font-size: 1rem;\n}\n\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"]:hover,\n#app [class*=\"meta-preview-container\"] [class*=\"action-button-container\"][class*=\"wide\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.84);\n}\n\n/* Episodes / streams panel */\n#app [class*=\"metadetails-content\"] [class*=\"videos-list-container\"],\n#app [class*=\"metadetails-content\"] [class*=\"streams-list-container\"] {\n    flex: 0 0 clamp(28rem, 31vw, 42rem) !important;\n    width: clamp(28rem, 31vw, 42rem);\n    margin: 0.75rem var(--dx-gutter) 1.5rem 0;\n    border-radius: var(--dx-radius-l);\n    background: rgba(19, 19, 23, 0.82);\n    border: 1px solid var(--dx-line);\n    backdrop-filter: blur(24px) saturate(140%);\n    box-shadow: var(--dx-shadow-2);\n    animation: dx-slide-in 0.5s var(--dx-ease-out) both;\n}\n\n@keyframes dx-slide-in {\n    from { opacity: 0; transform: translateX(24px); }\n    to { opacity: 1; transform: none; }\n}\n\n#app [class*=\"seasons-bar-container\"] {\n    padding: 0.5rem 0.75rem;\n    border-bottom: 1px solid var(--dx-line);\n}\n\n#app [class*=\"seasons-bar-container\"] [class*=\"button-container\"] {\n    border-radius: var(--dx-radius);\n}\n\n#app [class*=\"seasons-bar-container\"] [class*=\"button-container\"]:hover,\n#app [class*=\"seasons-bar-container\"] [class*=\"button-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app [class*=\"seasons-popup-label-container\"] [class*=\"button-container\"] {\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid var(--dx-line);\n    font-weight: 700;\n}\n\n#app [class*=\"videos-list-container\"] [class*=\"search-bar-container\"] {\n    margin: 0.75rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.05);\n    border: 1px solid var(--dx-line);\n}\n\n#app [class*=\"video-container\"] {\n    margin: 0 0.5rem;\n    border-radius: var(--dx-radius);\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"video-container\"]:hover,\n#app [class*=\"video-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.06);\n}\n\n#app [class*=\"video-container\"][class*=\"selected\"] {\n    background: rgba(255, 255, 255, 0.09);\n    box-shadow: inset 3px 0 0 var(--dx-accent);\n}\n\n#app [class*=\"video-container\"] [class*=\"thumbnail-container\"] {\n    border-radius: var(--dx-radius-s);\n    overflow: hidden;\n}\n\n#app [class*=\"video-container\"] [class*=\"title-container\"] {\n    font-weight: 600;\n    color: var(--dx-text);\n}\n\n#app [class*=\"video-container\"] [class*=\"released-container\"] {\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"video-container\"] [class*=\"upcoming-watched-container\"] > * {\n    border-radius: var(--dx-radius-s);\n}\n\n#app [class*=\"video-container\"] [class*=\"watched-container\"] {\n    background: rgba(70, 211, 105, 0.15);\n    color: #46d369;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"select-choices-wrapper\"] {\n    padding: 0.5rem 0.75rem;\n    border-bottom: 1px solid var(--dx-line);\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"] {\n    margin: 0.2rem 0.5rem;\n    border-radius: var(--dx-radius);\n    transition: background-color 0.2s, transform 0.2s var(--dx-ease-out);\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"]:hover,\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.07);\n    transform: translateX(3px);\n}\n\n/* A stream's right-click menu lives inside its card: lift that card above the ones after it,\n   otherwise they paint over the menu */\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"]:has([class*=\"menu-container\"]) {\n    position: relative;\n    z-index: 40;\n    transform: none;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"] [class*=\"menu-container\"] {\n    z-index: 41;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [class*=\"stream-container\"] {\n    align-self: stretch;\n    width: auto !important;\n    padding: 0.8rem 1rem;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"] [class*=\"info-container\"] {\n    width: 8.5rem;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"stream-container\"] [class*=\"description-container\"] {\n    max-width: none !important;\n    flex: 1 1 0 !important;\n    white-space: pre-wrap !important;\n    overflow-wrap: anywhere;\n    max-height: none !important;\n    font-size: 0.85rem;\n    line-height: 1.45;\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"addon-name\"] {\n    font-weight: 700;\n    color: var(--dx-text);\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"description-container\"] {\n    color: var(--dx-text-2);\n}\n\n/* =====================================================================\n   9. DISCOVER / LIBRARY / SEARCH / CALENDAR\n   ===================================================================== */\n\n#app [class*=\"discover-content\"],\n#app [class*=\"library-content\"],\n#app [class*=\"search-content\"] {\n    padding-top: 0.75rem;\n}\n\n#app [class*=\"search-content\"] {\n    padding-left: 0 !important;\n    padding-right: 0 !important;\n}\n\n#app [class*=\"discover-content\"] [class*=\"catalog-container\"] {\n    padding-left: calc(var(--dx-gutter) - 0.35rem);\n}\n\n#app [class*=\"library-content\"] {\n    padding-left: calc(var(--dx-gutter) - 0.35rem);\n    padding-right: calc(var(--dx-gutter) - 0.35rem);\n}\n\n#app [class*=\"selectable-inputs-container\"] {\n    gap: 0.6rem;\n    padding: 0 0.35rem 0.75rem;\n}\n\n/* Dropdowns / filters / chips */\n#app [class*=\"multiselect-menu\"] > [class*=\"button-container\"],\n#app [class*=\"select-input\"] > [class*=\"button-container\"],\n#app [class*=\"filter-button\"],\n#app [class*=\"selectable-inputs\"] [class*=\"button-container\"] {\n    height: 2.5rem;\n    border-radius: var(--dx-radius);\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n    transition: background-color 0.2s, border-color 0.2s;\n}\n\n#app [class*=\"multiselect-menu\"] > [class*=\"button-container\"]:hover,\n#app [class*=\"filter-button\"]:hover,\n#app [class*=\"multiselect-menu\"] > [class*=\"button-container\"]:focus-visible,\n#app [class*=\"filter-button\"]:focus-visible {\n    background: var(--dx-surface-2);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"multiselect-menu\"] [class*=\"text\"] {\n    font-size: 0.9rem;\n    font-weight: 600;\n}\n\n#app [class*=\"chips\"] [class*=\"chip\"] {\n    height: 2.2rem;\n    padding: 0 1rem;\n    border-radius: 999px;\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n    font-size: 0.85rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n    transition: background-color 0.2s, color 0.2s, border-color 0.2s;\n}\n\n#app [class*=\"chips\"] [class*=\"chip\"]:hover,\n#app [class*=\"chips\"] [class*=\"chip\"]:focus-visible {\n    color: var(--dx-text);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"chips\"] [class*=\"chip\"][class*=\"active\"] {\n    background: #fff;\n    border-color: #fff;\n    color: #000;\n}\n\n/* Grids */\n#app [class*=\"discover-content\"] [class*=\"meta-items-container\"],\n#app [class*=\"library-content\"] [class*=\"meta-items-container\"] {\n    grid-template-columns: repeat(auto-fill, minmax(clamp(9.5rem, 11vw, 13rem), 1fr)) !important;\n    gap: 0.35rem 0;\n    padding-bottom: 3rem;\n}\n\n/* Discover side preview */\n#app [class*=\"discover-content\"] > [class*=\"meta-preview-container\"] {\n    margin: 0 var(--dx-gutter) 1.25rem 0.75rem;\n    border-radius: var(--dx-radius-l);\n    background: var(--dx-bg-raised);\n    border: 1px solid var(--dx-line);\n    overflow: hidden;\n    box-shadow: var(--dx-shadow-2);\n}\n\n#app [class*=\"discover-content\"] > [class*=\"meta-preview-container\"] [class*=\"background-image-layer\"] img {\n    opacity: 0.55;\n    filter: none;\n}\n\n#app [class*=\"discover-content\"] > [class*=\"meta-preview-container\"] [class*=\"background-image-layer\"]::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: linear-gradient(0deg, var(--dx-bg-raised) 20%, rgba(19, 19, 23, 0.55) 60%, rgba(19, 19, 23, 0.3) 100%);\n}\n\n/* Empty / message states */\n#app [class*=\"message-container\"],\n#app [class*=\"placeholder-label\"] {\n    color: var(--dx-text-3);\n}\n\n/* Calendar */\n#app [class*=\"calendar\"] [class*=\"selector\"] {\n    gap: 1rem;\n}\n\n#app [class*=\"calendar\"] [class*=\"selector\"] [class*=\"button-container\"] {\n    border-radius: var(--dx-radius);\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n}\n\n#app [class*=\"calendar\"] [class*=\"cell\"] {\n    border-radius: var(--dx-radius);\n    background: var(--dx-bg-raised);\n    border: 1px solid var(--dx-line);\n    transition: background-color 0.2s, border-color 0.2s;\n}\n\n#app [class*=\"calendar\"] [class*=\"cell\"]:hover,\n#app [class*=\"calendar\"] [class*=\"cell\"]:focus-visible {\n    background: var(--dx-surface);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"calendar\"] [class*=\"cell\"][class*=\"today\"] {\n    border-color: var(--dx-accent);\n    box-shadow: inset 0 0 0 1px var(--dx-accent);\n}\n\n#app [class*=\"calendar\"] [class*=\"cell\"][class*=\"today\"] [class*=\"day\"] {\n    color: #fff;\n    font-weight: 800;\n}\n\n#app [class*=\"calendar\"] [class*=\"list-\"] [class*=\"item-\"] {\n    border-radius: var(--dx-radius);\n}\n\n#app [class*=\"calendar\"] [class*=\"episode-\"] {\n    border-radius: var(--dx-radius);\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"calendar\"] [class*=\"episode-\"]:hover,\n#app [class*=\"calendar\"] [class*=\"episode-\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.06);\n}\n\n#app [class*=\"calendar\"] [class*=\"artwork-container\"] {\n    border-radius: var(--dx-radius-s);\n    overflow: hidden;\n}\n\n/* =====================================================================\n   10. ADDONS + SETTINGS\n   ===================================================================== */\n\n#app [class*=\"addons-content\"] {\n    padding: 0.75rem calc(var(--dx-gutter) - 0.35rem) 0;\n}\n\n#app [class*=\"addons-content\"] [class*=\"add-button-container\"] {\n    height: 2.5rem;\n    padding: 0 1.1rem;\n    border-radius: var(--dx-radius);\n    background: var(--dx-accent);\n    transition: background-color 0.2s;\n}\n\n#app [class*=\"addons-content\"] [class*=\"add-button-container\"]:hover,\n#app [class*=\"addons-content\"] [class*=\"add-button-container\"]:focus-visible {\n    background: var(--dx-accent-hover);\n}\n\n#app [class*=\"addons-content\"] [class*=\"add-button-container\"] * {\n    color: #fff !important;\n    font-weight: 700;\n}\n\n#app [class*=\"addons-content\"] label[class*=\"search-bar-container\"] {\n    height: 2.5rem;\n    border-radius: var(--dx-radius);\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n}\n\n#app [class*=\"addons-list-container\"] {\n    gap: 0.75rem;\n    padding-bottom: 2rem;\n}\n\n#app [class*=\"addons-list-container\"] [class*=\"addon-container\"] {\n    margin: 0 0 0.75rem 0;\n    padding: 1.1rem 1.25rem;\n    border-radius: var(--dx-radius-l);\n    background: var(--dx-bg-raised);\n    border: 1px solid var(--dx-line);\n    transition: background-color 0.25s, border-color 0.25s, transform 0.25s var(--dx-ease-out);\n}\n\n#app [class*=\"addons-list-container\"] [class*=\"addon-container\"]:hover,\n#app [class*=\"addons-list-container\"] [class*=\"addon-container\"]:focus-visible {\n    background: var(--dx-surface);\n    border-color: var(--dx-line-strong);\n}\n\n#app [class*=\"addon-container\"] [class*=\"logo-container\"] {\n    border-radius: var(--dx-radius);\n    background: var(--dx-surface-2);\n    overflow: hidden;\n}\n\n#app [class*=\"addon-container\"] [class*=\"name-container\"] {\n    font-weight: 700;\n}\n\n#app [class*=\"addon-container\"] [class*=\"version-container\"],\n#app [class*=\"addon-container\"] [class*=\"types-container\"] {\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"addon-container\"] [class*=\"description-container\"] {\n    color: var(--dx-text-2);\n}\n\n/* Install / uninstall / configure / share */\n#app [class*=\"install-button-container\"],\n#app [class*=\"configure-button-container\"] {\n    border-radius: var(--dx-radius) !important;\n    background: var(--dx-accent) !important;\n    border: 0 !important;\n    transition: background-color 0.2s, opacity 0.2s;\n}\n\n#app [class*=\"install-button-container\"]:hover,\n#app [class*=\"configure-button-container\"]:hover,\n#app [class*=\"install-button-container\"]:focus-visible,\n#app [class*=\"configure-button-container\"]:focus-visible {\n    background: var(--dx-accent-hover) !important;\n}\n\n#app [class*=\"install-button-container\"] *,\n#app [class*=\"configure-button-container\"] * {\n    color: #fff !important;\n}\n\n#app [class*=\"uninstall-button-container\"],\n#app [class*=\"share-button-container\"] {\n    border-radius: var(--dx-radius) !important;\n    background: var(--dx-surface-2) !important;\n    border: 1px solid var(--dx-line) !important;\n    outline: none !important;\n}\n\n#app [class*=\"uninstall-button-container\"]:hover,\n#app [class*=\"share-button-container\"]:hover,\n#app [class*=\"uninstall-button-container\"]:focus-visible,\n#app [class*=\"share-button-container\"]:focus-visible {\n    background: var(--dx-surface-3) !important;\n}\n\n#app [class*=\"uninstall-button-container\"] *,\n#app [class*=\"share-button-container\"] * {\n    color: var(--dx-text) !important;\n}\n\n/* Settings */\n#app [class*=\"settings-content\"] {\n    padding: 0.75rem var(--dx-gutter) 0;\n    gap: 2rem;\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] {\n    padding: 0.5rem;\n    border-radius: var(--dx-radius-l);\n    background: var(--dx-bg-raised);\n    border: 1px solid var(--dx-line);\n    height: fit-content;\n    max-height: 100%;\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] > [class*=\"button\"],\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] > div > [class*=\"button\"] {\n    height: 2.75rem;\n    margin: 0.1rem 0;\n    padding: 0 1rem;\n    border-radius: var(--dx-radius);\n    font-weight: 600;\n    color: var(--dx-text-2);\n    opacity: 1;\n    transition: background-color 0.2s, color 0.2s;\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"button\"]:hover,\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"button\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.06);\n    color: var(--dx-text);\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"button\"][class*=\"selected\"] {\n    background: rgba(255, 255, 255, 0.1);\n    color: #fff;\n    box-shadow: inset 3px 0 0 var(--dx-accent);\n}\n\n#app [class*=\"settings-content\"] [class*=\"section-\"] {\n    border-bottom: 1px solid var(--dx-line);\n}\n\n#app [class*=\"settings-content\"] [class*=\"heading-\"] {\n    font-weight: 700;\n}\n\n/* Sections use the room there is (Stremio caps them at ~490px, which left half the page empty),\n   and every control sits on the right edge: toggles used to float in the middle of a centred box,\n   out of line with the dropdowns and buttons above and below them */\n#app [class*=\"settings-content\"] [class*=\"sections-container\"] > [class*=\"section-\"] {\n    max-width: 46rem;\n}\n\n#app [class*=\"settings-content\"] [class*=\"option-\"] > [class*=\"content-\"] {\n    justify-content: flex-end;\n}\n\n/* Each section's title, set like the rest of dx.bi's headings (it was a thin, light weight) */\n#app [class*=\"settings-content\"] [class*=\"sections-container\"] > [class*=\"section-\"] > [class*=\"label-\"] {\n    font-size: 1.6rem;\n    font-weight: 700;\n    letter-spacing: -0.01em;\n    color: var(--dx-text);\n}\n\n/* The app's notes under its own options */\n#app [class*=\"settings-content\"] .dxbi-note {\n    margin: -0.2rem 0 1rem;\n    font-size: 0.85rem;\n    line-height: 1.55;\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"settings-content\"] .dxbi-note b {\n    color: var(--dx-text-2);\n    font-weight: 600;\n}\n\n/* App, build and server versions under the menu: small print, not menu-sized text */\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"version-label\"] {\n    padding: 0.15rem 1rem;\n    font-size: 0.75rem;\n    line-height: 1.4;\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"settings-content\"] > [class*=\"menu-\"] [class*=\"spacing\"] {\n    margin-top: 0.5rem;\n    border-top: 1px solid var(--dx-line);\n}\n\n#app [class*=\"settings-content\"] [class*=\"option-\"] [class*=\"content-\"] [class*=\"button-container\"],\n#app [class*=\"settings-content\"] [class*=\"multiselect-menu\"] > [class*=\"button-container\"] {\n    border-radius: var(--dx-radius);\n}\n\n#app [class*=\"settings-content\"] [class*=\"user-info-content\"] [class*=\"avatar\"],\n#app [class*=\"settings-content\"] [class*=\"user-info-content\"] img {\n    border-radius: var(--dx-radius) !important;\n}\n\n/* Toggles and checkboxes */\n#app [class*=\"toggle-container\"] [class*=\"toggle\"] {\n    background: var(--dx-surface-3);\n}\n\n#app [class*=\"toggle-container\"].checked [class*=\"toggle\"],\n#app .checked > [class*=\"toggle\"] {\n    background: var(--dx-accent) !important;\n}\n\n#app [class*=\"checkbox-container\"].checked [class*=\"checkbox\"],\n#app [class*=\"checkbox\"].checked {\n    background: var(--dx-accent) !important;\n    border-color: var(--dx-accent) !important;\n}\n\n/* Keyboard: a selected switch or choice glows softly and grows a touch (they have no hover look\n   to borrow) */\n#app [class*=\"toggle-container\"]:focus-visible,\n#app [class*=\"radio-container\"]:focus-visible,\n#app [class*=\"checkbox-container\"]:focus-visible {\n    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));\n    transform: scale(1.08);\n    transition: transform 0.2s var(--dx-ease-out), filter 0.2s;\n}\n\n/* Text inputs */\n#app input[class*=\"text-input\"],\n#app [class*=\"text-input\"] input {\n    border-radius: var(--dx-radius);\n}\n\n/* =====================================================================\n   11. POPUPS, MENUS, MODALS, TOASTS, TOOLTIPS\n   ===================================================================== */\n\n#app [class*=\"menu-container\"][class*=\"menu-direction\"]:not([class*=\"context-menu\"]),\n#app [class*=\"nav-menu-container\"] {\n    border-radius: var(--dx-radius-l) !important;\n    background: rgba(22, 22, 27, 0.97) !important;\n    border: 1px solid var(--dx-line-strong) !important;\n    box-shadow: var(--dx-shadow-2) !important;\n    backdrop-filter: blur(20px);\n    overflow: hidden;\n}\n\n/* Animate the menu's content, never the container: other plugins hide containers with inline opacity */\n#app [class*=\"menu-container\"][class*=\"menu-direction\"] > * {\n    animation: dx-pop 0.18s var(--dx-ease-out) both;\n}\n\n@keyframes dx-pop {\n    from { opacity: 0; transform: translateY(-4px) scale(0.98); }\n    to { opacity: 1; transform: none; }\n}\n\n#app [class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"],\n#app [class*=\"menu-container\"] [class*=\"option-container\"] {\n    border-radius: var(--dx-radius);\n    transition: background-color 0.15s;\n}\n\n#app [class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"]:hover,\n#app [class*=\"menu-container\"] [class*=\"option-container\"]:hover,\n#app [class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"]:focus-visible,\n#app [class*=\"menu-container\"] [class*=\"option-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.08) !important;\n}\n\n#app [class*=\"menu-container\"] [class*=\"option-container\"][class*=\"selected\"] {\n    background: rgba(255, 255, 255, 0.1) !important;\n}\n\n#app [class*=\"nav-menu-container\"] [class*=\"nav-menu-section\"] {\n    border-color: var(--dx-line) !important;\n}\n\n#app [class*=\"modal-container\"] {\n    background: rgba(0, 0, 0, 0.7);\n    backdrop-filter: blur(6px);\n    animation: dx-fade 0.2s both;\n}\n\n#app [class*=\"modal-dialog-container\"] {\n    border-radius: var(--dx-radius-l) !important;\n    background: var(--dx-surface) !important;\n    border: 1px solid var(--dx-line) !important;\n    box-shadow: var(--dx-shadow-2) !important;\n}\n\n/* The content sits inside the dialog: one card only, not a second inset one */\n#app [class*=\"modal-dialog-container\"] [class*=\"modal-dialog-content\"] {\n    border-radius: 0 !important;\n    background: transparent !important;\n    border: 0 !important;\n    box-shadow: none !important;\n}\n\n#app [class*=\"modal-dialog-container\"] {\n    animation: dx-pop 0.25s var(--dx-ease-out) both;\n}\n\n#app [class*=\"modal-dialog-container\"] [class*=\"action-button\"],\n#app [class*=\"modal-dialog-container\"] [class*=\"button-container\"][class*=\"action\"] {\n    border-radius: var(--dx-radius) !important;\n}\n\n#app [class*=\"toasts-container\"] [class*=\"toast-item-container\"] {\n    border-radius: var(--dx-radius) !important;\n    background: var(--dx-surface-2) !important;\n    /* (sides written out, not `border` and then one side: see \"A SIDE AFTER THE WHOLE\" below) */\n    border-style: solid !important;\n    border-width: 1px 1px 1px 3px !important;\n    border-color: var(--dx-line) var(--dx-line) var(--dx-line) var(--dx-accent) !important;\n    box-shadow: var(--dx-shadow-2) !important;\n    animation: dx-slide-in 0.35s var(--dx-ease-out) both;\n}\n\n#app [class*=\"toasts-container\"] [class*=\"toast-item-container\"][class*=\"success\"] {\n    border-left-color: #46d369 !important;\n}\n\n#app [class*=\"toasts-container\"] [class*=\"toast-item-container\"][class*=\"error\"] {\n    border-left-color: #ff5a5f !important;\n}\n\n#app [class*=\"tooltip-container\"] {\n    border-radius: var(--dx-radius-s) !important;\n    background: #fff !important;\n    color: #000 !important;\n    font-weight: 600;\n    font-size: 0.8rem;\n}\n\n/* =====================================================================\n   12. PLAYER — Netflix-style controls and panels\n   ===================================================================== */\n\n/* Top bar: just a large back arrow (title moves to the bottom when the plugin is on) */\n#app [class*=\"player-container\"] [class*=\"nav-bar-layer\"] {\n    background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, transparent 100%) !important;\n    height: 7rem;\n}\n\n#app [class*=\"player-container\"] [class*=\"player-nav\"] {\n    padding: 1.5rem var(--dx-gutter) 0 calc(var(--dx-gutter) - 0.75rem) !important;\n    align-items: center;\n}\n\n#app [class*=\"player-container\"] [class*=\"player-nav\"] [class*=\"player-button\"] {\n    width: 3.25rem;\n    height: 3.25rem;\n    border-radius: 50%;\n    background: transparent !important;\n    transition: transform 0.2s var(--dx-ease-out);\n}\n\n#app [class*=\"player-container\"] [class*=\"player-nav\"] [class*=\"player-button\"]:hover,\n#app [class*=\"player-container\"] [class*=\"player-nav\"] [class*=\"player-button\"]:focus-visible {\n    transform: scale(1.15);\n}\n\n/* Some Windows installs drew the back arrow unsized: a black chevron across the whole video that\n   sent every click back to the streams list. Keep top-bar icons small and click-through always. */\n#app [class*=\"player-container\"] [class*=\"nav-bar-layer\"] svg {\n    max-width: 3rem !important;\n    max-height: 3rem !important;\n    pointer-events: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"player-nav\"] [class*=\"player-button\"] svg {\n    width: 2.1rem;\n    height: 2.1rem;\n    color: #fff;\n}\n\n#app [class*=\"player-container\"] [class*=\"player-title\"] {\n    font-size: 1.15rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n}\n\nbody[data-dx-ptitle] #app [class*=\"player-container\"] [class*=\"player-title-container\"],\nbody[data-dx-ptitle] #app [class*=\"player-container\"] [class*=\"nav-bar-layer\"] > [class^=\"title-\"] {\n    visibility: hidden;\n}\n\n/* Bottom bar */\n#app [class*=\"player-container\"] [class*=\"control-bar-layer\"] {\n    padding: 5rem var(--dx-gutter) 1.4rem !important;\n    background: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.5) 45%, transparent 100%) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-layer\"] [class*=\"seek-bar-container\"] {\n    height: 2.25rem;\n    gap: 1rem;\n}\n\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"label\"] {\n    font-size: 0.95rem;\n    font-weight: 600;\n    font-variant-numeric: tabular-nums;\n    color: var(--dx-text);\n    opacity: 1;\n}\n\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] > [class*=\"button-container\"] {\n    background: transparent !important;\n    padding: 0 0.25rem;\n}\n\n#app [class*=\"slider-container\"] [class*=\"track\"] {\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.25) !important;\n}\n\n#app [class*=\"slider-container\"] [class*=\"track-before\"] {\n    background: rgba(255, 255, 255, 0.45) !important;\n}\n\n#app [class*=\"slider-container\"] [class*=\"track-after\"] {\n    background: var(--dx-accent) !important;\n}\n\n#app [class*=\"slider-container\"] [class*=\"thumb\"] {\n    background: var(--dx-accent) !important;\n    box-shadow: none !important;\n    transition: transform 0.15s var(--dx-ease-out);\n    transform-origin: center;\n}\n\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"slider-container\"] {\n    --track-size: calc(4px + 3px * var(--dx-seek-hot, 0));\n    --thumb-size: 16px;\n}\n\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"]:hover,\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"]:focus-visible {\n    --dx-seek-hot: 1;\n}\n\n/* Stremio centres the knob with translateX(-50%) — keep that, only add the scale */\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"thumb\"] {\n    transform: translateX(-50%) scale(calc(1.15 * var(--dx-seek-hot, 0)));\n}\n\nhtml[class*=\"active-slider-within\"] #app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"thumb\"] {\n    transform: translateX(-50%) scale(1.15);\n}\n\n/* Button row */\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] {\n    position: relative;\n    gap: 0.35rem;\n    margin-top: 0.35rem;\n    border-radius: 0 !important;\n    background: transparent !important;\n    transform: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > * {\n    order: 3;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"control-bar-button-\"]:first-child {\n    order: 0;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-seek-back {\n    order: 1;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-seek-fwd {\n    order: 2;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-container\"] {\n    gap: 0.35rem;\n    border-radius: 0 !important;\n    background: transparent !important;\n}\n\n/* Narrow windows: Stremio folds these buttons into a pop-up behind \"⋯\", which needs its panel */\n@media only screen and (max-width: 640px) {\n    #app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-container\"] {\n        background: rgb(22, 22, 27) !important;\n        border-radius: 12px !important;\n    }\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-button\"],\n#app [class*=\"player-container\"] .dxp-player-btn,\n.dx-seek {\n    width: 3.5rem !important;\n    height: 3.5rem !important;\n    border-radius: 50% !important;\n    background: transparent !important;\n    transform: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"] svg,\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-button\"] svg,\n#app [class*=\"player-container\"] .dxp-player-btn svg,\n.dx-seek svg {\n    width: 2.15rem !important;\n    height: 2.15rem !important;\n    color: #fff;\n    opacity: 1 !important;\n    transform: scale(var(--dx-btn-scale, 1));\n    transition: transform 0.18s var(--dx-ease-out);\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"]:hover:not(.disabled),\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-button\"]:hover,\n.dx-seek:hover,\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"]:focus-visible,\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-menu-button\"]:focus-visible,\n#app [class*=\"player-container\"] .dxp-player-btn:hover,\n#app [class*=\"player-container\"] .dxp-player-btn:focus-visible,\n.dx-seek:focus-visible {\n    --dx-btn-scale: 1.22;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"].disabled svg {\n    opacity: 0.3 !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"].active svg,\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"][class*=\"active\"] svg {\n    color: #fff;\n    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));\n}\n\n.dx-seek {\n    position: relative;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    color: #fff;\n    cursor: pointer;\n}\n\n/* Volume: slider slides out when you point at the speaker */\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"volume-slider\"] {\n    flex: 0 0 0 !important;\n    width: 0;\n    margin: 0 !important;\n    opacity: 0;\n    --track-size: 4px;\n    --thumb-size: 14px;\n    transition: flex-basis 0.3s var(--dx-ease-out), opacity 0.2s, margin 0.3s;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"]:hover + [class*=\"volume-slider\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"volume-slider\"]:hover,\nhtml[class*=\"active-slider-within\"] #app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"volume-slider\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-button-\"]:focus-visible + [class*=\"volume-slider\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"volume-slider\"]:focus-visible {\n    flex-basis: 8rem !important;\n    margin: 0 0.75rem 0 0.25rem !important;\n    opacity: 1;\n}\n\n/* Title in the bar (plugin): in the free space between the left and right buttons. It shortens\n   with \"…\" as the space shrinks (episode name first) and steps aside when there's no room left. */\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"spacing\"] {\n    min-width: 0;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    overflow: hidden;\n    container-type: inline-size;\n}\n\n.dx-player-title {\n    display: flex;\n    align-items: baseline;\n    justify-content: center;\n    gap: 0.6rem;\n    min-width: 0;\n    max-width: 100%;\n    padding: 0 1rem;\n    box-sizing: border-box;\n    white-space: nowrap;\n    pointer-events: none;\n}\n\n.dx-player-title b {\n    flex: 0 1 auto;\n    min-width: 0;\n    font-size: 1.2rem;\n    font-weight: 700;\n    color: #fff;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n.dx-player-title span {\n    flex: 0 1000 auto;\n    min-width: 0;\n    font-size: 1.05rem;\n    font-weight: 500;\n    color: var(--dx-text-2);\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n@container (max-width: 180px) {\n    .dx-player-title {\n        display: none;\n    }\n}\n\n/* Play / pause / seek feedback in the centre */\n.dx-player-flash {\n    position: absolute;\n    z-index: 5;\n    left: 50%;\n    top: 50%;\n    width: 6rem;\n    height: 6rem;\n    margin: -3rem 0 0 -3rem;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: 50%;\n    background: rgba(0, 0, 0, 0.45);\n    color: #fff;\n    pointer-events: none;\n    opacity: 0;\n}\n\n.dx-player-flash svg {\n    width: 2.8rem;\n    height: 2.8rem;\n}\n\n.dx-player-flash b {\n    position: absolute;\n    bottom: -2rem;\n    font-size: 1rem;\n    font-weight: 700;\n    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);\n}\n\n.dx-player-flash.is-on {\n    animation: dx-flash 0.65s var(--dx-ease-out) both;\n}\n\n@keyframes dx-flash {\n    0% { opacity: 0; transform: scale(0.6); }\n    25% { opacity: 1; transform: scale(1); }\n    100% { opacity: 0; transform: scale(1.35); }\n}\n\n/* ---------- Panels (subtitles, audio, speed, info, more) ---------- */\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] {\n    bottom: 7.5rem !important;\n    right: var(--dx-gutter) !important;\n    border-radius: 6px !important;\n    background: rgba(38, 38, 38, 0.97) !important;\n    border: 0 !important;\n    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;\n    backdrop-filter: none !important;\n    overflow: hidden;\n    /* Must stay a transition: Stremio unmounts menus on transitionend */\n    transition: opacity 0.18s ease, transform 0.24s var(--dx-ease-out) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"].fade-enter {\n    transform: translateY(10px);\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"].fade-enter.fade-active {\n    transform: none;\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"].fade-exit.fade-active {\n    transform: translateY(6px);\n}\n\n@keyframes dx-panel {\n    from { opacity: 0; transform: translateY(8px); }\n    to { opacity: 1; transform: none; }\n}\n\n/* Headings */\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"languages-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"variants-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"settings-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] > [class^=\"title-\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"speed-title\"] {\n    padding: 1.35rem 1.5rem 0.75rem !important;\n    font-size: 1.3rem !important;\n    font-weight: 700 !important;\n    color: #fff !important;\n    opacity: 1 !important;\n    text-align: left !important;\n}\n\n/* Subtitles: three columns separated by hairlines */\n#app [class*=\"subtitles-menu-container\"] {\n    min-width: 0;\n}\n\n#app [class*=\"subtitles-menu-container\"] [class*=\"languages-container\"] {\n    width: 15rem;\n}\n\n#app [class*=\"subtitles-menu-container\"] [class*=\"variants-container\"] {\n    width: 17rem;\n}\n\n#app [class*=\"subtitles-menu-container\"] [class*=\"subtitles-settings-container\"] {\n    width: 15rem;\n    padding: 0 !important;\n}\n\n/* Short, Netflix-style column titles */\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"languages-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"variants-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"settings-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"audio-menu-container\"] [class*=\"languages-header\"] {\n    font-size: 0 !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"languages-header\"]::after,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"variants-header\"]::after,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"settings-header\"]::after,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"audio-menu-container\"] [class*=\"languages-header\"]::after {\n    font-size: 1.3rem;\n    font-weight: 700;\n}\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"languages-header\"]::after { content: \"Subtitles\"; }\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"variants-header\"]::after { content: \"Source\"; }\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"subtitles-menu-container\"] [class*=\"settings-header\"]::after { content: \"Adjust\"; }\n#app [class*=\"player-container\"] [class*=\"menu-layer\"][class*=\"audio-menu-container\"] [class*=\"languages-header\"]::after { content: \"Audio\"; }\n\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"languages-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"variants-header\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"settings-header\"] {\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] {\n    width: 100%;\n    padding: 0 !important;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] [class*=\"content\"] {\n    width: 100%;\n    justify-content: space-between;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] [class*=\"value\"] {\n    white-space: nowrap;\n}\n\n#app [class*=\"subtitles-menu-container\"] > * {\n    border-right: 1px solid rgba(255, 255, 255, 0.08);\n}\n\n#app [class*=\"subtitles-menu-container\"] > *:last-child {\n    border-right: 0;\n}\n\n/* Option rows with a tick on the selected one */\n#app [class*=\"player-container\"] [class*=\"language-option\"],\n#app [class*=\"player-container\"] [class*=\"variant-option\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"] {\n    position: relative;\n    min-height: 3rem;\n    margin: 0 !important;\n    padding: 0.55rem 1.5rem 0.55rem 3rem !important;\n    border-radius: 0 !important;\n    background: transparent !important;\n    box-shadow: none !important;\n    transition: background-color 0.15s;\n}\n\n#app [class*=\"player-container\"] [class*=\"language-option\"]:hover,\n#app [class*=\"player-container\"] [class*=\"variant-option\"]:hover,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"]:hover,\n#app [class*=\"player-container\"] [class*=\"language-option\"]:focus-visible,\n#app [class*=\"player-container\"] [class*=\"variant-option\"]:focus-visible,\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.06) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"language-label\"],\n#app [class*=\"player-container\"] [class*=\"variant-label\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"] [class*=\"label\"] {\n    font-size: 1.08rem !important;\n    font-weight: 500 !important;\n    color: var(--dx-text-2) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"variant-origin\"] {\n    font-size: 0.82rem;\n    color: var(--dx-text-3) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"language-option\"].selected [class*=\"language-label\"],\n#app [class*=\"player-container\"] [class*=\"variant-option\"].selected [class*=\"variant-label\"],\n#app [class*=\"player-container\"] [class*=\"menu-layer\"] [class*=\"option-container\"].selected [class*=\"label\"] {\n    color: #fff !important;\n    font-weight: 700 !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"language-option\"].selected::before,\n#app [class*=\"player-container\"] [class*=\"variant-option\"].selected::before {\n    content: \"\";\n    position: absolute;\n    left: 1.2rem;\n    top: 50%;\n    width: 1.1rem;\n    height: 1.1rem;\n    margin-top: -0.55rem;\n    background: #fff;\n    -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12.5l5 5L20 6.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\") center / contain no-repeat;\n    mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 12.5l5 5L20 6.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\") center / contain no-repeat;\n}\n\n/* Stock \"selected\" dot is replaced by the tick */\n#app [class*=\"player-container\"] [class*=\"language-option\"] > [class*=\"icon\"],\n#app [class*=\"player-container\"] [class*=\"variant-option\"] > [class*=\"icon\"] {\n    display: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"languages-list\"],\n#app [class*=\"player-container\"] [class*=\"variants-list\"] {\n    padding-bottom: 0.75rem;\n}\n\n/* Delay / size / position steppers */\n#app [class*=\"subtitles-settings-container\"] [class*=\"settings-list\"] {\n    padding: 0 1.5rem 1.25rem;\n    gap: 0.9rem;\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"header\"] {\n    font-size: 0.85rem;\n    font-weight: 600;\n    color: var(--dx-text-3);\n    text-transform: uppercase;\n    letter-spacing: 0.08em;\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"content\"] {\n    height: 2.75rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"button\"] {\n    width: 2.75rem;\n    height: 2.75rem;\n    border-radius: var(--dx-radius);\n    background: transparent !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"button\"]:hover,\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"button\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.1) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"stepper\"] [class*=\"value\"] {\n    font-size: 1rem;\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n}\n\n/* Playback speed: one line, dots, current speed highlighted */\n#app [class*=\"speed-menu-container\"] {\n    width: 36rem;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"top-container\"] {\n    display: none !important;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"options-container\"] {\n    position: relative;\n    display: flex !important;\n    justify-content: space-between;\n    padding: 1.25rem 1.5rem 1.6rem !important;\n    gap: 0 !important;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"options-container\"]::before {\n    content: \"\";\n    position: absolute;\n    left: 2.75rem;\n    right: 2.75rem;\n    top: 2.05rem;\n    height: 2px;\n    background: rgba(255, 255, 255, 0.3);\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"] {\n    position: relative;\n    flex: 1 1 0;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 0.9rem;\n    height: auto !important;\n    padding: 0 !important;\n    background: transparent !important;\n    border-radius: 0 !important;\n    font-size: 1rem;\n    font-weight: 500;\n    color: var(--dx-text-2);\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"]::before {\n    content: \"\";\n    order: -1;\n    width: 0.9rem;\n    height: 0.9rem;\n    margin: 0.35rem 0;\n    border-radius: 50%;\n    background: rgba(255, 255, 255, 0.55);\n    transition: transform 0.2s var(--dx-ease-out), background-color 0.2s;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"]:hover::before,\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"]:focus-visible::before {\n    transform: scale(1.3);\n    background: #fff;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"][class*=\"active\"] {\n    color: #fff;\n    font-weight: 700;\n}\n\n#app [class*=\"speed-menu-container\"] [class*=\"speed-button\"][class*=\"active\"]::before {\n    transform: scale(1.75);\n    background: #fff;\n    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);\n}\n\n/* Stream info */\n#app [class*=\"statistics-menu-container\"] {\n    min-width: 24rem;\n    padding-bottom: 1rem;\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"stats\"] {\n    padding: 0 1.5rem;\n    gap: 1.5rem;\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"stat-\"] [class*=\"label\"],\n#app [class*=\"statistics-menu-container\"] [class*=\"detail\"] [class*=\"label\"] {\n    font-size: 0.78rem;\n    font-weight: 700;\n    letter-spacing: 0.08em;\n    text-transform: uppercase;\n    color: var(--dx-text-3);\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"value\"] {\n    font-size: 1.15rem;\n    font-weight: 700;\n    color: #fff;\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"detail\"] {\n    padding: 1rem 1.5rem 0;\n}\n\n#app [class*=\"statistics-menu-container\"] [class*=\"copyable-value\"] {\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07) !important;\n}\n\n/* \"More\" options */\n#app [class*=\"options-menu-container\"] {\n    min-width: 17rem;\n    padding: 0.5rem 0;\n}\n\n#app [class*=\"options-menu-container\"] [class*=\"option-container\"] {\n    padding-left: 1.25rem !important;\n    gap: 0.9rem;\n}\n\n#app [class*=\"options-menu-container\"] [class*=\"option-container\"] svg {\n    width: 1.3rem;\n    height: 1.3rem;\n    color: var(--dx-text-2);\n}\n\n/* Episodes side drawer + its handle */\n#app [class*=\"player-container\"] [class*=\"side-drawer-button-layer\"] {\n    width: 2.5rem !important;\n    height: 6rem !important;\n    padding: 0 !important;\n    border-radius: 6px 0 0 6px !important;\n    background: rgba(38, 38, 38, 0.85) !important;\n    border: 0 !important;\n    box-shadow: none !important;\n    backdrop-filter: none !important;\n    transition: background-color 0.2s, width 0.2s;\n}\n\n#app [class*=\"player-container\"] [class*=\"side-drawer-button-layer\"]:hover,\n#app [class*=\"player-container\"] [class*=\"side-drawer-button-layer\"]:focus-visible {\n    width: 3rem !important;\n    background: rgba(60, 60, 60, 0.95) !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"side-drawer-layer\"] {\n    background: rgba(24, 24, 24, 0.97) !important;\n    border-left: 1px solid rgba(255, 255, 255, 0.06) !important;\n    border-radius: 0 !important;\n    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.5) !important;\n    backdrop-filter: none !important;\n}\n\n/* Buffering: a spinner instead of Stremio's title logo (the layer only exists while buffering) */\n#app [class*=\"player-container\"] [class*=\"buffering-layer\"] img,\n#app [class*=\"player-container\"] [class*=\"buffering-layer\"] [class*=\"image\"] {\n    display: none !important;\n}\n\n#app [class*=\"player-container\"] [class*=\"buffering-layer\"] {\n    display: flex !important;\n    align-items: center;\n    justify-content: center;\n    pointer-events: none;\n}\n\n#app [class*=\"player-container\"] [class*=\"buffering-layer\"]::before {\n    content: \"\";\n    width: 4.2rem;\n    height: 4.2rem;\n    border-radius: 50%;\n    border: 3px solid rgba(255, 255, 255, 0.14);\n    border-top-color: var(--dx-accent);\n    filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.6));\n    animation: dx-spin 0.85s linear infinite;\n}\n\n@keyframes dx-spin {\n    to { transform: rotate(360deg); }\n}\n\n/* Up next */\n#app [class*=\"next-video-popup-container\"] {\n    right: var(--dx-gutter) !important;\n    bottom: 8rem !important;\n    border-radius: 6px !important;\n    background: rgba(38, 38, 38, 0.97) !important;\n    border: 0;\n    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);\n    overflow: hidden;\n    animation: dx-panel 0.3s var(--dx-ease-out) both;\n}\n\n#app [class*=\"next-video-popup-container\"] [class*=\"play-button\"] {\n    background: #fff !important;\n    border-radius: var(--dx-radius) !important;\n}\n\n#app [class*=\"next-video-popup-container\"] [class*=\"play-button\"] * {\n    color: #000 !important;\n}\n\n/* =====================================================================\n   13. STREMIO ENHANCED'S OWN UI (themes/plugins list, alerts)\n   ===================================================================== */\n\n#enhanced [class*=\"option-\"] {\n    border-radius: var(--dx-radius);\n}\n\n#enhanced .install-button-container-yfcq5,\n#enhanced .uninstall-button-container-oV4Yo,\n#enhanced [id$=\".theme.css\"],\n#enhanced [id=\"Default\"] {\n    border-radius: var(--dx-radius) !important;\n}\n\n.toast-container,\n#enhanced-alert-container,\n[class*=\"enhanced-alert\"] {\n    border-radius: var(--dx-radius-l) !important;\n}\n\n/* =====================================================================\n   14. ACCESSIBILITY\n   ===================================================================== */\n\n/* Keyboard focus looks the same as pointing with the mouse (every hover style above also answers\n   to :focus-visible), never a square outline drawn around things */\n:focus-visible {\n    outline: none !important;\n}\n\n@media (prefers-reduced-motion: reduce) {\n    *,\n    *::before,\n    *::after {\n        animation-duration: 0.01ms !important;\n        animation-iteration-count: 1 !important;\n        transition-duration: 0.01ms !important;\n    }\n}\n\n/* =====================================================================\n   15. REFINEMENTS\n   ===================================================================== */\n\n/* Stock hover tooltips sit in the middle of posters — the preview card replaces them.\n   The plugin flags the tooltip box itself while a poster is pointed at: a body:has(...:hover) rule\n   (or any class on <html>/<body>) made the browser restyle the whole page on every hover. */\n.tooltips-items-container[data-dx-hide] {\n    display: none !important;\n}\n\n\n/* Wide card when no backdrop exists: blurred poster + sharp poster */\n.dx-wide-art.is-fallback {\n    background: var(--dx-surface-2) !important;\n}\n\n.dx-wide-blur {\n    position: absolute;\n    inset: -20px;\n    background-size: cover;\n    background-position: center;\n    filter: blur(22px) brightness(0.55) saturate(1.2);\n}\n\n.dx-wide-thumb {\n    position: absolute;\n    top: 0;\n    right: 0;\n    height: 100%;\n    aspect-ratio: 2 / 3;\n    object-fit: cover;\n    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 35%);\n    mask-image: linear-gradient(90deg, transparent 0%, #000 35%);\n}\n\n.dx-wide-art.is-fallback .dx-wide-name {\n    right: 40%;\n    white-space: normal;\n    display: -webkit-box;\n    -webkit-line-clamp: 2;\n    -webkit-box-orient: vertical;\n}\n\n/* Addons: actions readable; disabled stays dim */\n#app [class*=\"addon-container\"] [class*=\"uninstall-button-container\"] {\n    opacity: 1 !important;\n}\n\n#app [class*=\"addon-container\"] [class*=\"uninstall-button-container\"].disabled {\n    opacity: 0.35 !important;\n}\n\n#app [class*=\"addon-container\"] [class*=\"configure-button-container\"] {\n    background: var(--dx-surface-2) !important;\n    border: 1px solid var(--dx-line) !important;\n}\n\n#app [class*=\"addon-container\"] [class*=\"configure-button-container\"]:hover,\n#app [class*=\"addon-container\"] [class*=\"configure-button-container\"]:focus-visible {\n    background: var(--dx-surface-3) !important;\n}\n\n#app [class*=\"addon-container\"] [class*=\"configure-button-container\"] * {\n    color: var(--dx-text) !important;\n}\n\n/* Settings: links in white, not accent */\n#app [class*=\"settings-content\"] [class*=\"link-\"],\n#app [class*=\"settings-content\"] a {\n    color: var(--dx-text-2) !important;\n    transition: color 0.2s;\n}\n\n#app [class*=\"settings-content\"] [class*=\"link-\"]:hover,\n#app [class*=\"settings-content\"] a:hover,\n#app [class*=\"settings-content\"] [class*=\"link-\"]:focus-visible,\n#app [class*=\"settings-content\"] a:focus-visible {\n    color: #fff !important;\n    text-decoration: underline;\n    text-underline-offset: 3px;\n}\n\n#app [class*=\"settings-content\"] [class*=\"user-info-content\"] [class*=\"avatar\"] {\n    border: 0 !important;\n    box-shadow: 0 0 0 1px var(--dx-line-strong);\n}\n\n/* =====================================================================\n   16. COMMUNITY PLUGINS (Addon Manager, TheIntroDB, Enhanced Player)\n   ===================================================================== */\n\nhtml:root {\n    --am-accent: var(--dx-accent);\n    --am-bg: var(--dx-bg-raised);\n    --am-border-radius: var(--dx-radius-l);\n}\n\nbody .am-header-btn {\n    height: 2.5rem;\n    border-radius: var(--dx-radius);\n    border: 1px solid var(--dx-line-strong);\n    background: var(--dx-surface);\n    color: var(--dx-text);\n    font-size: 0.9rem;\n}\n\nbody .am-header-btn:hover,\nbody .am-header-btn:focus-visible {\n    background: var(--dx-surface-2);\n    transform: none;\n}\n\nbody .am-header-btn.active {\n    background: var(--dx-accent);\n    border-color: var(--dx-accent);\n    color: #fff;\n}\n\nbody .am-modal {\n    background: var(--dx-surface);\n    border: 1px solid var(--dx-line);\n    border-radius: var(--dx-radius-l);\n}\n\n/* Skip intro / recap button from TheIntroDB */\nbody #tidb-active-btn,\nbody #skiprange-active-btn,\nbody #skiprange-upgrade-btn {\n    padding: 0.85rem 1.5rem 0.85rem 1.25rem !important;\n    border-radius: var(--dx-radius) !important;\n    border: 1.5px solid rgba(255, 255, 255, 0.75) !important;\n    background: rgba(18, 18, 22, 0.72) !important;\n    backdrop-filter: blur(10px) !important;\n    font-family: \"Inter\", sans-serif !important;\n    font-size: 1rem !important;\n    font-weight: 700 !important;\n    letter-spacing: 0.01em;\n    box-shadow: var(--dx-shadow-2);\n}\n\nbody #tidb-active-btn:hover,\nbody #skiprange-active-btn:hover,\nbody #skiprange-upgrade-btn:hover,\nbody #tidb-active-btn:focus-visible,\nbody #skiprange-active-btn:focus-visible,\nbody #skiprange-upgrade-btn:focus-visible {\n    background: #fff !important;\n    color: #000 !important;\n    border-color: #fff !important;\n}\n\n\n/* Enhanced Player title above the seek bar */\n#app .custom-series-name {\n    font-size: 0.8rem;\n    font-weight: 700;\n    letter-spacing: 0.08em;\n    text-transform: uppercase;\n    color: var(--dx-text-2);\n}\n\n#app .custom-episode-title {\n    font-size: 1.05rem;\n    font-weight: 700;\n    color: #fff;\n}\n\n/* Plugin settings dialogs: label above its description, not squeezed beside it */\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"heading-\"] {\n    display: flex !important;\n    flex-direction: column !important;\n    align-items: flex-start !important;\n    justify-content: center;\n    gap: 0.2rem;\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"heading-\"] > [class*=\"label-\"] {\n    font-weight: 600;\n    color: var(--dx-text);\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"heading-\"] > div:not([class]) {\n    color: var(--dx-text-3) !important;\n    margin-top: 0 !important;\n}\n\n[class*=\"modal-dialog-container\"] select {\n    border-radius: var(--dx-radius) !important;\n    background-color: var(--dx-surface-2) !important;\n    border: 1px solid var(--dx-line) !important;\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"buttons-container\"] [class*=\"action-button\"] {\n    border-radius: var(--dx-radius) !important;\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"heading-\"] {\n    flex: 1 1 auto !important;\n    max-width: none !important;\n    width: auto !important;\n}\n\n[class*=\"modal-dialog-container\"] [class*=\"option-\"] > [class*=\"content-\"]:has([class*=\"toggle-container\"]) {\n    flex: 0 0 auto !important;\n    width: auto !important;\n    max-width: none !important;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] + [class*=\"stepper\"] {\n    margin-top: 1rem !important;\n}\n\n#app [class*=\"subtitles-settings-container\"] [class*=\"stepper\"] [class*=\"header\"] {\n    margin-bottom: 0.45rem !important;\n}\n\n::-webkit-scrollbar-button {\n    display: none;\n    width: 0;\n    height: 0;\n}\n\n/* =====================================================================\n   17. CONTEXT MENU FIX compatibility\n   That plugin clones the account button (and other menus) into\n   .context-menu-portal outside #app, so give the clones the same look.\n   ===================================================================== */\n\n.context-menu-portal [class*=\"menu-button-container\"] {\n    display: flex !important;\n    align-items: center;\n    gap: 0.4rem;\n    height: 2.5rem !important;\n    padding: 0 0.4rem !important;\n    border-radius: var(--dx-radius) !important;\n    background: rgba(255, 255, 255, 0.08) !important;\n    overflow: visible !important;\n}\n\n.context-menu-portal [class*=\"menu-button-container\"] > [class*=\"avatar\"] {\n    flex: none;\n    width: 2rem !important;\n    height: 2rem !important;\n    border: 0 !important;\n    border-radius: var(--dx-radius-s) !important;\n    overflow: hidden;\n}\n\n.context-menu-portal [class*=\"menu-button-container\"] > [class*=\"avatar\"] img {\n    width: 100% !important;\n    height: 100% !important;\n    object-fit: cover;\n}\n\n.context-menu-portal [class*=\"menu-button-container\"] > svg {\n    flex: none;\n    width: 1.1rem !important;\n    height: 1.1rem !important;\n    color: var(--dx-text);\n}\n\n.context-menu-portal [class*=\"menu-container\"][class*=\"menu-direction\"],\n.context-menu-portal [class*=\"nav-menu-container\"] {\n    border-radius: var(--dx-radius-l) !important;\n    background: rgba(22, 22, 27, 0.97) !important;\n    border: 1px solid var(--dx-line-strong) !important;\n    box-shadow: var(--dx-shadow-2) !important;\n    overflow: hidden;\n}\n\n.context-menu-portal [class*=\"menu-container\"][class*=\"menu-direction\"] [class*=\"nav-menu-container\"] {\n    border: 0 !important;\n    box-shadow: none !important;\n}\n\n/* Account menu (both in-app and cloned) */\n[class*=\"nav-menu-container\"] [class*=\"user-info-container\"] [class*=\"avatar\"],\n[class*=\"nav-menu-container\"] [class*=\"avatar\"] {\n    border: 0 !important;\n    border-radius: var(--dx-radius) !important;\n    box-shadow: 0 0 0 1px var(--dx-line-strong);\n}\n\n[class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"] {\n    border-radius: var(--dx-radius);\n    transition: background-color 0.15s;\n}\n\n[class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"]:hover,\n[class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"]:focus-visible {\n    background: rgba(255, 255, 255, 0.08) !important;\n}\n\n[class*=\"nav-menu-container\"] [class*=\"nav-menu-option-container\"] svg {\n    color: var(--dx-text-2);\n}\n\n\n/* =====================================================================\n   18. ENHANCED VIDEO PLAYER compatibility (subtitle style panel + title)\n   ===================================================================== */\n\n/* dx.bi shows the title in the control bar; hide the duplicate */\nbody[data-dx-ptitle] #app .custom-series-name,\nbody[data-dx-ptitle] #app .custom-episode-title {\n    display: none !important;\n}\n\n#app [class*=\"subtitles-menu-container\"] .enhanced-subtitle-customize-section {\n    width: 22rem;\n    max-height: 100%;\n    padding: 0 1.5rem 1.25rem;\n    overflow-y: auto;\n    border-left: 1px solid rgba(255, 255, 255, 0.08);\n    font-size: 0.9rem;\n    color: var(--dx-text-2);\n}\n\n#app .enhanced-subtitle-customize-header {\n    display: flex;\n    align-items: center;\n    padding: 1.35rem 0 0.75rem;\n    font-size: 0 !important;\n}\n\n#app .enhanced-subtitle-customize-header > * {\n    display: none !important;\n}\n\n#app .enhanced-subtitle-customize-header::after {\n    content: \"Style\";\n    font-size: 1.3rem;\n    font-weight: 700;\n    color: #fff;\n}\n\n#app .enhanced-subtitle-presets-bar {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 0.4rem;\n    margin-bottom: 1rem;\n}\n\n#app .enhanced-subtitle-preset-btn {\n    height: 2rem;\n    padding: 0 0.85rem;\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid transparent;\n    font-size: 0.82rem;\n    font-weight: 600;\n    color: var(--dx-text-2);\n    cursor: pointer;\n    transition: background-color 0.15s, color 0.15s;\n}\n\n#app .enhanced-subtitle-preset-btn:hover,\n#app .enhanced-subtitle-preset-btn:focus-visible {\n    background: rgba(255, 255, 255, 0.12);\n    color: #fff;\n}\n\n#app .enhanced-subtitle-preset-btn.selected {\n    background: #fff;\n    color: #000;\n}\n\n#app .enhanced-subtitle-preview-section {\n    margin-bottom: 1rem;\n}\n\n#app .enhanced-subtitle-preview-label,\n#app .enhanced-stepper-header,\n#app .enhanced-select-header,\n#app .enhanced-color-header,\n#app .enhanced-text-header {\n    margin-bottom: 0.4rem;\n    font-size: 0.72rem;\n    font-weight: 700;\n    letter-spacing: 0.08em;\n    text-transform: uppercase;\n    color: var(--dx-text-3);\n}\n\n#app .enhanced-subtitle-preview-box {\n    display: flex;\n    align-items: flex-end;\n    justify-content: center;\n    height: 5.5rem;\n    padding: 0.75rem;\n    border-radius: var(--dx-radius);\n    background:\n        linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35)),\n        url(\"https://images.metahub.space/background/medium/tt1375666/img\") center / cover,\n        #333;\n    overflow: hidden;\n}\n\n#app .enhanced-subtitle-preview-text {\n    max-width: 100%;\n    text-align: center;\n    white-space: normal;\n}\n\n#app .enhanced-settings-grid {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 0.85rem 0.75rem;\n}\n\n#app .enhanced-stepper-content {\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    height: 2.5rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app .enhanced-stepper-button {\n    width: 2.5rem;\n    height: 2.5rem;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    border-radius: var(--dx-radius);\n    background: transparent;\n    color: #fff;\n    cursor: pointer;\n}\n\n#app .enhanced-stepper-button:hover,\n#app .enhanced-stepper-button:focus-visible {\n    background: rgba(255, 255, 255, 0.1);\n}\n\n#app .enhanced-stepper-button svg {\n    width: 0.9rem;\n    height: 0.9rem;\n}\n\n#app .enhanced-stepper-value {\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n    color: #fff;\n}\n\n#app .enhanced-select,\n#app .enhanced-text-input {\n    width: 100%;\n    height: 2.5rem;\n    padding: 0 0.75rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid transparent;\n    color: #fff;\n    font-size: 0.85rem;\n    appearance: auto;\n}\n\n#app .enhanced-select:focus,\n#app .enhanced-text-input:focus {\n    border-color: rgba(255, 255, 255, 0.5);\n}\n\n#app .enhanced-select option {\n    background: #262626;\n    color: #fff;\n}\n\n#app .enhanced-color-content {\n    display: flex;\n    align-items: center;\n    gap: 0.6rem;\n    height: 2.5rem;\n    padding: 0 0.5rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.07);\n}\n\n#app .enhanced-color-input {\n    width: 1.6rem;\n    height: 1.6rem;\n    padding: 0;\n    border: 0;\n    border-radius: 50%;\n    overflow: hidden;\n    cursor: pointer;\n    appearance: none;\n}\n\n#app .enhanced-color-input::-webkit-color-swatch-wrapper {\n    padding: 0;\n}\n\n#app .enhanced-color-input::-webkit-color-swatch {\n    border: 2px solid rgba(255, 255, 255, 0.5);\n    border-radius: 50%;\n}\n\n#app .enhanced-color-value {\n    font-size: 0.8rem;\n    font-variant-numeric: tabular-nums;\n    color: var(--dx-text-2);\n}\n\n/* =====================================================================\n   19. STREAM PLUGINS compatibility (Stream Keyword Filter, Stream Finder,\n   FilterStreams, Stream Quality Picker…). Anything a plugin inserts next to\n   the streams/episodes panel is stacked on top of it as one column.\n   ===================================================================== */\n\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) {\n    display: grid !important;\n    grid-template-columns: minmax(0, 1fr) clamp(28rem, 31vw, 42rem);\n    grid-template-rows: auto auto auto minmax(0, 1fr);\n    column-gap: 1.5rem;\n    padding-right: var(--dx-gutter) !important;\n}\n\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) > [class*=\"meta-preview\"] {\n    grid-column: 1;\n    grid-row: 1 / -1;\n    min-height: 0;\n}\n\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) > [class*=\"spacing\"] {\n    display: none !important;\n}\n\n#app [class*=\"metadetails-content\"] > :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"]) {\n    grid-column: 2;\n    width: auto !important;\n    max-width: none !important;\n    margin: 0 !important;\n    padding: 0.85rem 1rem !important;\n    background: rgba(19, 19, 23, 0.86) !important;\n    /* A SIDE AFTER THE WHOLE: `border: 1px solid var(…)` followed by `border-bottom: 0` is a rule\n       the browser can't write out again (the three sides left come out empty), and dx.bi TV keeps\n       the styles as the browser writes them out: the panel lost its border there. */\n    border-style: solid;\n    border-width: 1px 1px 0;\n    border-color: var(--dx-line);\n    backdrop-filter: blur(24px) saturate(140%);\n    z-index: 2;\n}\n\n#app [class*=\"metadetails-content\"] > :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"]):first-of-type,\n#app [class*=\"metadetails-content\"] > [class*=\"spacing\"] + :not([class*=\"streams-list\"]):not([class*=\"videos-list\"]) {\n    margin-top: 0.75rem !important;\n    border-radius: var(--dx-radius-l) var(--dx-radius-l) 0 0;\n}\n\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) > [class*=\"streams-list\"],\n#app [class*=\"metadetails-content\"]:has(> :not([class*=\"meta-preview\"]):not([class*=\"spacing\"]):not([class*=\"streams-list\"]):not([class*=\"videos-list\"])) > [class*=\"videos-list\"] {\n    grid-column: 2;\n    grid-row: 4;\n    width: auto !important;\n    flex: none !important;\n    min-height: 0;\n    margin: 0 0 1.5rem 0 !important;\n    border-top-left-radius: 0 !important;\n    border-top-right-radius: 0 !important;\n    animation: none;\n}\n\n/* Chips / inputs that stream plugins add: match dx.bi */\n#app [class*=\"metadetails-content\"] [class*=\"chip\"]:not([class*=\"chips\"]) {\n    border-radius: 999px;\n}\n\n/* AniSkip shows its buttons inside Stremio's \"up next\" popup */\n#app [id^=\"skip-\"][id$=\"-button\"] {\n    border-radius: var(--dx-radius) !important;\n    background: #fff !important;\n}\n\n#app [id^=\"skip-\"][id$=\"-button\"] * {\n    color: #000 !important;\n}\n\n/* =====================================================================\n   19b. CLEAN STREAM LIST (plugin): one Netflix-style row per stream\n   ===================================================================== */\n\n#app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [data-dxv] {\n    position: relative;\n    margin: 0;\n    padding: 0.9rem 1.1rem !important;\n    display: flex !important;\n    align-items: center;\n    flex: none !important;\n    height: auto !important;\n    min-height: 5.5rem;\n    border-radius: 0;\n    border-bottom: 1px solid var(--dx-line);\n    --dxv-tile: rgba(255, 255, 255, 0.09);\n}\n\n#app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [data-dxv]:hover,\n#app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [data-dxv]:focus-visible {\n    background: rgba(255, 255, 255, 0.08);\n    transform: none;\n    --dxv-tile: var(--dx-accent);\n}\n\n/* Not drawn until dx.bi's row is ready, and loading rows match the finished ones */\nhtml[data-dx-rows] [class*=\"streams-container\"] > [class*=\"stream-container\"]:not([data-dxv]) {\n    visibility: hidden;\n}\n\nhtml[data-dx-rows] [class*=\"streams-list-container\"] [class*=\"stream-placeholder-container\"] {\n    min-height: 5.5rem;\n    margin: 0;\n    border-radius: 0;\n    border-bottom: 1px solid var(--dx-line);\n    background: none;\n}\n\nhtml[data-dx-rows] [class*=\"streams-list-container\"] [class*=\"stream-placeholder-container\"] > * {\n    visibility: hidden;\n}\n\n/* A title can have 500 streams but only a handful are on screen: off-screen rows skip style and\n   layout until they scroll into view (this cut the title page's longest freeze by most of a second).\n   A hovered or focused row renders fully, so its menu is never clipped. */\n[data-dxv] {\n    content-visibility: auto;\n    contain-intrinsic-size: auto 96px;\n}\n\n/* Not on a TV. Its browser is Android's, where a button taking the selection has the browser ask\n   every element of the page whether it can take focus (for the keyboard's Next and Previous keys),\n   and each skipped row it asks about is laid out there and then, one row at a time: 337 layouts,\n   three and a half seconds on a SHIELD, every time the remote went from the streams to the bar above\n   them. A TV's rows are drawn a few to a frame by the plugin instead (streamRows). */\n.dx-tv [data-dxv] {\n    content-visibility: visible;\n    contain-intrinsic-size: none;\n}\n\n[data-dxv]:hover,\n[data-dxv]:focus-within {\n    content-visibility: visible;\n}\n\n[data-dxv] > :not(.dxv-row):not([class*=\"menu-container\"]):not(.dxd-stream) {\n    position: absolute !important;\n    width: 1px !important;\n    height: 1px !important;\n    overflow: hidden !important;\n    opacity: 0 !important;\n    pointer-events: none !important;\n}\n\n.dxv-row {\n    display: flex;\n    align-items: center;\n    gap: 1rem;\n    width: 100%;\n    min-width: 0;\n    pointer-events: none;\n}\n\n.dxv-q {\n    flex: none;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    gap: 0.2rem;\n    width: 6.25rem;\n    height: 3.55rem;\n    border-radius: var(--dx-radius-s);\n    background: var(--dxv-tile);\n    transition: background-color 0.18s;\n}\n\n.dxv-q b {\n    font: 800 1.15rem/1 Inter, system-ui, sans-serif !important;\n    color: #fff;\n}\n\n.dxv-q i {\n    font: 600 0.66rem/1 Inter, system-ui, sans-serif !important;\n    color: rgba(255, 255, 255, 0.82);\n    white-space: nowrap;\n}\n\n.dxv-main {\n    flex: 1 1 0;\n    display: flex;\n    flex-direction: column;\n    gap: 0.22rem;\n    min-width: 0;\n}\n\n.dxv-main strong {\n    font: 700 1rem/1.25 Inter, system-ui, sans-serif !important;\n    color: var(--dx-text);\n}\n\n.dxv-top {\n    display: flex;\n    align-items: baseline;\n    justify-content: space-between;\n    gap: 0.75rem;\n    min-width: 0;\n}\n\n/* Seeds, provider and size are never cut off: they wrap instead */\n.dxv-main small {\n    font: 500 0.82rem/1.3 Inter, system-ui, sans-serif !important;\n    color: var(--dx-text-2);\n    overflow-wrap: anywhere;\n}\n\n/* A language's flag, in a stream row and in the Language menu, in front of its name: a touch larger\n   than the words, and no taller a line for it (a menu option's words would drop below the others'\n   and lose their foot). Its font is the page's, whose flag font draws it on Windows too: see BASE. */\n.dx-flag {\n    display: inline;\n    margin-right: 0.3em;\n    font-size: 1.1em;\n    font-style: normal;\n    font-weight: 400;\n    line-height: 0;\n}\n\n/* The row's languages keep the size of its other facts (Stremio sizes every element 1rem of its own),\n   and a flag keeps to its name at a line's end, as the flags after the first two do to each other */\n.dxv-lang,\n.dxv-more {\n    font: inherit;\n    white-space: nowrap;\n}\n\n.dxv-more .dx-flag {\n    margin-right: 0.2em;\n}\n\n.dxv-main u {\n    font: 400 0.72rem/1.3 Inter, system-ui, sans-serif !important;\n    color: var(--dx-text-3);\n    text-decoration: none;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    white-space: nowrap;\n}\n\n.dxv-best {\n    display: none;\n    font: 800 0.68rem/1 Inter, system-ui, sans-serif !important;\n    letter-spacing: 0.04em;\n    text-transform: uppercase;\n    color: var(--dx-accent);\n}\n\n[data-dx-best] .dxv-best {\n    display: block;\n}\n\n/* TV: the best match and the Trailer button in colours of their own, plain to pick out from the\n   sofa. The best match is the stream selected as a title opens (OK plays it), in gold; the Trailer\n   is one press to its left, in blue. Flat colours and one inset line: nothing here moves or blurs.\n   (The remote's ring is an outline, and its dark band replaces the gold line while the row has it.) */\n.dx-tv #app [data-dxv][data-dx-best] {\n    background: linear-gradient(100deg, rgba(255, 196, 0, 0.36), rgba(255, 120, 0, 0.2) 55%, rgba(255, 45, 85, 0.18)) !important;\n    box-shadow: inset 0 0 0 2px #ffc400;\n    border-radius: var(--dx-radius-s);\n}\n\n.dx-tv #app [data-dxv][data-dx-best] .dxv-q {\n    background: linear-gradient(135deg, #ffb300, #ff5e00) !important;\n}\n\n.dx-tv #app [data-dxv][data-dx-best] .dxv-main {\n    border-bottom-color: transparent;\n}\n\n.dx-tv #app [data-dx-best] .dxv-best {\n    display: inline-block;\n    align-self: flex-start;\n    padding: 0.2rem 0.5rem;\n    border-radius: 999px;\n    color: #1a1200;\n    background: linear-gradient(90deg, #ffe14d, #ffb300);\n}\n\n.dx-tv #app a[data-dx-trailer] {\n    background: linear-gradient(100deg, #00c2ff, #2b6bff) !important;\n    border-color: transparent !important;\n    color: #fff !important;\n    opacity: 1 !important;\n}\n\n.dx-tv #app a[data-dx-trailer] svg,\n.dx-tv #app a[data-dx-trailer] [class*=\"label-\"] {\n    color: #fff !important;\n    opacity: 1 !important;\n}\n\n/* TV: a stream the page selected by itself (the best match as a title opens, the stream gone back to\n   after a trailer) wears the remote's ring like one stepped to. The browser only counts a selection\n   as the keyboard's when a key made it. */\n.dx-tv #app [data-dxv]:focus,\n.dx-tv #app [data-dxv][data-dx-picked] {\n    outline: 3px solid var(--dx-focus, #fff) !important;\n    outline-offset: 3px;\n    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.85) !important;\n    z-index: 2;\n}\n\n.dx-tv #app section[class*=\"streams-\"] [class*=\"group-\"] > [data-dxv]:focus:not([data-dx-best]) {\n    background: rgba(255, 255, 255, 0.08);\n    --dxv-tile: var(--dx-accent);\n}\n\n.dxv-state {\n    flex: none;\n    font: 600 0.74rem/1 Inter, system-ui, sans-serif !important;\n    color: var(--dx-text-3);\n    white-space: nowrap;\n}\n\n.dxv-state.is-ready {\n    color: #46d369;\n}\n\n.dxq-play:not([data-dx-native]) {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.5rem;\n    height: 3rem;\n    margin: 0 0.75rem 1rem 0;\n    padding: 0 1.75rem 0 1.25rem;\n    border: 0;\n    border-radius: var(--dx-radius);\n    background: #fff;\n    color: #000;\n    cursor: pointer;\n    transition: background-color 0.15s;\n}\n\n.dxq-play:not([data-dx-native]):hover,\n.dxq-play:not([data-dx-native]):focus-visible {\n    background: rgba(255, 255, 255, 0.78);\n}\n\n.dxq-play:not([data-dx-native]) svg {\n    width: 1.4rem;\n    height: 1.4rem;\n}\n\n.dxq-play:not([data-dx-native]) span {\n    font: 700 1rem/1 Inter, system-ui, sans-serif !important;\n}\n\n.dxq-status {\n    flex: none;\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    gap: 1rem;\n    padding: 0.8rem 1.1rem;\n    border-bottom: 1px solid var(--dx-line);\n    font: 600 0.9rem/1.2 Inter, system-ui, sans-serif;\n    color: var(--dx-text);\n}\n\n.dxq-status button,\n.dxq-pill button {\n    border: 0;\n    background: none;\n    color: var(--dx-text-2);\n    font: 700 0.85rem/1 Inter, system-ui, sans-serif;\n    cursor: pointer;\n}\n\n.dxq-pill {\n    position: absolute;\n    left: 2rem;\n    top: 5rem;\n    z-index: 30;\n    display: flex;\n    align-items: center;\n    gap: 1rem;\n    padding: 0.7rem 1rem;\n    border-radius: var(--dx-radius);\n    background: rgba(0, 0, 0, 0.72);\n    color: #fff;\n    font: 600 0.9rem/1 Inter, system-ui, sans-serif;\n}\n\n.dxq-pill button {\n    color: #fff;\n    text-decoration: underline;\n}\n\n/* =====================================================================\n   20. STREAM SORT & FILTER BAR (plugin)\n   ===================================================================== */\n\n/* Sorting uses CSS order, so the list must be a flex column */\n#app [class*=\"streams-container\"].dx-sortable {\n    display: flex !important;\n    flex-direction: column;\n}\n\n/* Stremio's Install addons button stays after every stream, however they're sorted */\n#app [class*=\"streams-container\"].dx-sortable > :not([class*=\"stream-container\"]) {\n    order: 99999;\n}\n\n#app [class*=\"streams-container\"].dx-sortable > [data-dx-hide] {\n    display: none !important;\n}\n\n/* Stremio's title page from November 2026: streams sit in addon groups inside a panel. The same\n   clean rows, and while sorted the groups run as one list (their headings hidden) */\n#app section[class*=\"streams-\"] [class*=\"group-\"] > [data-dxv] {\n    position: relative;\n    margin: 0;\n    padding: 0.9rem 1.1rem !important;\n    display: flex !important;\n    align-items: center;\n    height: auto !important;\n    min-height: 5.5rem;\n    border-radius: 0;\n    border-bottom: 1px solid var(--dx-line);\n    background: none;\n    --dxv-tile: rgba(255, 255, 255, 0.09);\n}\n\n#app section[class*=\"streams-\"] [class*=\"group-\"] > [data-dxv]:hover,\n#app section[class*=\"streams-\"] [class*=\"group-\"] > [data-dxv]:focus-visible {\n    background: rgba(255, 255, 255, 0.08);\n    transform: none;\n    --dxv-tile: var(--dx-accent);\n}\n\nhtml[data-dx-rows] section[class*=\"streams-\"] [class*=\"group-\"] > a[class*=\"stream-\"]:not([data-dxv]) {\n    visibility: hidden;\n}\n\n#app [class*=\"groups-\"].dx-sortable {\n    display: flex !important;\n    flex-direction: column;\n}\n\n#app [class*=\"groups-\"].dx-sortable > [class*=\"group-\"] {\n    display: contents;\n}\n\n#app [class*=\"groups-\"].dx-sortable.dx-sorted [class*=\"group-label\"] {\n    display: none;\n}\n\n#app [class*=\"groups-\"].dx-sortable > :not([class*=\"group-\"]) {\n    order: 99999;\n}\n\n#app [class*=\"groups-\"].dx-sortable [data-dx-hide] {\n    display: none !important;\n}\n\n/* the new panel's addon tabs and episode rows in dx.bi's accent */\n#app section[class*=\"panel-\"] [role=\"tab\"][class*=\"selected-\"] [class*=\"label-\"],\n#app section[class*=\"panel-\"] [role=\"tab\"][class*=\"selected-\"] [class*=\"count-\"] {\n    color: #fff;\n}\n\n#app section[class*=\"panel-\"] [role=\"tablist\"] [class*=\"indicator-\"] {\n    background: var(--dx-accent) !important;\n}\n\n/* TV, the redesign's rows: each is a box of its own kind all along, so the selection's ring\n   changes nothing but what is drawn (see the older page's rows, further down), and the panel\n   scrolls a row far enough in for its ring to show whole. (No content-visibility: auto here: see\n   \"Not on a TV\" above.) */\n.dx-tv #app section[class*=\"streams-\"] [class*=\"group-\"] > a[class*=\"stream-\"] {\n    isolation: isolate;\n}\n\nhtml.dx-tv:not(.dx-phone) #app section[class*=\"streams-\"][class*=\"panel-\"] > [class*=\"body-\"] {\n    scroll-padding-block: 10px;\n}\n\n.dx-streambar {\n    flex: none;\n    padding: 0.85rem 0.85rem 0.75rem;\n    border-bottom: 1px solid var(--dx-line);\n    overflow: visible !important;\n}\n\n.dx-streambar[hidden] {\n    display: none;\n}\n\n.dx-sb-row {\n    display: flex;\n    flex-wrap: wrap;\n    align-items: center;\n    gap: 0.4rem;\n    overflow: visible !important;\n}\n\n.dx-sb-btn {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.35rem;\n    height: 2rem;\n    padding: 0.12em 0.7rem 0 0.8rem;\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.07);\n    border: 1px solid var(--dx-line);\n    color: var(--dx-text-2);\n    font-size: 0.82rem;\n    font-weight: 600;\n    line-height: 1;\n    white-space: nowrap;\n    cursor: pointer;\n    transition: background-color 0.15s, color 0.15s, border-color 0.15s;\n}\n\n.dx-sb-btn:hover,\n.dx-sb-btn:focus-visible {\n    background: rgba(255, 255, 255, 0.12);\n    color: #fff;\n}\n\n.dx-sb-btn svg {\n    width: 0.85rem;\n    height: 0.85rem;\n    flex: none;\n    margin-top: -0.12em;\n    transition: transform 0.2s var(--dx-ease-out);\n}\n\n.dx-sb-btn.is-open svg:last-child {\n    transform: rotate(180deg);\n}\n\n.dx-sb-btn.is-on {\n    background: #fff;\n    border-color: #fff;\n    color: #000;\n}\n\n.dx-sb-sort {\n    padding-left: 0.7rem;\n    color: #fff;\n}\n\n.dx-sb-sort svg:first-child {\n    width: 0.95rem;\n    height: 0.95rem;\n}\n\n.dx-sb-toggle {\n    padding-right: 0.8rem;\n}\n\n.dx-sb-div {\n    width: 1px;\n    height: 1.2rem;\n    margin: 0 0.15rem;\n    background: var(--dx-line-strong);\n}\n\n.dx-sb-count {\n    margin-left: auto;\n    padding-left: 0.5rem;\n    font-size: 0.78rem;\n    font-weight: 600;\n    font-variant-numeric: tabular-nums;\n    color: var(--dx-text-3);\n    white-space: nowrap;\n}\n\n.dx-sb-reset {\n    padding: 0.2rem 0.1rem;\n    background: none;\n    border: 0;\n    color: var(--dx-text-2);\n    font-size: 0.78rem;\n    font-weight: 700;\n    cursor: pointer;\n    text-decoration: underline;\n    text-underline-offset: 3px;\n}\n\n.dx-sb-reset:hover,\n.dx-sb-reset:focus-visible {\n    color: #fff;\n}\n\n/* The open menu unfolds in place (no clipping inside the panel) */\n.dx-sb-menu {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 0.35rem;\n    margin-top: 0.65rem;\n    padding: 0.6rem;\n    border-radius: var(--dx-radius);\n    background: rgba(255, 255, 255, 0.04);\n    border: 1px solid var(--dx-line);\n    animation: dx-fade 0.18s ease both;\n}\n\n.dx-sb-opt {\n    display: inline-flex;\n    align-items: center;\n    gap: 0.4rem;\n    height: 2rem;\n    padding: 0.12em 0.75rem 0 0.55rem;\n    border-radius: var(--dx-radius-s);\n    background: transparent;\n    border: 1px solid transparent;\n    color: var(--dx-text-2);\n    font-size: 0.84rem;\n    font-weight: 500;\n    line-height: 1;\n    cursor: pointer;\n    transition: background-color 0.15s, color 0.15s;\n}\n\n.dx-sb-opt:hover,\n.dx-sb-opt:focus-visible {\n    background: rgba(255, 255, 255, 0.08);\n    color: #fff;\n}\n\n.dx-sb-opt.is-on {\n    background: rgba(255, 255, 255, 0.12);\n    border-color: rgba(255, 255, 255, 0.25);\n    color: #fff;\n    font-weight: 700;\n}\n\n/* the newer title page sets its own size on spans in its panel: keep the menu's */\n.dx-sb-menu .dx-sb-label,\n.dx-sb-menu .dx-sb-n {\n    font-size: inherit !important;\n}\n\n.dx-sb-menu .dx-sb-n {\n    font-size: 0.72rem !important;\n}\n\n.dx-sb-check {\n    display: inline-flex;\n    width: 0.95rem;\n    height: 0.95rem;\n    flex: none;\n    border-radius: 3px;\n    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.35);\n    margin-top: -0.12em;\n}\n\n.dx-sb-opt.is-on .dx-sb-check {\n    background: var(--dx-accent);\n    box-shadow: none;\n    color: #fff;\n}\n\n.dx-sb-check svg {\n    width: 100%;\n    height: 100%;\n    padding: 1px;\n}\n\n.dx-sb-n {\n    font-size: 0.72rem;\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n    color: var(--dx-text-3);\n}\n\n.dx-stream-empty {\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 0.75rem;\n    padding: 2.5rem 1rem;\n    color: var(--dx-text-2);\n    font-size: 0.95rem;\n    text-align: center;\n}\n\n.dx-streambar [role=\"button\"],\n.dx-stream-empty [role=\"button\"],\ndiv.dxq-play {\n    box-sizing: border-box;\n    -webkit-user-select: none;\n    user-select: none;\n}\n\n.dx-stream-empty button,\n.dx-stream-empty [role=\"button\"] {\n    height: 2.2rem;\n    padding: 0 1rem;\n    border-radius: var(--dx-radius);\n    background: #fff;\n    color: #000;\n    font-weight: 700;\n    cursor: pointer;\n}\n\n/* =====================================================================\n   21. SEEK BAR PREVIEW + NEXT EPISODE (plugin)\n   ===================================================================== */\n\n.dx-scrub {\n    position: absolute;\n    inset: 0;\n    z-index: 2;\n    pointer-events: none;\n    overflow: visible !important;\n}\n\n/* lighter fill from the playhead to the cursor */\n.dx-scrub-fill {\n    position: absolute;\n    top: 50%;\n    height: var(--track-size, 4px);\n    transform: translateY(-50%);\n    border-radius: 999px;\n    background: rgba(255, 255, 255, 0.35);\n    opacity: 0;\n    transition: opacity 0.15s;\n}\n\n.dx-scrub.is-on .dx-scrub-fill {\n    opacity: 1;\n}\n\n.dx-scrub-tip {\n    position: absolute;\n    bottom: calc(100% + 1.1rem);\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 0.45rem;\n    transform: translateX(-50%) translateY(6px);\n    opacity: 0;\n    transition: opacity 0.15s ease, transform 0.15s ease;\n}\n\n.dx-scrub.is-on .dx-scrub-tip {\n    opacity: 1;\n    transform: translateX(-50%);\n}\n\n.dx-scrub-frame {\n    display: none;\n    width: 16rem;\n    border: 2px solid rgba(255, 255, 255, 0.9);\n    border-radius: 6px;\n    background: #000;\n    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);\n    overflow: hidden !important;\n}\n\n.dx-scrub.has-frame .dx-scrub-frame,\n.dx-scrub.is-loading .dx-scrub-frame {\n    display: block;\n}\n\n/* loading: a 16:9 dark box with a soft moving sheen until the frame arrives */\n.dx-scrub.is-loading:not(.has-frame) .dx-scrub-frame {\n    position: relative;\n    aspect-ratio: 16 / 9;\n    background: #141414;\n}\n\n.dx-scrub.is-loading:not(.has-frame) .dx-scrub-frame canvas {\n    visibility: hidden;\n}\n\n.dx-scrub.is-loading:not(.has-frame) .dx-scrub-frame::after {\n    content: \"\";\n    position: absolute;\n    inset: 0;\n    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.08) 50%, transparent 70%);\n    animation: dx-scrub-sheen 1.1s linear infinite;\n}\n\n@keyframes dx-scrub-sheen {\n    from { transform: translateX(-100%); }\n    to { transform: translateX(100%); }\n}\n\n.dx-scrub-frame canvas {\n    display: block;\n    width: 100%;\n    height: auto;\n}\n\n.dx-scrub-time {\n    padding: 0.3rem 0.6rem;\n    border-radius: 4px;\n    background: rgba(0, 0, 0, 0.75);\n    font-size: 0.95rem;\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n    color: #fff;\n    white-space: nowrap;\n}\n\n/* Next Episode sits at the start of the right-hand group, like Netflix */\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"spacing\"] {\n    order: 3;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-next,\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-pip,\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > .dx-external {\n    order: 4;\n}\n\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"control-bar-buttons-menu-container\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-buttons-container\"] > [class*=\"control-bar-buttons-menu-button\"] {\n    order: 5;\n}\n\n/* Let the preview card rise above the bar (Stremio clips overflow on these) */\n#app [class*=\"player-container\"] [class*=\"control-bar-layer\"],\n#app [class*=\"player-container\"] [class*=\"control-bar-container\"],\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"],\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"slider-wrapper\"],\n#app [class*=\"player-container\"] [class*=\"seek-bar-container\"] [class*=\"slider-container\"] {\n    overflow: visible !important;\n}\n\n/* dx.bi's card already shows the time — hide Stremio's small tooltip while it's there */\nbody[data-dx-route=\"player\"] > [class*=\"seek-tooltip\"] {\n    display: none !important;\n}\n\n/* =====================================================================\n   22. PICTURE ENHANCEMENT (plugin): upscaled canvas over the video\n   ===================================================================== */\n\n.dx-enhance {\n    position: absolute;\n    z-index: 0;\n    pointer-events: none;\n    image-rendering: auto;\n}\n\n/* The video's own subtitle lines would sit under the canvas — dx.bi redraws them on top */\n#app [class*=\"player-container\"] video[data-dx-enhanced]::cue {\n    visibility: hidden !important;\n}\n\n.dx-enhance-subs {\n    position: absolute;\n    z-index: 2;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 0.15em;\n    pointer-events: none;\n    text-align: center;\n}\n\n.dx-enhance-cue {\n    display: inline-block;\n    max-width: 90%;\n    padding: 0.05em 0.35em;\n    line-height: 1.3;\n    white-space: pre-line;\n}\n\n.dx-enh-btn.is-on svg {\n    color: var(--dx-accent) !important;\n    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--dx-accent) 60%, transparent));\n}\n\n.dx-player-toast {\n    position: absolute;\n    z-index: 6;\n    top: 6rem;\n    left: 50%;\n    padding: 0.6rem 1.1rem;\n    border-radius: 999px;\n    background: rgba(20, 20, 20, 0.85);\n    color: #fff;\n    font-size: 0.95rem;\n    font-weight: 600;\n    pointer-events: none;\n    opacity: 0;\n    transform: translate(-50%, -6px);\n    transition: opacity 0.2s ease, transform 0.2s ease;\n}\n\n.dx-player-toast.is-on {\n    opacity: 1;\n    transform: translate(-50%, 0);\n}\n\n/* =====================================================================\n   WINDOWS AND TV: no blurred glass behind scrolling panels\n   ===================================================================== */\n\n/* Chromium on Windows can leave stale copies of a scrolled panel on screen when it has a blurred\n   (backdrop-filter) background: the streams list then looks like rows drawn over each other.\n   Solid backgrounds instead (dx.bi's plugin adds .dx-win on Windows). TVs (.dx-tv, dx.bi TV) get the\n   same, since their graphics are far weaker than a computer's (theirs is in the one rule a TV tries\n   on every element, \"nothing glides\" below). */\n.dx-win #app *,\n.dx-win body > * {\n    backdrop-filter: none !important;\n}\n\n/* No big soft shadows on a TV: each is a blur painted again whenever what it surrounds changes, the\n   selected poster's at every press of the remote. A fine line instead (from Nathflix, by Lavagnou) */\nhtml.dx-tv {\n    --dx-shadow-1: 0 0 0 1px rgba(255, 255, 255, 0.06);\n    --dx-shadow-2: 0 0 0 1px rgba(255, 255, 255, 0.08);\n}\n\n.dx-tv body #app [class*=\"main-nav-bars-container\"] > nav[class*=\"horizontal-nav-bar\"][data-dx-scrolled] {\n    box-shadow: 0 1px 0 var(--dx-line);\n}\n\n.dx-tv .dx-btn:focus-visible,\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"] {\n    box-shadow: none;\n}\n\n.dx-tv .dx-hero-title,\n.dx-tv .dx-hero-desc {\n    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);\n}\n\n.dx-win #app [class*=\"metadetails-content\"] [class*=\"streams-list-container\"],\n.dx-tv #app [class*=\"metadetails-content\"] [class*=\"streams-list-container\"] {\n    background: rgb(19, 19, 23) !important;\n}\n\n.dx-win #app [class*=\"menu-container\"]:not([class*=\"buttons-menu-container\"]),\n.dx-win .context-menu-portal [class*=\"menu-container\"],\n.dx-tv #app [class*=\"menu-container\"]:not([class*=\"buttons-menu-container\"]) {\n    background: rgb(22, 22, 27) !important;\n}\n\n/* THE DX.BI APP: the top bar's fullscreen button repeats the window's own buttons (F11 still\n   toggles full screen, and the player keeps its fullscreen button) */\n.dx-app #app [class*=\"horizontal-nav-bar\"] [title*=\"ullscreen\"] {\n    display: none !important;\n}\n\n/* TV: what the remote is on must be plain to see from the sofa. A white ring on everything but\n   titles (they lift and open their card). See All always shows: it's at the end of each row. */\n.dx-tv #app :is(a, button, input, [tabindex]):not([class*=\"meta-item-link\"]):focus-visible {\n    outline: 3px solid var(--dx-focus, #fff) !important;\n    outline-offset: 3px;\n    /* the ring follows each control's own shape (pills stay pills) and shows at once: the controls'\n       own transitions faded it in, and a forced corner radius squared off the pills */\n    transition: none !important;\n    /* above its neighbours, so none of them paints over the ring (z-index needs no position here:\n       the controls are flex items) */\n    z-index: 2;\n}\n\n/* A dark band between the ring and the control: the white ring stays plain to see on white\n   buttons and on bright artwork */\n.dx-tv #app :is(a, button, input, [tabindex]):not([class*=\"meta-item-link\"]):focus-visible {\n    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.85) !important;\n}\n\n/* Where a box around it would cut the ring off (the plugin's ringRoom marks those), the ring is\n   drawn just inside the control, with the dark band inside it */\n.dx-tv #app [data-dx-ring-in]:focus-visible {\n    outline-offset: -3px !important;\n    box-shadow: inset 0 0 0 6px rgba(0, 0, 0, 0.7) !important;\n}\n\n/* controls drawn square get softened corners, so their ring isn't boxy */\n.dx-tv #app :is([class*=\"nav-tab-button\"], [class*=\"horizontal-nav-bar\"] [class*=\"button-container\"], [class*=\"horizontal-nav-bar\"] [class*=\"submit-button-container\"], [class*=\"label-container\"]):focus-visible {\n    border-radius: var(--dx-radius-s);\n}\n\n/* the sort chips sit in a scroll box, which cut their ring off: room for it inside the box */\n.dx-tv #app [class*=\"selectable-inputs-container\"] [class*=\"horizontal-scroll\"] {\n    padding: 7px !important;\n    margin: -7px !important;\n}\n\n/* the billboard clips its text and buttons to its box: the ring may reach a little past it */\n.dx-tv .dx-hero-content,\n.dx-tv .dx-hero-actions {\n    overflow: clip !important;\n    overflow-clip-margin: 8px;\n}\n\n.dx-tv #app .dxl-tools {\n    padding-top: 7px !important;\n    margin-top: -7px !important;\n}\n\n.dx-tv #app [class*=\"meta-row\"] [class*=\"see-all-container\"] {\n    --dx-row-hot: 1;\n}\n\n/* TV titles: the selection moves at once, with a ring in the highlight colour. Lifts and zooms\n   that faded in and out left the last title looking selected for a moment on slower sticks. */\n.dx-tv #app [class*=\"meta-item-container\"],\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-container\"],\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-container\"]::after,\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-image-layer\"] {\n    transition: none !important;\n}\n\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-image-layer\"] {\n    transform: none !important;\n}\n\n/* the ring in the highlight colour with a dark band inside it, so it still shows on white or very\n   bright artwork */\n.dx-tv #app [class*=\"meta-item-container\"]:focus-within [class*=\"poster-container\"]::after,\n.dx-tv body #app [class*=\"discover-content\"] [class*=\"meta-item-container\"].selected:focus-within:not(.hovered):not(.active) [class*=\"poster-container\"]::after {\n    box-shadow: inset 0 0 0 3px var(--dx-focus, #fff), inset 0 0 0 6px rgba(0, 0, 0, 0.8);\n}\n\n/* TV title page: the genre and cast names, the IMDb score and the like / library buttons sit in\n   boxes that clip what spills out, which cut their rings off. Those boxes still clip, a ring's\n   width further out; the round buttons get a round ring just inside their own space. */\n.dx-tv #app [class*=\"metadetails-container\"] :is([class*=\"links-container\"], [class*=\"runtime-release-info-container\"]),\n.dx-tv #app [class*=\"meta-row\"] [class*=\"header-container\"],\n.dx-tv #app [class*=\"user-info-content\"],\n.dx-tv #app [class*=\"user-info-content\"] [class*=\"email-logout-container\"],\n.dx-tv #app [class*=\"user-info-content\"] [class*=\"buttons-container\"],\n.dx-tv #app [class*=\"session-actions\"] {\n    overflow: clip !important;\n    overflow-clip-margin: 8px;\n}\n\n.dx-tv #app [class*=\"metadetails-container\"] [class*=\"meta-info-container\"] {\n    padding-left: 8px !important;\n    margin-left: -8px !important;\n}\n\n.dx-tv #app [class*=\"metadetails-container\"] [class*=\"action-buttons-container\"] [class*=\"group-container\"] {\n    overflow: visible !important;\n}\n\n.dx-tv #app [class*=\"metadetails-container\"] [class*=\"group-container\"] > [class*=\"icon-container\"]:focus-visible {\n    border-radius: 50% !important;\n    outline-offset: -5px !important;\n    box-shadow: inset 0 0 0 8px rgba(0, 0, 0, 0.55) !important;\n}\n\n.dx-tv #app [class*=\"streams-list-container\"] [class*=\"streams-container\"] {\n    padding-top: 7px !important;\n}\n\n/* TV: the row the remote moves into settles just under the top bar (60px), heading and all (the\n   plugin's keyNav scrolls the row to its start) */\n.dx-tv #app :is([class*=\"board-row\"], [class*=\"search-row\"], [class*=\"meta-row-container\"]),\n.dx-tv .dxe-airing {\n    scroll-margin-top: 72px;\n}\n\n/* TV: a stick's graphics chip redraws whatever moves or is blurred, every frame, and the remote\n   waits behind it. The billboard's slow zoom, the rows' faded edges (each row drawn twice) and the\n   blurred Continue Watching backdrops are left out. */\n.dx-tv .dx-hero-backdrop {\n    animation: none !important;\n}\n\n/* TV: the active dot's progress line is a nine-second animation, and the graphics chip composed the\n   whole screen afresh for it forty times a second while nothing else moved (a SHIELD: 500 frames in\n   twelve idle seconds, none on a page without the billboard), with the remote waiting behind each.\n   The active dot is plain white instead. */\n.dx-tv .dx-hero-dot.is-active::after {\n    animation: none !important;\n}\n\n/* TV: the hover card's glow is a 30px blur of the artwork, blurred again on every frame of the\n   card's fade and lift, and its soft shadow another 28px blur: a stall at each title the remote\n   rests on. A plain shadow line instead. */\n.dx-tv .dx-preview-aura,\n.dx-tv .dx-preview::before {\n    filter: none !important;\n}\n\n/* TV: only the billboard picture on show (and one fading out) is kept on the graphics chip: each of\n   the others was a full-screen layer held in memory. The top bar turns solid at once, as its fade\n   was redrawn in full on every frame of the jump down into the rows. */\n.dx-tv .dx-hero-backdrop {\n    will-change: auto;\n}\n\n.dx-tv #app nav[class*=\"horizontal-nav-bar\"] {\n    transition: none !important;\n}\n\n/* TV: Home rows well out of view aren't drawn at all until you get near them. Every frame that\n   changed anything reworked all twenty-odd rows, which held the jump from row to row back. */\n.dx-tv #app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) > [class*=\"board-row\"] {\n    content-visibility: auto;\n    contain-intrinsic-size: auto 380px;\n}\n\n/* TV: the stream list. Stremio's own text in each row stays in the page under dx.bi's row (the\n   plugin reads it), but squeezed into a 1px box its long file names wrapped a letter to a line:\n   thousands of lines laid out again whenever the list changed, the freeze while streams arrive.\n   On a TV it isn't laid out at all. */\n.dx-tv [data-dxv] > :not(.dxv-row):not([class*=\"menu-container\"]):not(.dxd-stream) {\n    display: none !important;\n}\n\n.dx-tv #app [class*=\"meta-row\"] > [class*=\"meta-items-container\"] {\n    -webkit-mask-image: none !important;\n    mask-image: none !important;\n}\n\n/* TV: a title's lift (a 3D move) and the rows' rise kept every poster and row on a layer of its\n   own, well over 200 on Home, all reworked with each press: flat cards and rows instead (the\n   selected title keeps its ring) */\n.dx-tv #app .animation-fade-in {\n    animation: none !important;\n}\n\n.dx-tv #app [class*=\"meta-item-container\"] [class*=\"poster-container\"] {\n    transform: none !important;\n    scale: none !important;\n}\n\n/* TV: badges appear as they are, rather than fading in together (a row's worth at a time) */\n.dx-tv .dx-badge {\n    animation: none;\n}\n\n.dx-tv .dx-wide-blur {\n    filter: brightness(0.45);\n}\n\n/* TV: nothing glides or fades from one look to the next: a change shows at once. Every frame of a\n   transition is a turn of the page's one thread, with the remote waiting behind it, and a single\n   press started several: Stremio's menu dots fading on the title left and the title reached (a\n   tenth of a second each, the whole screen put together afresh as each began and ended), the\n   stream list's tiles and rows, the billboard's pictures for over a second every nine. The page\n   jumps instead of gliding too, so the selection never waits off screen for a slow scroll (rows\n   still glide sideways: the plugin asks for that itself), and nothing is blurred glass (see\n   \"WINDOWS AND TV\" above). One rule holds all of it, because it is tried on every element.\n   The hover card keeps its own short fade and growth (set below). Animations are named one by one\n   after this rule instead: a time for them written here, on every element, made each restyle of\n   the page cost twice as much. */\nhtml.dx-tv :not(.dx-preview) {\n    backdrop-filter: none !important;\n    scroll-behavior: auto !important;\n    transition: none !important;\n}\n\n/* Stremio takes its menus and drawers off the page when their closing transition ends (see \"Must\n   stay a transition\" in the player's panels): those keep one, too short to see, so that end comes */\nhtml.dx-tv [class*=\"-enter\"],\nhtml.dx-tv [class*=\"-exit\"] {\n    transition: all 0.01ms !important;\n}\n\n/* The entrances: the billboard, a title's picture, logo and its panel of streams or episodes\n   (sliding in while its rows were still arriving), menus, dialogs, messages. Each ends as the\n   thing looks anyway, and nothing waits for one to end. (The title page of November 2026 fades its\n   picture in and slides its whole content up, 430 stream rows with it.) */\n.dx-tv .dx-hero,\n.dx-tv .dx-sb-menu,\n.dx-tv #app [class*=\"metadetails-container\"] > [class*=\"background-image-layer\"] img,\n.dx-tv #app [class*=\"meta-preview-container\"] [class*=\"logo\"],\n.dx-tv #app [class*=\"metadetails-content\"] [class*=\"videos-list-container\"],\n.dx-tv #app [class*=\"metadetails-content\"] [class*=\"streams-list-container\"],\n.dx-tv #app [class*=\"details-\"] > [class*=\"background-\"] img,\n.dx-tv #app [class*=\"details-\"] > [class*=\"content-\"],\n.dx-tv #app [class*=\"menu-container\"][class*=\"menu-direction\"] > *,\n.dx-tv #app [class*=\"modal-container\"],\n.dx-tv #app [class*=\"modal-dialog-container\"],\n.dx-tv #app [class*=\"toasts-container\"] [class*=\"toast-item-container\"] {\n    animation: none !important;\n}\n\n/* Stremio marks the episode just chosen with a border that fades for three seconds, redrawn on\n   every frame of them. It ends at once (a time too short to see rather than none: the border it\n   ends with stays, as before). */\n.dx-tv #app [class*=\"video-container\"][class*=\"selected\"] {\n    animation-duration: 0.01ms !important;\n}\n\n/* (what ::before and ::after draw isn't reached by the rule above: the tabs' underline, the Remove\n   tab's label, whose opening was laid out afresh on every frame, and the knob of Stremio's switches) */\nhtml.dx-tv #app nav[class*=\"vertical-nav-bar\"] a[class*=\"nav-tab-button\"]::after,\nhtml.dx-tv #app [class*=\"meta-item-container\"] [class*=\"dismiss-icon-layer\"]::before,\nhtml.dx-tv #app [class*=\"toggle-container\"] [class*=\"toggle\"]::before {\n    transition: none !important;\n}\n\n/* TV: the hover card's glow and soft shadow are big blurred layers redrawn as it opens */\n.dx-tv .dx-preview-aura,\n.dx-tv .dx-preview::before {\n    display: none;\n}\n\n/* TV: the card fades and grows in place rather than unfolding from the poster's outline (a moving\n   clip the stick redrew in full on every frame), and its artwork holds still. That fade is left\n   to it (\"nothing glides\" above passes it by), and it only has a layer of its own while it moves,\n   rather than one kept for it the whole time. */\n.dx-tv .dx-preview {\n    scale: 0.94;\n    transition: scale 0.18s ease, opacity 0.18s ease, visibility 0s linear 0.18s;\n    will-change: auto;\n}\n\n.dx-tv .dx-preview.is-open {\n    scale: 1;\n    transition: scale 0.18s ease, opacity 0.18s ease, visibility 0s;\n}\n\n.dx-tv .dx-preview-inner {\n    clip-path: none !important;\n    transition: none;\n    will-change: auto;\n}\n\n.dx-tv .dx-preview-ghost {\n    display: none;\n}\n\n.dx-tv .dx-preview.is-open .dx-preview-media::before {\n    animation: none;\n}\n\n/* TV: a long stream list. The white ring's place above its neighbours (z-index, in \"what the\n   remote is on\" above) turned the row gaining it and the row losing it into boxes of another kind\n   (ones that stack their own contents), and Chromium lays out afresh around a box that changes\n   kind: the list and, through the list's height, the whole title page, at every press (60-70 ms\n   of each on a desktop slowed to a TV's pace). Each row is that kind of box all along now, so the\n   ring changes nothing but what is drawn… */\n.dx-tv #app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [class*=\"stream-container\"] {\n    isolation: isolate;\n}\n\n/* …and the list is an island: rows arriving, sorted or changed are worked out inside it, without\n   the page around it. Not on a phone, where the list can be as tall as its rows.\n   (Rows drawn only when near the screen, content-visibility: auto, were tried here and left out:\n   each press then took more frames, and opening a title more layout, not less.) */\nhtml.dx-tv:not(.dx-phone) #app [class*=\"streams-list-container\"] > [class*=\"streams-container\"] {\n    contain: strict;\n}\n\n/* The list's box cut the white ring off a row resting at its top or bottom edge: the first row, and\n   each row the remote steps to past an edge (the box scrolls only as far as it must). Room for the\n   ring inside the box, and the remote's rows stop short of its edges by as much. */\nhtml.dx-tv:not(.dx-phone) #app [class*=\"streams-list-container\"] > [class*=\"streams-container\"] {\n    padding-top: 7px;\n    padding-bottom: 7px;\n    scroll-padding-block: 7px;\n}\n\n/* Stremio's own contents stay in a row once dx.bi's are in (unseen, in a box one pixel wide: see\n   \"CLEAN STREAM LIST\"). Laid out at that width, a word to a line, they were most of the work of a\n   list arriving. On a TV they are not laid out at all (the plugin reads their text, which is\n   still there), and neither is a row whose dx.bi version isn't in yet: it is out of sight until\n   then anyway, and keeps a row's height meanwhile. */\n.dx-tv [data-dxv] > :not(.dxv-row):not([class*=\"menu-container\"]) {\n    content-visibility: hidden;\n}\n\nhtml.dx-tv[data-dx-rows] #app [class*=\"streams-list-container\"] [class*=\"streams-container\"] > [class*=\"stream-container\"]:not([data-dxv]) {\n    content-visibility: hidden;\n    contain-intrinsic-block-size: 4.75rem;\n}\n\n/* TV: a move from one title to the next only redraws the two of them. Three things had Chromium\n   put the whole screen together again at every such press instead, several times the work (each\n   of the three is enough to bring that back).\n   One: rows snap to their titles, and Chromium keeps note, on the row, of which of the things it\n   snaps to holds the selection. Rows snap to a speck at each title's edge now (the same resting\n   places), and a speck never holds it. */\n.dx-tv #app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > [class*=\"meta-item-\"],\n.dx-tv #app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > [class*=\"meta-item-\"] {\n    scroll-snap-align: none;\n}\n\n.dx-tv #app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > [class*=\"meta-item-\"]::before,\n.dx-tv #app [class*=\"search-content\"] [class*=\"meta-row\"] > [class*=\"meta-items-container\"] > [class*=\"meta-item-\"]::before {\n    content: \"\";\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 1px;\n    height: 1px;\n    pointer-events: none;\n    scroll-snap-align: start;\n}\n\n/* Two: the Remove tab of a Continue Watching title could be clicked as soon as its title was\n   selected, though it only shows under the mouse or when selected itself. Now it can be clicked\n   when it shows (a phone's is left as it was: a finger has no \"under\"). */\nhtml.dx-tv:not(.dx-phone) #app [class*=\"meta-item-container\"]:focus-within:not(.hovered, .active, .selected) [class*=\"dismiss-icon-layer\"]:not(:focus-visible) {\n    pointer-events: none;\n}\n\n/* Three: Stremio's menu dots went from not drawn at all to drawn. They are always drawn now, in\n   clear ink until their title is selected or pointed at (not where the screen is touched: there\n   Stremio shows them on every title). */\n@media not all and (any-pointer: coarse) {\n    .dx-tv #app [class*=\"meta-item-container\"] [class*=\"menu-label-container\"] {\n        opacity: 1;\n    }\n\n    .dx-tv #app [class*=\"meta-item-container\"]:not(:focus-within, .hovered, .active, .selected) [class*=\"menu-label-container\"] > svg {\n        color: transparent;\n    }\n}\n\n/* TV: a row's arrows and page marks wait for a mouse, which a TV seldom has. Unseen, each was\n   still a layer of the screen (for where a click would land), reworked on every frame its row\n   moved: they stay out of the picture until a pointer is over their row. */\n.dx-tv .dx-arrow,\n.dx-tv .dx-row-pages {\n    visibility: hidden;\n}\n\n.dx-tv [class*=\"meta-row\"]:hover > .dx-arrow:not(.is-hidden),\n.dx-tv [class*=\"meta-row\"]:hover > .dx-row-pages,\n.dx-tv [class*=\"meta-row\"]:focus-visible > .dx-row-pages {\n    visibility: visible;\n}\n\n/* Kids profiles and hidden titles (plugin): titles that mustn't show, and rows left with none, are\n   out; titles still being checked keep their place but stay unseen. A kids profile has no Addons or\n   Settings tabs (the parental PIN opens them). */\n#app [data-dx-off] {\n    display: none !important;\n}\n\n#app [data-dx-pending] {\n    visibility: hidden !important;\n}\n\nbody[data-dx-kids] #app [class*=\"horizontal-nav-bar\"] a[href=\"#/addons\"],\nbody[data-dx-kids] #app [class*=\"horizontal-nav-bar\"] a[href=\"#/settings\"],\nbody[data-dx-kids] #app [class*=\"vertical-nav-bar\"] a[href=\"#/addons\"],\nbody[data-dx-kids] #app [class*=\"vertical-nav-bar\"] a[href=\"#/settings\"] {\n    display: none !important;\n}\n\n/* Phones held upright: laid out at the phone's own width, with the tabs in a bar under the thumb */\n.dx-upright #app [class*=\"main-nav-bars-container\"] > nav[class*=\"vertical-nav-bar\"],\n.dx-upright #app nav[class*=\"vertical-nav-bar\"] {\n    position: fixed !important;\n    inset: auto 0 0 0 !important;\n    z-index: 50 !important;\n    display: flex !important;\n    flex-direction: row !important;\n    justify-content: space-around !important;\n    align-items: stretch !important;\n    width: 100% !important;\n    max-width: none !important;\n    height: 3.75rem !important;\n    padding: 0 !important;\n    transform: none !important;\n    background: rgb(16, 16, 20) !important;\n    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;\n}\n\n.dx-upright #app nav[class*=\"vertical-nav-bar\"] > * {\n    flex: 1 1 0 !important;\n    width: auto !important;\n    height: 100% !important;\n    margin: 0 !important;\n    min-width: 0 !important;\n}\n\n.dx-upright #app nav[class*=\"horizontal-nav-bar\"] {\n    padding: 0 0.75rem !important;\n}\n\n/* The billboard: a tall picture, with everything centred over the bottom of it */\n.dx-upright .dx-hero {\n    height: min(128vw, 68vh);\n    min-height: 0;\n    margin-bottom: 0.5rem;\n}\n\n.dx-upright .dx-hero-content {\n    position: absolute;\n    inset: auto 0 1.75rem 0 !important;\n    top: auto !important;\n    width: 100% !important;\n    max-width: none !important;\n    padding: 0 1.25rem !important;\n    align-items: center !important;\n    text-align: center;\n}\n\n.dx-upright .dx-hero-kicker,\n.dx-upright .dx-hero-desc {\n    display: none !important;\n}\n\n.dx-upright .dx-hero-content > .dx-hero-logo {\n    max-width: 70% !important;\n    max-height: 7rem !important;\n    margin: 0 auto 0.6rem !important;\n    object-position: center bottom !important;\n}\n\n.dx-upright .dx-hero-meta {\n    justify-content: center !important;\n    flex-wrap: wrap;\n}\n\n.dx-upright .dx-hero-actions {\n    width: 100% !important;\n    justify-content: center !important;\n    flex-wrap: nowrap !important;\n    gap: 0.6rem !important;\n    overflow: visible !important;\n}\n\n.dx-upright .dx-hero-actions > * {\n    flex: 1 1 0 !important;\n    min-width: 0 !important;\n    justify-content: center !important;\n    padding-left: 0.5rem !important;\n    padding-right: 0.5rem !important;\n    white-space: nowrap;\n}\n\n.dx-upright .dx-hero-dots {\n    left: 0 !important;\n    right: 0 !important;\n    bottom: 0.6rem !important;\n    justify-content: center !important;\n}\n\n.dx-upright #app [class*=\"board-content-\"]:not([class*=\"board-content-container\"]) {\n    scrollbar-width: none;\n}\n\n.dx-upright #app [class*=\"board-content-\"]:not([class*=\"board-content-container\"])::-webkit-scrollbar {\n    display: none;\n}\n\n/* Three titles across, as Android streaming apps have them */\n.dx-upright #app [class*=\"discover-content\"] [class*=\"meta-items-container\"],\n.dx-upright #app [class*=\"library-content\"] [class*=\"meta-items-container\"] {\n    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;\n    gap: 0.75rem 0.6rem !important;\n    padding: 0 0.75rem 1.5rem !important;\n}\n\n.dx-upright #app [class*=\"metadetails-container\"] [class*=\"runtime-release-info-container\"] {\n    flex-wrap: wrap !important;\n    justify-content: flex-start !important;\n    gap: 0.5rem 1rem !important;\n}\n\n/* Text sits on the picture: keep it readable over bright ones */\n.dx-upright #app [class*=\"metadetails-container\"] [class*=\"meta-preview-container\"]::before {\n    content: \"\";\n    position: fixed;\n    inset: 0;\n    z-index: 0;\n    background: rgba(0, 0, 0, 0.45);\n    pointer-events: none;\n}\n\n.dx-upright #app [class*=\"metadetails-container\"] [class*=\"meta-preview-container\"] > * {\n    position: relative;\n    z-index: 1;\n}\n\n/* A phone is touched, not steered: no remote rings */\n.dx-phone #app :is(a, button, input, [tabindex]):not([class*=\"meta-item-link\"]):focus-visible {\n    outline: none !important;\n}\n\n.dx-phone #app [class*=\"meta-item-container\"]:focus-within [class*=\"poster-container\"]::after {\n    box-shadow: none !important;\n}\n\n/* Phones on their side: the profile menu scrolls when it's taller than the screen */\n.dx-phone #app [class*=\"nav-menu-container\"] {\n    max-height: calc(100vh - 4.5rem) !important;\n    overflow-y: auto !important;\n}\n\n/* Addons page on a phone on its side: the search box gives way to the Order & backup button */\n.dx-phone .dxe-addon-btn {\n    flex: none;\n    white-space: nowrap;\n}\n\n/* =====================================================================\n   Phones held upright: the layout is one column, so what it needs is less\n   desktop spacing, a top bar that stays readable and the list closer to hand\n   ===================================================================== */\n@media only screen and (max-width: 640px) and (orientation: portrait) {\n    /* Stremio leaves room for its taller bottom bar: a band of nothing above this one */\n    :root {\n        --vertical-nav-bar-size: 3.7rem !important;\n    }\n\n    /* \"See All\" sits at the screen's edge and is always there: phones have no hover */\n    html body #app [class*=\"board-row\"] > [class*=\"header-container\"],\n    html body #app [class*=\"meta-row\"] > [class*=\"header-container\"],\n    html body #app [class*=\"meta-row\"]:has(> .dx-row-pages) > [class*=\"header-container\"] {\n        padding-right: 0.8rem !important;\n    }\n    #app .dx-row-pages {\n        display: none !important;\n    }\n    #app [class*=\"board-row\"] [class*=\"see-all-container\"],\n    #app [class*=\"meta-row\"] [class*=\"see-all-container\"] {\n        margin-left: auto !important;\n        opacity: 1 !important;\n        transform: none !important;\n    }\n\n    /* Movie and series pages: the bar stays readable over what scrolls under it */\n    #app [class*=\"metadetails-container\"] > nav[class*=\"nav-bar\"] {\n        background: linear-gradient(to bottom, rgba(10, 10, 12, 0.95) 55%, rgba(10, 10, 12, 0)) !important;\n        z-index: 3;\n    }\n    #app [class*=\"metadetails-content\"] {\n        padding-left: 0 !important;\n    }\n    #app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] {\n        width: 100% !important;\n        padding-top: 0 !important;\n        padding-bottom: 0.75rem !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-info-container\"] {\n        padding: 0 1rem !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-info-container\"] [class*=\"logo\"] {\n        max-height: 5.5rem !important;\n        margin: 0 auto 0.75rem 0 !important;\n        object-position: left center;\n    }\n    /* Genres and cast: one line each that slides, so the page isn't mostly labels */\n    #app [class*=\"metadetails-content\"] [class*=\"meta-links\"] {\n        margin-top: 0.75rem !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-links\"] [class*=\"links-container\"] {\n        flex-wrap: nowrap !important;\n        max-height: none !important;\n        overflow-x: auto;\n        scrollbar-width: none;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-links\"] [class*=\"links-container\"]::-webkit-scrollbar {\n        display: none;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"meta-links\"] [class*=\"link-container\"] {\n        flex: none !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"description-container\"] {\n        margin-top: 0.75rem !important;\n    }\n    #app [class*=\"metadetails-content\"] > [class*=\"meta-preview-container\"] > [class*=\"action-buttons-container\"] {\n        gap: 0.6rem !important;\n        margin-top: 0.9rem !important;\n        padding: 0 1rem !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"action-buttons-container\"] > * {\n        margin: 0 !important;\n    }\n    #app [class*=\"metadetails-content\"] [class*=\"videos-list\"],\n    #app [class*=\"metadetails-content\"] [class*=\"streams-list\"] {\n        width: auto !important;\n        margin: 0 0.5rem 1rem !important;\n    }\n\n    /* Search: the box gives way so the profile stays on screen */\n    #app nav[class*=\"horizontal-nav-bar\"] [class*=\"search-bar\"] {\n        flex: 1 1 auto !important;\n        width: auto !important;\n        min-width: 0 !important;\n        max-width: none !important;\n        margin: 0 !important;\n    }\n    #app nav[class*=\"horizontal-nav-bar\"] [class*=\"buttons-container\"] {\n        flex: none !important;\n    }\n\n    /* Discover: Filters clear of the edge */\n    #app [class*=\"discover-content\"] {\n        padding-right: 0.5rem !important;\n    }\n}\n";
   }
 
   function introVideoData() {

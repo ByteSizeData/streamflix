@@ -21,6 +21,7 @@
     control: (command) => bridge.control(TOKEN, JSON.stringify(command)),
     findServers: () => bridge.findServers(TOKEN),
     torrentUrl: (json) => (bridge.torrentUrl ? bridge.torrentUrl(TOKEN, json) : ""),
+    thaiSubtitles: (json) => { if (bridge.thaiSubtitles) bridge.thaiSubtitles(TOKEN, json); },
     // (an older app has no question to ask: null)
     askTorrent: () => (bridge.askTorrent ? new Promise((resolve) => { tv.torrentAnswer = (n) => { tv.torrentAnswer = null; resolve(n); }; bridge.askTorrent(TOKEN); }) : Promise.resolve(null)),
     deviceInfo: () => { try { return JSON.parse(bridge.deviceInfo ? bridge.deviceInfo(TOKEN) : "{}"); } catch (_) { return {}; } },
@@ -125,8 +126,16 @@
   const schemas = {};
   const savedListeners = {};
 
+  // The app is asked once per plugin, not once per setting: dx.bi reads about 75 settings as it
+  // starts, and each answer was the whole settings object crossing from the app and parsed again.
+  // The page keeps what it was given and what it saves (the app itself only writes settings while
+  // the page is gone, after a crash).
+  const settingsCache = {};
   function readSettings(plugin) {
-    try { return JSON.parse(native.getSettings(plugin) || "{}") || {}; } catch (_) { return {}; }
+    if (!settingsCache[plugin]) {
+      try { settingsCache[plugin] = JSON.parse(native.getSettings(plugin) || "{}") || {}; } catch (_) { settingsCache[plugin] = {}; }
+    }
+    return settingsCache[plugin];
   }
 
   const api = {
@@ -137,10 +146,13 @@
       const value = readSettings(plugin)[key];
       return value === undefined ? null : value;
     },
-    getSettings: async (plugin) => readSettings(plugin),
+    getSettings: async (plugin) => ({ ...readSettings(plugin) }),
     saveSetting: async (plugin, key, value) => {
-      native.saveSetting(plugin, key, JSON.stringify(value === undefined ? null : value));
-      const all = readSettings(plugin);
+      const json = JSON.stringify(value === undefined ? null : value);
+      native.saveSetting(plugin, key, json);
+      // (as the app keeps it: what JSON carries of the value)
+      readSettings(plugin)[key] = JSON.parse(json);
+      const all = { ...readSettings(plugin) };
       for (const callback of savedListeners[plugin] || []) {
         try { callback(all); } catch (err) { console.error(err); }
       }
@@ -192,7 +204,13 @@
     .dxtv-qr { display: block; width: 220px; height: 220px; margin: 0 auto 18px; border-radius: 8px; background: #fff; }
     /* No streaming server runs on the TV itself (debrid streams don't need one): no nagging bar */
     [class*="board-warning-container"] { display: none !important; }
+    /* Stremio's "A new version of Stremio is available" bar: the TV takes the update itself (webUpdate) */
+    [class*="web-update-banner"] { display: none !important; }
     .dxtv-toast { position: fixed; left: 50%; bottom: 48px; z-index: 2147483600; transform: translateX(-50%); padding: 14px 22px; border-radius: 10px; background: rgba(20,20,20,.94); color: #fff; font: 500 16px Inter, system-ui, sans-serif; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+    /* The plugin's own dialogs (Simkl, Customise Home, reviews…) were drawn for a mouse: their buttons
+       only lighten a little when selected, which a TV across the room doesn't show. The remote's
+       selection gets the same ring the rest of the page has */
+    .dxe-modal .dxe-btn:focus, .dxe-modal .dxs-input:focus, .dxe-modal a[href]:focus, .dxe-modal [tabindex]:focus { outline: 3px solid var(--dx-focus, #fff) !important; outline-offset: 3px; }
   `;
   function ensureStyle() {
     if (document.getElementById("dxtv-style")) return;
@@ -260,6 +278,9 @@
     document.body.append(el);
     setTimeout(() => el.remove(), ms);
   }
+
+  // (the plugin's messages on a TV)
+  tv.toast = (text, ms) => toast(text, ms);
 
   // ---------------------------------------------------------------------------
   // Streaming server: a TV has none of its own, and torrents need one. dx.bi or Stremio running on
@@ -426,8 +447,79 @@
   };
   tv.saveSetting = (key, value) => api.saveSetting(PLUGIN.replace(/\.plugin\.js$/, ""), key, value);
 
+  // Stremio's redesigned Settings (November 2026): one page at a time, picked from a menu on the left
+  // (Preferences / This browser / Help). dx.bi's entries are a group of their own at the top of that
+  // menu, wearing the classes of Stremio's own items (read from the page as it is, so they keep
+  // matching when Stremio rebuilds its styles).
+  const SETTINGS_ICONS = {
+    sliders: "M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z",
+    people: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z",
+    list: "M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z",
+    home: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
+    server: "M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z",
+    flag: "M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z",
+    heart: "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z",
+  };
+  // The entry of that menu last pressed. What it opened took the remote's selection and dropped it
+  // on closing, and the next press started again from the section beside the menu: Back hands the
+  // selection to the entry again.
+  let menuFrom = null;
+  function menuAgain() {
+    const from = menuFrom;
+    if (!from) return;
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (from.isConnected && (!a || a === document.body)) from.focus({ preventScroll: true });
+    }, 80);
+  }
+
+  function ensureSettingsMenu(menu) {
+    // (.dxtv-group is a heading of the settings sheet's, in capitals: not that)
+    if (menu.querySelector(":scope > .dxtv-menu")) return;
+    const first = menu.querySelector(':scope > [class*="group-"]');
+    const like = first && (first.querySelector(':scope > a[class*="item-"]:not([class*="selected"])') || first.querySelector(':scope > a[class*="item-"]'));
+    // (the menu is still being drawn: looked at again when the page next changes)
+    if (!first || !like) return;
+    const classOf = (n) => (n ? (typeof n.className === "string" ? n.className : n.getAttribute("class") || "") : "");
+    const itemClass = [...like.classList].filter((c) => !/^selected/.test(c)).join(" ");
+    const labelClass = classOf(like.querySelector('[class*="item-label"]'));
+    const iconClass = classOf(like.querySelector("svg"));
+    const group = document.createElement("div");
+    group.className = `${first.className} dxtv-menu`;
+    const heading = document.createElement("div");
+    heading.className = classOf(first.querySelector(':scope > [class*="label-"]'));
+    heading.textContent = "dx.bi";
+    group.append(heading);
+    const loaded = (act) => () => { if (window.__dxbi) act(window.__dxbi); else toast("dx.bi hasn't finished loading yet. Try again in a moment."); };
+    const add = (name, icon, act) => {
+      const item = document.createElement("a");
+      item.className = `${itemClass} dxtv-item`;
+      item.setAttribute("role", "button");
+      item.tabIndex = 0;
+      item.innerHTML = `<svg class="${iconClass}" viewBox="0 0 24 24" aria-hidden="true"><path d="${SETTINGS_ICONS[icon]}" fill="currentColor"></path></svg><div class="${labelClass}"></div>`;
+      item.lastChild.textContent = name;
+      const run = () => { menuFrom = item; act(); };
+      item.addEventListener("click", (e) => { e.preventDefault(); run(); });
+      item.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); run(); } });
+      group.append(item);
+    };
+    add("dx.bi settings", "sliders", settingsSheet);
+    add("Who's watching?", "people", loaded((dx) => dx.whoIsWatching && dx.whoIsWatching.open()));
+    add("Simkl", "list", loaded((dx) => dx.simkl && dx.simkl.open()));
+    add("Customise Home", "home", loaded((dx) => dx.homeLayout && dx.homeLayout.open()));
+    add("Streaming server", "server", () => findServer());
+    add("Report a problem", "flag", reportProblem);
+    add("Support dx.bi", "heart", donate);
+    menu.insertBefore(group, first);
+  }
+
   function ensureSettingsEntry() {
     if (!/^#\/settings/.test(location.hash)) return;
+    const menu = document.querySelector('[class*="settings-content"] > nav[class*="menu-"]');
+    if (menu) {
+      ensureSettingsMenu(menu);
+      return;
+    }
     // also in Settings' own list (General, Interface… Shortcuts), where people look for it
     const shortcuts = document.querySelector('[class*="settings-container"] [data-section="shortcuts"], [class*="settings-content"] [data-section="shortcuts"]');
     if (shortcuts && !shortcuts.parentElement.querySelector(".dxtv-side")) {
@@ -459,6 +551,10 @@
     who.className = "dxtv-row dxtv-settings-entry";
     who.innerHTML = `<span>Who's watching?<small>Add viewers and switch between them. Each viewer has their own library and Continue Watching</small></span><b>Open</b>`;
     who.addEventListener("click", () => { if (window.__dxbi && window.__dxbi.whoIsWatching) window.__dxbi.whoIsWatching.open(); });
+    const simkl = document.createElement("button");
+    simkl.className = "dxtv-row dxtv-settings-entry";
+    simkl.innerHTML = forDevice(`<span>Simkl<small>Your Simkl lists (Watching, Plan to Watch…) as rows on Home. Connect with a code you type at simkl.com/pin on your phone or computer; which lists show is under dx.bi settings → Simkl</small></span><b>Open</b>`);
+    simkl.addEventListener("click", () => { if (window.__dxbi && window.__dxbi.simkl) window.__dxbi.simkl.open(); else toast("dx.bi hasn't finished loading yet. Try again in a moment."); });
     const layout = document.createElement("button");
     layout.className = "dxtv-row dxtv-settings-entry";
     layout.innerHTML = `<span>Customise Home<small>Move, hide or rename Home's rows, whichever addon they come from</small></span><b>Open</b>`;
@@ -467,7 +563,7 @@
     support.className = "dxtv-row dxtv-settings-entry";
     support.innerHTML = `<span>Support dx.bi<small>dx.bi is free. If you enjoy it, you can buy its developer a coffee</small></span><b>Open</b>`;
     support.addEventListener("click", donate);
-    content.prepend(entry, who, layout, server, problem, support);
+    content.prepend(entry, who, simkl, layout, server, problem, support);
   }
 
   // ---------------------------------------------------------------------------
@@ -476,16 +572,37 @@
   // ---------------------------------------------------------------------------
   let handoff = null; // { hash, video id } of the stream the native player has
 
-  // Stremio's in-page video never plays while the native player has the stream
+  // Stremio's in-page video never plays on its player screen: every stream on the TV goes to the native
+  // player. (It used to be held back only while the native player had the stream. Once, after Back from
+  // the native player, the page stayed on Stremio's player screen with nothing handed over any more, and
+  // Stremio's own player started the same 4K film in the page, without its subtitles, behind the TV's
+  // Home screen, and the TV began closing other apps for memory.)
+  const onPlayerScreen = () => /^#\/player\//.test(location.hash);
   const realPlay = HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play = function () {
-    if (handoff && /^#\/player\//.test(location.hash)) {
+    if (onPlayerScreen()) {
       this.muted = true;
       try { this.pause(); } catch (_) { /* not ready */ }
       return Promise.resolve();
     }
     return realPlay.apply(this, arguments);
   };
+
+  // …and never loads it either. Stremio's player screen underneath still handed the stream to its own
+  // <video>, which fetched the same file a second time and, where the TV can decode it, began decoding
+  // it: bandwidth and a decoder taken from the player on screen for a picture nobody sees.
+  const mediaSrc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "src");
+  if (mediaSrc && mediaSrc.get && mediaSrc.set) {
+    Object.defineProperty(HTMLMediaElement.prototype, "src", {
+      configurable: true,
+      enumerable: mediaSrc.enumerable,
+      get() { return mediaSrc.get.call(this); },
+      set(value) {
+        if (onPlayerScreen() && (this.tagName === "VIDEO" || (this.closest && this.closest('[class*="player-container"]')))) return;
+        mediaSrc.set.call(this, value);
+      },
+    });
+  }
 
   function silenceWebPlayer() {
     document.querySelectorAll('[class*="player-container"] video').forEach((v) => {
@@ -592,23 +709,73 @@
     return state;
   }
 
+  // Thai subtitles (dx.bi settings → Thai subtitles, on by default): Thai files are first under the
+  // player's subtitles button whenever the film or episode has some. They start on by themselves only
+  // with "Start with Thai subtitles" (off by default: nothing shows until the viewer picks it).
+  // Stremio's subtitle addon has next to none, so the app looks them up on
+  // OpenSubtitles itself, by the title's IMDb id: only films and episodes with one (an anime's kitsu or
+  // mal id, or a link played on its own, finds nothing there).
+  const THAI = /^(th|tha|thai)$/i;
+  const thaiOn = () => readSettings(PLUGIN.replace(/\.plugin\.js$/, "")).thaiSubtitles !== false;
+  const thaiStart = () => thaiOn() && readSettings(PLUGIN.replace(/\.plugin\.js$/, "")).thaiStart === true;
+  // (dx.bi settings → Only Thai and English subtitles, on by default in this build)
+  const thaiEnglishOnly = () => readSettings(PLUGIN.replace(/\.plugin\.js$/, "")).subtitlesThaiEnglish !== false;
+  function thaiLookup(videoId, stream) {
+    const m = /^(tt\d{5,10})(?::(\d{1,4}):(\d{1,5}))?$/.exec(typeof videoId === "string" ? videoId : "");
+    if (!m) return null;
+    const hints = (stream && stream.behaviorHints) || {};
+    // the file's name says which release it is (resolution, source, group): the app picks the subtitle
+    // timed to the same one
+    const release = [hints.filename, stream && stream.title, stream && stream.description, stream && stream.name]
+      .filter((x) => typeof x === "string" && x.trim()).join("\n").slice(0, 1000);
+    return m[2] ? { imdb: m[1], season: Number(m[2]), episode: Number(m[3]), release } : { imdb: m[1], release };
+  }
+  // A film's or an episode's streams are on screen (#/detail/movie/tt…/tt…, #/detail/series/tt…/tt…:1:2):
+  // the app starts looking now, so the files are usually there by the time one is played. No stream is
+  // picked yet, so the app goes by the files' downloads; the hand-off asks again with the stream, and
+  // finds that lookup. Once per film or episode while the page is open
+  const thaiAsked = new Set();
+  function thaiEarly() {
+    const m = /^#\/detail\/(movie|series)\/([^/?]+)(?:\/([^/?]+))?/.exec(location.hash);
+    if (!m || !thaiOn()) return;
+    // (a film opened without its video in the address, as the billboard's More info does, shows its
+    // streams too; a series page without an episode doesn't)
+    const raw = m[3] || (m[1] === "movie" ? m[2] : "");
+    if (!raw) return;
+    let videoId = "";
+    try { videoId = decodeURIComponent(raw); } catch (_) { return; }
+    const lookup = thaiLookup(videoId, null);
+    if (!lookup || thaiAsked.has(videoId)) return;
+    thaiAsked.add(videoId);
+    native.thaiSubtitles(JSON.stringify(lookup));
+  }
+
   // Addons can offer hundreds of subtitle files: keep up to three in the start language and English
   // and two in every other language (so every language is there, as on the desktop: a cap on the
   // total used to drop whole languages), the start language and English first. The first in the
-  // start language is marked to switch on as the video starts
+  // start language is marked to switch on as the video starts. Thai goes before them all while Thai
+  // subtitles are on (the app switches the first Thai one on itself, with "Start with Thai subtitles")
+  // With "Only Thai and English subtitles", nothing else is handed over (but Stremio's own subtitle
+  // language, when one is set). The TV's player fetches every file it is handed as the video starts:
+  // two in each of forty languages was eighty requests at once to the subtitle addon's server, which
+  // answered most of them "too many requests", the Thai and English ones as likely as any.
   async function pickSubtitles(list, language) {
     const preferred = language || (await profileSettings()).subtitlesLanguage || "";
-    const rank = (lang) => (sameLanguage(lang, preferred) ? 0 : /^(eng|en)$/.test(lang) ? 1 : 2);
+    const thai = thaiOn();
+    if (thaiEnglishOnly()) list = list.filter((x) => x && (THAI.test(x.lang || "") || /^(eng|en|english)$/i.test(x.lang || "") || sameLanguage(x.lang, preferred)));
+    const rank = (lang) => (thai && THAI.test(lang) ? -1 : sameLanguage(lang, preferred) ? 0 : /^(eng|en)$/.test(lang) ? 1 : 2);
     const count = {};
     const out = [];
     let started = false;
     for (const sub of list.filter((x) => x && x.url).sort((a, b) => rank(a.lang || "") - rank(b.lang || ""))) {
       const lang = sub.lang || "";
-      if ((count[lang] || 0) >= (rank(lang) < 2 ? 3 : 2)) continue;
-      count[lang] = (count[lang] || 0) + 1;
+      // ("th" and "tha" are one language: the app numbers its own Thai files on from these)
+      const key = thai && THAI.test(lang) ? "tha" : lang;
+      if ((count[key] || 0) >= (rank(lang) < 2 ? 3 : 2)) continue;
+      count[key] = (count[key] || 0) + 1;
       // "English", "English 2", "English 3"
       // (where it came from: the stream's own, or a subtitle addon's search by title, which may not fit this release)
-      const pick = { url: sub.url, lang, label: subtitleLabel(lang) + (count[lang] > 1 ? ` ${count[lang]}` : ""), source: sub.source || "addon" };
+      const pick = { url: sub.url, lang, label: (key === "tha" ? "Thai" : subtitleLabel(lang)) + (count[key] > 1 ? ` ${count[key]}` : ""), source: sub.source || "addon" };
       if (language && !started && sameLanguage(lang, language)) pick.start = started = true;
       out.push(pick);
       if (out.length >= 120) break;
@@ -632,6 +799,15 @@
     }
   }
 
+  // The title's page a player screen belongs to: its list of streams (or of episodes)
+  function detailOf(state) {
+    const sel = state && state.selected;
+    const meta = sel && sel.metaRequest && sel.metaRequest.path;
+    if (!meta || !meta.type || !meta.id) return "";
+    const video = sel.streamRequest && sel.streamRequest.path && sel.streamRequest.path.id;
+    return `#/detail/${encodeURIComponent(meta.type)}/${encodeURIComponent(meta.id)}${video ? `/${encodeURIComponent(video)}` : ""}`;
+  }
+
   async function startHandoff() {
     const hash = location.hash;
     if (!/^#\/player\//.test(hash) || (handoff && handoff.hash === hash)) return;
@@ -642,10 +818,18 @@
     // The player screen fills in over a moment: wait until the stream is known, and give the
     // title's details (name, episode, saved position) a few seconds more to arrive
     let known = 0;
+    let thaiAskedHere = false;
     for (let i = 0; i < 60 && location.hash === hash; i++) {
       state = await playerState();
       const stream = state && state.selected && state.selected.stream;
       if (stream && stream.ytId) break;
+      // Thai subtitles: asked again as soon as the stream is known, while the rest gets ready (the app
+      // finds the lookup the title's streams started, or starts one when the player was opened another way)
+      if (stream && !thaiAskedHere) {
+        thaiAskedHere = true;
+        const lookup = thaiOn() && thaiLookup(state.selected.streamRequest && state.selected.streamRequest.path && state.selected.streamRequest.path.id, stream);
+        if (lookup) native.thaiSubtitles(JSON.stringify(lookup));
+      }
       const streamKnown = stream && (stream.url || (state.stream && state.stream.type === "Ready") || stream.infoHash || stream.externalUrl);
       if (streamKnown) {
         known++;
@@ -750,7 +934,14 @@
       }
       return;
     }
-    if (!url) { handoff = null; return; }
+    // (a kind of stream the native player can't take: Stremio's own player is never let play on the TV,
+    // so back to the list rather than a player screen that waits for ever)
+    if (!url) {
+      handoff = null;
+      history.back();
+      toast("This stream can't play on the TV. Try another one.", 5000);
+      return;
+    }
 
     const meta = state.metaItem && state.metaItem.type === "Ready" ? state.metaItem.content : (state.metaItem && state.metaItem.content) || {};
     const videoId = state.selected.streamRequest && state.selected.streamRequest.path && state.selected.streamRequest.path.id;
@@ -780,8 +971,9 @@
     ], subtitleLanguage);
     // (where the end credits start, in seconds: stopped past there counts as finished)
     const credits = (skips || []).find((s) => s && s.type === "credits");
-    handoff = { hash, videoId, started: Date.now(), creditsAt: credits && credits.start > 0 ? credits.start : 0 };
+    handoff = { hash, videoId, started: Date.now(), detail: detailOf(state), creditsAt: credits && credits.start > 0 ? credits.start : 0 };
     tv.partyVideo = new NativeVideo();
+    tv.scrobbleVideo = new ScrobbleVideo(hash);
     partySeen = "";
     note(`playing in dx.bi's player: ${describeStream(stream, url, torrent, headers)}`);
     native.play(JSON.stringify({
@@ -813,6 +1005,9 @@
       startMs: resumeMs,
       headers,
       subtitles,
+      thaiSubtitles: thaiOn(),
+      thaiStart: thaiStart(),
+      thaiLookup: thaiOn() ? thaiLookup(videoId, stream) : null,
       background: meta.background || meta.poster || "",
       // (the lock screen's picture)
       poster: meta.poster || "",
@@ -860,6 +1055,46 @@
     }
   }
 
+  // Marking what you watch on Simkl: the plugin's scrobbler listens to this stand-in as it would to a
+  // <video>. The native player's reports (every few seconds: PROGRESS_INTERVAL_MS in PlayerActivity.kt,
+  // which tickGap tells the plugin) become timeupdate, playing and pause events, and how the player
+  // closed becomes a last timeupdate, with ended when it played through. One per handoff, carrying the
+  // player route it belongs to, so the plugin never takes it for the next title's.
+  class ScrobbleVideo extends EventTarget {
+    constructor(hash) {
+      super();
+      Object.assign(this, { hash, time: 0, length: NaN, stopped: true, buffering: true, seeking: false, ended: false, closed: false, tickGap: 5000 });
+    }
+    get currentTime() { return this.time; }
+    get duration() { return this.length; }
+    get paused() { return this.stopped; }
+    get readyState() { return this.buffering ? 2 : 4; }
+    update(ms, durationMs, paused, buffering) {
+      if (this.closed) return;
+      const changed = paused !== this.stopped;
+      Object.assign(this, { time: ms / 1000, length: durationMs > 0 ? durationMs / 1000 : NaN, stopped: paused, buffering });
+      if (changed) this.dispatchEvent(new Event(paused ? "pause" : "playing"));
+      this.dispatchEvent(new Event("timeupdate"));
+    }
+    // The player closed: where it got to (the end, when it played through). A close is not a pause:
+    // the page leaves the player screen next, and the plugin sends where it got to then
+    close(ms, durationMs, ended) {
+      if (this.closed) return;
+      this.closed = true;
+      if (durationMs > 0) this.length = durationMs / 1000;
+      if (ms > 0) this.time = ms / 1000;
+      if (ended && this.length > 0) this.time = this.length;
+      this.buffering = false;
+      if (ended) this.stopped = true;
+      this.dispatchEvent(new Event("timeupdate"));
+      this.stopped = true;
+      if (ended) {
+        this.ended = true;
+        this.dispatchEvent(new Event("ended"));
+      }
+    }
+  }
+
   tv.partyToast = (text) => native.control({ cmd: "toast", text });
   tv.onPartyTick = (ms, durationMs, paused, buffering, rate) => {
     if (tv.partyVideo) tv.partyVideo.update(ms, durationMs, paused, buffering, rate);
@@ -881,19 +1116,31 @@
     native.control({ cmd: "party", on: !!info, code: info ? info.code : "", people: info ? info.people : [] });
   }, 1000);
 
-  // The native player reports where it is every few seconds, and once more when it closes.
+  // The native player reports where it is every few seconds, and once more when it closes. Paused is
+  // the viewer's pause (or the end); buffering is a wait for data, which Stremio counts as not playing
+  // but the Simkl scrobbler must not take for a pause
   // The phone apps: Watch stats count the time between reports while it plays (a long gap, asleep
   // or stalled, doesn't)
+  // A jump further than playing could explain is a skip, and Stremio is told so ("Seek"). Told as
+  // plain progress, a place further back is not taken: Stremio only moves its saved place forwards
+  // for that, so after going back ten minutes and leaving, the next play started from the furthest
+  // point reached, not from where it was left.
   let playingSince = 0;
-  tv.onProgress = (timeMs, durationMs, paused) => {
+  let reported = null;
+  tv.onProgress = (timeMs, durationMs, paused, buffering) => {
     if (!handoff || !/^#\/player\//.test(location.hash)) return;
     const now = Date.now();
+    const before = reported && reported.hash === location.hash ? reported : null;
+    reported = { hash: location.hash, time: timeMs, at: now, still: !!paused || !!buffering };
+    const gone = before ? now - before.at : 0;
+    const jumped = !!before && Math.abs(timeMs - (before.time + (before.still ? 0 : gone))) > Math.max(3000, gone * 1.5);
     const dx = window.__dxbi;
     if (window.__dxbiEngine && !paused && playingSince && now - playingSince < 15000 && dx && dx.statsPlayed) dx.statsPlayed((now - playingSince) / 1000);
     playingSince = paused ? 0 : now;
     silenceWebPlayer();
-    dispatch({ action: "Player", args: { action: "TimeChanged", args: { time: Math.max(0, Math.round(timeMs)), duration: Math.max(0, Math.round(durationMs)), device: "dxbi-tv" } } });
-    dispatch({ action: "Player", args: { action: "PausedChanged", args: { paused: !!paused } } });
+    dispatch({ action: "Player", args: { action: jumped ? "Seek" : "TimeChanged", args: { time: Math.max(0, Math.round(timeMs)), duration: Math.max(0, Math.round(durationMs)), device: "dxbi-tv" } } });
+    dispatch({ action: "Player", args: { action: "PausedChanged", args: { paused: !!paused || !!buffering } } });
+    if (tv.scrobbleVideo) tv.scrobbleVideo.update(timeMs, durationMs, !!paused, !!buffering);
   };
 
   // The title's own colour for the player's seek bar when dx.bi has one quickly, else the accent
@@ -926,6 +1173,17 @@
     return nextLink(state);
   }
 
+  // Back from the native player goes back a screen in the page, which is the title's page. Should the
+  // page still be on that player screen a moment later (the screen before it was the same player
+  // screen, so the address didn't change and nothing else noticed), it is taken to the title's page.
+  function leavePlayerScreen(detail) {
+    setTimeout(async () => {
+      if (handoff || !onPlayerScreen()) return;
+      const to = detail || detailOf(await playerState()) || "#/";
+      if (!handoff && onPlayerScreen()) location.replace(to);
+    }, 1500);
+  }
+
   // An episode: its watched tag (on its own: the season's others stay as they are). A film: marked
   // watched unless the 70% rule already did (that would count it watched twice)
   async function markFinished(videoId) {
@@ -941,9 +1199,14 @@
 
   async function closeHandoff(timeMs, durationMs, ended, error, next) {
     tv.partyVideo = null;
+    // Simkl hears where it got to: at once when it played through, otherwise as the page leaves the player
+    const scrobble = tv.scrobbleVideo;
+    tv.scrobbleVideo = null;
+    if (scrobble) scrobble.close(timeMs, durationMs, ended);
     if (handoff && /^#\/player\//.test(location.hash)) {
       if (timeMs > 0) tv.onProgress(timeMs, durationMs, true);
       if (ended) dispatch({ action: "Player", args: { action: "Ended" } });
+      const detail = handoff.detail || "";
       // The phone apps: finished (played to the end, or closed past the end credits) is marked
       // watched, as Mark as watched does. Stremio only marks a video it saw 70% of playing, so one
       // with its intro skipped, or closed in the credits, moved Continue Watching on without it
@@ -960,7 +1223,10 @@
       const link = next && await nextLinkFor(await playerState());
       note(`player closed at ${Math.round(timeMs / 1000)}/${Math.round(durationMs / 1000)} s${ended ? ", ended" : ""}${next ? ", next" : ""}${error ? `, error: ${error}` : ""}`);
       if (link) location.replace(link);
-      else history.back();
+      else {
+        history.back();
+        leavePlayerScreen(detail);
+      }
       // The phone apps: its series page picks the next episode (or the one it closed on), once the
       // page has left the player (a page it goes back to may load the old one first)
       if (phone && window.__dxbiEngine.afterPlaying && !(link && /^#\/player\//.test(link))) {
@@ -1029,13 +1295,15 @@
   // Returns false on Home, where the app decides (it leaves).
   // ---------------------------------------------------------------------------
   tv.back = () => {
-    if (openModal) { closeModal(); return true; }
+    if (openModal) { closeModal(); menuAgain(); return true; }
     const who = window.__dxbi && window.__dxbi.whoIsWatching;
-    if (who && who.el) { who.back(); return true; }
+    if (who && who.el) { who.back(); menuAgain(); return true; }
     const sheet = document.querySelector(".dxe-modal");
     if (sheet) {
-      const close = sheet.querySelector("[data-act=close]");
+      // (the Simkl dialog waiting for its code has Cancel instead: Back gives up the sign-in, as it should)
+      const close = sheet.querySelector("[data-act=close], [data-act=cancel]");
       if (close) close.click(); else sheet.remove();
+      menuAgain();
       return true;
     }
     if (window.__dxbi && typeof window.__dxbi.closeTrailer === "function" && window.__dxbi.closeTrailer()) return true;
@@ -1046,6 +1314,14 @@
     if (stremioModal) {
       const close = stremioModal.querySelector('[class*="close-button"]');
       if (close) { close.click(); return true; }
+    }
+    // One of the stream bar's menus (order, quality, language, source): Back shuts it and the
+    // remote carries on from the button that opened it. (Back left the title altogether.)
+    const barMenu = document.querySelector(".dx-streambar .dx-sb-btn.is-open");
+    if (barMenu) {
+      barMenu.click();
+      if (barMenu.isConnected) barMenu.focus({ preventScroll: true });
+      return true;
     }
     // (an open popup menu: the profile menu's is only marked by its direction class, so it was
     // missed and Back left the remote stuck in it)
@@ -1061,6 +1337,87 @@
     if (!route || route === "board") return false;
     history.back();
     return true;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Stremio's web app updates itself: a new build's service worker fetches it and waits, and Stremio
+  // shows "A new version of Stremio is available · Reload the user interface" along the bottom, again
+  // every time the app comes to the front, until it's pressed. On a TV that read as dx.bi nagging. The
+  // bar stays hidden (STYLE above) and the TV presses it itself, always, at a moment when nobody is in
+  // the middle of anything:
+  //  - as the page starts (an update found last time), while the intro or the first screen covers it;
+  //  - when dx.bi leaves the screen (Home, another app, the TV going to sleep: the app says so);
+  //  - when the remote has been put down for a few minutes.
+  // Never while the native player has a stream, since the page is keeping its watch progress, and never
+  // on a player screen, in a watch party or with no network.
+  // Stremio only looks for a new build when its page comes back into view, and a TV's page can stay in
+  // view for days: the TV asks too, each time dx.bi comes to the front and every few hours.
+  // ---------------------------------------------------------------------------
+  const webUpdate = {
+    // when one was last taken: a build that can't take over isn't pressed again and again
+    LAST: "dxtv-web-update",
+    HOLD_MS: 30 * 60 * 1000,
+    START_MS: 15 * 1000,
+    IDLE_MS: 4 * 60 * 1000,
+    CHECK_MS: 3 * 60 * 60 * 1000,
+    used: Date.now(), // when the remote was last pressed (or the screen touched)
+    checked: Date.now(), // when a new build was last looked for
+    banner: () => document.querySelector('[class*="web-update-banner"] [role="status"]'),
+    apply(why) {
+      const banner = this.banner();
+      if (!banner || handoff || resuming) return false;
+      // Nor on a player screen (the page would come back on it and hand its stream over again: the one
+      // that just ended, while Up next looks for the next), with no network (it would come back from
+      // its own cache with every row failing to load), or in a watch party (it would leave it)
+      if (/^#\/player\//.test(location.hash) || navigator.onLine === false) return false;
+      const dx = window.__dxbi;
+      if (dx && dx.partyInfo && dx.partyInfo()) return false;
+      let playing = false;
+      try { playing = !!native.activePlayback(); } catch (_) { /* the app will say */ }
+      if (playing) return false;
+      let last = 0;
+      try { last = Number(localStorage.getItem(this.LAST)) || 0; } catch (_) { /* no storage */ }
+      if (Date.now() - last < this.HOLD_MS) return false;
+      // the bar's button, not its ×: Stremio moves the page onto the new build and reloads it
+      const button = banner.querySelector('[class*="button"]:not([class*="close"])');
+      if (!button) return false;
+      try { localStorage.setItem(this.LAST, String(Date.now())); } catch (_) { /* no storage */ }
+      console.log(`[dx.bi TV] taking Stremio's update (${why})`);
+      button.click();
+      return true;
+    },
+    // Is there a new build? (Stremio's own page hears the answer, and shows its bar)
+    check() {
+      this.checked = Date.now();
+      try {
+        navigator.serviceWorker.getRegistration().then((r) => r && r.update()).catch(() => { /* offline: next time */ });
+      } catch (_) { /* no service worker here */ }
+    },
+    // Something is open that a reload would take away
+    busy() {
+      return /^#\/player\//.test(location.hash) || !!openModal || !!document.querySelector(".dxe-modal, .dxe-who, .dxe-theatre, .dxe-trailer");
+    },
+    watch() {
+      // An update found last time: Stremio shows it as soon as the page is up
+      const since = Date.now();
+      const starting = setInterval(() => {
+        if (Date.now() - since > this.START_MS || this.apply("start")) clearInterval(starting);
+      }, 500);
+      // One found while dx.bi is on: once the remote has been down for a while
+      setInterval(() => {
+        const now = Date.now();
+        if (now - this.checked > this.CHECK_MS) this.check();
+        if (now - this.used > this.IDLE_MS && !this.busy()) this.apply("idle");
+      }, 60 * 1000);
+    },
+  };
+  for (const type of ["keydown", "pointerdown"]) window.addEventListener(type, () => { webUpdate.used = Date.now(); }, { capture: true, passive: true });
+  // the app: dx.bi has left the screen (what's open is still there when it comes back)
+  tv.hidden = () => !webUpdate.busy() && webUpdate.apply("background");
+  // the app: dx.bi is back on screen
+  tv.shown = () => {
+    webUpdate.used = Date.now();
+    webUpdate.check();
   };
 
   // ---------------------------------------------------------------------------
@@ -1155,6 +1512,7 @@
   function onRoute() {
     ensureSettingsEntry();
     if (/^#\/player\//.test(location.hash)) startHandoff();
+    if (/^#\/detail\//.test(location.hash)) thaiEarly();
     if (/^#\/search\?search=./.test(location.hash) && document.activeElement && document.activeElement.tagName !== "INPUT") resultsFirst();
   }
 
@@ -1164,6 +1522,7 @@
     loadPlugin();
     resumePlayback();
     onRoute();
+    webUpdate.watch();
     new MutationObserver(ensureSettingsEntry).observe(document.body, { childList: true, subtree: true });
   };
   if (document.readyState === "complete") start();

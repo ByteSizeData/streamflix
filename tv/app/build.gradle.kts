@@ -6,10 +6,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// The TV app shares dx.bi's version number: it's read from the plugin at the repository root
+// The TV app shares dx.bi's version number: it's read from the plugin at the repository root. A
+// custom build's suffix ("2.26.0-simkl.1") stays in the version name, where Updates sees it and
+// leaves the build alone; the version code comes from the numbers before it
 val pluginFile = rootProject.file("../dxbi.plugin.js")
-val dxbiVersion = Regex("""@version\s+([\d.]+)""").find(pluginFile.readText())!!.groupValues[1]
-val versionParts = dxbiVersion.split(".").map { it.toInt() }
+val dxbiVersion = Regex("""@version\s+(\S+)""").find(pluginFile.readText())!!.groupValues[1]
+val versionParts = dxbiVersion.substringBefore("-").split(".").map { it.toInt() }
 
 // Release signing: tv/keystore.properties (not in git) or the DXBI_TV_KEYSTORE* environment variables in CI
 val keystoreProps = Properties().apply {
@@ -17,6 +19,11 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 fun signingValue(key: String, env: String): String? = keystoreProps.getProperty(key) ?: System.getenv(env)
+
+// -PdxbiInspect=true: a release build whose page can be looked into from a computer (chrome://inspect,
+// tools/tv-lab.mjs --device) on a real TV, signed and trimmed like any other so it installs over one.
+// Never for a build that is handed out.
+val inspect = (project.findProperty("dxbiInspect") as String?) == "true"
 
 // Where the app looks for its updates: the repository it was built from (GitHub Actions says which), so
 // a fork's TVs follow the fork's own releases rather than being offered builds signed with another key
@@ -84,6 +91,7 @@ android {
             ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
             isMinifyEnabled = true
             isShrinkResources = true
+            isDebuggable = inspect
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (signingValue("storeFile", "DXBI_TV_KEYSTORE") != null) signingConfig = signingConfigs.getByName("release")
         }

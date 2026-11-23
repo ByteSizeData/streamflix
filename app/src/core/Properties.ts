@@ -18,6 +18,11 @@ class Properties {
 
     // Stremio Enhanced's folder: dx.bi offers to bring your sign-in and settings over from it once
     public static enhancedImportPath = join(Properties.baseDataPath, "stremio-enhanced");
+
+    // Stremio's own app (Stremio 5) keeps its web profile here on Windows: dx.bi offers to bring it over once
+    public static stremioImportPath = process.platform === "win32"
+        ? join(process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local"), "Programs", "StremioService", "stremio-shell-ng.exe.WebView2", "EBWebView", "Default")
+        : "";
 }
 
 export default Properties;

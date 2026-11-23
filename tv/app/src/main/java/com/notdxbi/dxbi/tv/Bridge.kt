@@ -139,6 +139,21 @@ class Bridge(private val activity: MainActivity) {
         }
     }
 
+    /**
+     * Starts looking up Thai subtitles for a film or episode whose streams are on screen (and again for the
+     * stream about to play), so they're usually there when the player opens. [json]: { imdb, season,
+     * episode, release }, release empty before a stream is picked
+     */
+    @JavascriptInterface
+    fun thaiSubtitles(token: String, json: String) {
+        if (!allowed(token)) return
+        try {
+            ThaiSubtitles.request(activity.applicationContext, JSONObject(json))
+        } catch (_: Exception) {
+            // (the player asks again)
+        }
+    }
+
     /** The device, for problem reports: model, Android, WebView, memory, the torrent engine's state */
     /**
      * Minutes ahead of UTC on the device's own clock. Android's time zone rules are updated with the

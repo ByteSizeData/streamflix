@@ -1,9 +1,11 @@
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import { IPC_CHANNELS } from "../constants";
 import logger from "../utils/logger";
 import Updater from '../core/Updater';
 
 export function setupUpdater() {
+    // a custom build (Simkl) is never offered the plain dx.bi in its place
+    if (/simkl/i.test(app.getVersion())) return;
     ipcMain.on(IPC_CHANNELS.UPDATE_CHECK_STARTUP, async (_, checkForUpdatesOnStartup: string) => {
         logger.info(`Checking for updates on startup: ${checkForUpdatesOnStartup === "true" ? "enabled" : "disabled"}.`);
         if (checkForUpdatesOnStartup === "true") {

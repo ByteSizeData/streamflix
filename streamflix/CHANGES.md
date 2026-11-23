@@ -1,0 +1,40 @@
+# What StreamFlix changes
+
+StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes below. dx.bi's own
+changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
+still called "dx.bi, Simkl build", newest first.
+
+## 2.38.3-simkl.4 (custom build)
+
+- **TV: what closed the player on a long skip.** Seen happen at last, on a SHIELD with the build before simkl.3: the skip button held for twenty-odd seconds, then "Source error" and the player gone. A held button repeats about twenty times a second and each repeat opened the stream again; after a few hundred of those the stream's server answered 429, "too many requests", and the player gave up. Since simkl.3 a hold goes as one skip when the button is let go, and the same hold (and one of forty seconds) plays on.
+- **TV: a held skip button speeds up.** Ten seconds a count for the first second and a half, then thirty seconds, then a minute, then two: twenty minutes is about six seconds of holding and half an hour about eight (simkl.3 had slowed a hold to under a minute of film a second). The label counts along and shows where it will land: "+22 min 10 s   23:23".
+- **TV: a skip never lands on the very end.** A held button runs to the end of the film, and a skip that landed there ended the play (marked watched, the next episode starting) or sat there loading. Skips now stop ten seconds short of the end.
+- **TV: a busy server is waited for.** When a stream's server answers "too many requests" or "busy", the player says so, waits three seconds (then six, then nine) and carries on from where it stood, three times before it gives up.
+
+## 2.38.3-simkl.3 (custom build)
+
+- **TV: the app no longer runs out of memory while a film plays.** The player keeps what it has loaded of the video in the app's own memory, about 144 MB of it for a 4K film, and a TV box allows an app 192 MB unless it asks for more. With the page's share on top, dx.bi sat at 173 MB of 187 all through a film (measured on a SHIELD TV Pro). Past three quarters of the allowance Android destroys the app's screens that aren't showing, so the main screen and its page were thrown away about half a minute into each film (Back then took twelve seconds while it all loaded again, and nothing reached Stremio or Simkl meanwhile), and a skip that makes the player load from a new place asked for more memory when there was none left. The app now asks for the large allowance (512 MB on a SHIELD) and uses 150 MB of it.
+- **TV: the player survives the screen changing.** A TV coming on, an HDMI link settling or the HDR mode changing is a change of the screen to Android, which destroyed the player and made it again, and a player made again closed. The main screen was built again the same way, and its page started over from Home. Both screens take every such change themselves now.
+- **TV: skipping forwards and back holds up.** Presses that follow each other quickly add up and go as one skip ("+40 s"), a held button counts a few times a second and not twenty, a debrid stream's link is followed once a play instead of at every skip, and a play that fails after a skip starts again from where it stood (twice at most) before it is given up.
+- **TV: going back is remembered.** Leave after skipping back and the next play starts from where you left, not from the furthest point you had reached. (Stremio only moves its saved place forwards for plain progress; a skip is now told to it as a skip.)
+- **TV: a title opens with its best match selected.** The best match is selected as the streams come up, so OK plays it with no press before, and it stays on the best match while addons are still answering. Press any button and the selection is yours. Back from the player, the stream you played is selected again.
+- **TV: the Trailer is one press away.** Left from any stream goes to the Trailer button, and when the trailer closes the selection is back on the stream you left.
+- **TV: the best match and the Trailer stand out.** The best match has a gold frame, an orange quality tile and a gold Best match label; the Trailer button is bright blue.
+- **TV: no subtitles start by themselves.** Thai subtitles are still found, but stay off until you pick one, and a release's own subtitle track marked "default" stays off too. dx.bi settings → Subtitles → **Start with Thai subtitles** brings the old behaviour back.
+- **TV: Thai and English at the top of the subtitles menu, and only those are fetched.** The player's subtitles button lists Off, then Thai, then English, then the file's own other languages. With **Only Thai and English subtitles** (on in this build) nothing else is handed to the player: it fetches every subtitle file it is handed as a video starts, and two files in each of forty languages was eighty requests at once, most of them answered "too many requests" by the subtitle addon's server.
+- **TV: a diary for the next problem.** The app keeps a short log on the device of its screens being made and destroyed, the player opening, skipping, failing and closing, and any crash with its trace (`adb shell cat /sdcard/Android/data/com.notdxbi.dxbi.tv/files/diary.txt`). No titles are in it, and no addresses beyond a host name.
+
+## 2.38.3-simkl.2 (custom build)
+
+- **TV: the stream list no longer freezes the remote.** Going from a title's streams up to the Sort and filter buttons stopped everything for three to four seconds on a title with a few hundred streams (4.4 seconds for one press, measured on a SHIELD TV Pro with 309 streams), and the presses made meanwhile were lost. There were two causes. The browser was told to skip stream rows out of view, and Android's browser lays every skipped row out again, one at a time, whenever a button takes the selection. And the bar's controls were form buttons, which make Android's browser ask every element of the page whether it can take focus. On a TV the rows are no longer skipped (they are drawn a few to a frame, as before) and the bar's controls are plain elements. The same press now takes about 75 ms.
+- **TV: the Sort and filter buttons can be reached after scrolling.** On the redesigned title page the bar scrolls away with the list, and Up from the first stream went past it to the addon tabs. It goes to the bar now, wherever the list is.
+- **TV: Back closes an open Sort or filter menu** instead of leaving the title.
+- **TV: Settings' menu works with the remote.** Left goes from a section into the menu and Right back out (the menu was taken for the top bar, and couldn't be entered from the side at all). dx.bi's entries there look like Stremio's own (they were in capitals), and Back from what an entry opened returns to that entry.
+
+## 2.38.3-simkl.1 (custom build)
+
+- **Up to date with dx.bi 2.38.3.** Everything upstream changed from 2.27 to 2.38.3 is in, with this build's Simkl lists and scrobbling, stream order (a release site first, English dubs first, flags), Thai subtitles and TV engine kept.
+- **Title pages work again.** Stremio redesigned its title page in November 2026 (streams in a panel grouped by addon, new buttons, new facts line). The 2.26.0-simkl builds found none of it: no clean stream rows, no sort and filter bar, no Reviews or Hide, no Ends at, no scores. All of it finds its place on the new page, and still on the old one.
+- **TV: the remote steps through the new stream list row by row**, in the order shown, across addon groups.
+- **TV: dx.bi is back in Settings.** Stremio's new Settings page is a menu on the left with one page at a time, and dx.bi's entries (dx.bi settings, Who's watching?, Simkl, Customise Home, Streaming server, Report a problem) had nowhere to go, so on a TV there was no way to open them. They're a **dx.bi** group at the top of that menu now.
+- **TV: a title's page comes up at once.** The new page fades its picture in and slides its content up, stream rows and all; on a TV both are switched off, like every other entrance.

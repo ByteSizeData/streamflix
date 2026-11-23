@@ -10,3 +10,11 @@ tools/prev/
 # Cloudflare Worker local secrets
 .dev.vars
 .wrangler/
+
+# screenshots from tools/simkl-smoke.mjs
+simkl-shots/
+simkl-shots-packaged/
+build-win.log
+
+# what tools/tv-lab.mjs measured
+tv-lab/
