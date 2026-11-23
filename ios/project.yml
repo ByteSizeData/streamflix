@@ -1,4 +1,4 @@
-# dx.bi for iPhone. XcodeGen makes the Xcode project from this (`xcodegen` in ios/; the .xcodeproj
+# StreamFlix for iPhone. XcodeGen makes the Xcode project from this (`xcodegen` in ios/; the .xcodeproj
 # isn't kept in git). GitHub Actions builds it on a Mac: .github/workflows/ios.yml
 name: Dxbi
 options:
@@ -41,7 +41,7 @@ targets:
     info:
       path: Dxbi/Info.plist
       properties:
-        CFBundleDisplayName: dx.bi
+        CFBundleDisplayName: StreamFlix
         DxbiUpdateRepo: $(DXBI_UPDATE_REPO)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -65,8 +65,8 @@ targets:
           - bebas_neue.ttf
         UIUserInterfaceStyle: Dark
         ITSAppUsesNonExemptEncryption: false
-        # A streaming server on the network (Stremio or dx.bi on a computer) plays torrents for the phone
-        NSLocalNetworkUsageDescription: dx.bi looks for a Stremio streaming server on your network to play torrents.
+        # A streaming server on the network (Stremio or StreamFlix on a computer) plays torrents for the phone
+        NSLocalNetworkUsageDescription: StreamFlix looks for a Stremio streaming server on your network to play torrents.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
         # "Play in another app"
