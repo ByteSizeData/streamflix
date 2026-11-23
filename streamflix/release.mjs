@@ -104,7 +104,8 @@ if (apks) {
     copyFileSync(join(root, "tv", file), join(work, "tv", file));
   }
   say("building the Android apps (some minutes)");
-  const gradle = process.platform === "win32" ? "gradlew.bat" : "./gradlew";
+  // (Windows runs a .bat through its shell, which wants the whole path, quoted)
+  const gradle = process.platform === "win32" ? JSON.stringify(join(work, "tv", "gradlew.bat")) : "./gradlew";
   execFileSync(gradle, ["assembleTvRelease", "assembleMobileRelease", "--no-daemon", "--console=plain", "-q"], { cwd: join(work, "tv"), stdio: "inherit", shell: process.platform === "win32", env: { ...process.env, DXBI_UPDATE_REPO: repo } });
   const built = [["tv", "streamflix-tv.apk"], ["mobile", "streamflix-mobile.apk"]].map(([flavor, name]) => {
     const to = join(work, name);
