@@ -52,7 +52,7 @@ import com.notdxbi.dxbi.tv.phone.StreamOption
 private enum class Sort(val label: String) { Best("Best quality"), Seeds("Most seeds"), Largest("Largest first"), Smallest("Smallest first"), Addon("Addon order") }
 
 /**
- * The streams for one film or episode, the way dx.bi's stream list shows them: dx.bi's pick at the
+ * The streams for one film or episode, the way StreamFlix's stream list shows them: StreamFlix's pick at the
  * top (Just press Play's choice: what you chose last time, else the best that's ready), then every
  * stream with its quality, HDR, source, codec, languages, size and seeds, to filter and sort.
  */
@@ -93,7 +93,7 @@ fun StreamPicker(
                 subtitle?.let { Text(it, color = Dx.Muted, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
         }
-        // dx.bi's pick: one tap
+        // StreamFlix's pick: one tap
         choices?.picked?.let { best ->
             item(key = "pick") {
                 Row(

@@ -21,15 +21,15 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * dx.bi for phones, joined to dx.bi TV's code (see PhoneHooks.kt): native screens over the page,
+ * StreamFlix for phones, joined to StreamFlix TV's code (see PhoneHooks.kt): native screens over the page,
  * which keeps doing Stremio's work underneath (laid out and running, just covered), and where a
- * stream goes when it's played. On a TV the phone app is just dx.bi TV.
+ * stream goes when it's played. On a TV the phone app is just StreamFlix TV.
  */
 object Phone {
 
     /**
      * Where the next stream the page hands over goes (the screens choose before asking the page to
-     * play): dx.bi's own player, another app, a Chromecast, or a download. Back to [Target.Player] once used.
+     * play): StreamFlix's own player, another app, a Chromecast, or a download. Back to [Target.Player] once used.
      */
     enum class Target { Player, External, Cast, Download }
 
@@ -53,7 +53,7 @@ object Phone {
         // Another app playing a stream (VLC, mpv, MX Player…): it says where it got to when it closes
         external = activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { ExternalPlayer.finished(it.data) }
         val engine = Engine(js).also { engine = it }
-        // (downloads left unfinished last time carry on as soon as dx.bi opens)
+        // (downloads left unfinished last time carry on as soon as StreamFlix opens)
         Downloads.manager(activity)
         // (where it draws nothing, touches reach the page: how the page shows through when it's needed)
         val screens = ComposeView(activity).apply { setContent { PhoneApp(engine) } }
@@ -72,7 +72,7 @@ object Phone {
         engine?.onMessage("""{"type":"gone"}""")
     }
 
-    /** A stream the page handed over, when it isn't for dx.bi's player: true when it's been dealt with */
+    /** A stream the page handed over, when it isn't for StreamFlix's player: true when it's been dealt with */
     fun play(activity: MainActivity, json: String): Boolean {
         val target = nextTarget.also { nextTarget = Target.Player }
         when (target) {
@@ -89,7 +89,7 @@ object Phone {
     }
 
     /**
-     * dx.bi's player couldn't open or decode [stream]: other players (VLC, mpv, MX Player) bring their
+     * StreamFlix's player couldn't open or decode [stream]: other players (VLC, mpv, MX Player) bring their
      * own decoders and often can, so it's offered before giving up. [close] once the viewer chose,
      * told whether it went to another app. False when there's no address to hand on.
      */
@@ -98,7 +98,7 @@ object Phone {
         if (activity.isFinishing) return false
         android.app.AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle("This stream didn't play here")
-            .setMessage("dx.bi's player stopped: $reason.\n\nAnother video app (VLC, mpv or MX Player) may play it.")
+            .setMessage("StreamFlix's player stopped: $reason.\n\nAnother video app (VLC, mpv or MX Player) may play it.")
             .setPositiveButton("Open in another app") { _, _ ->
                 try {
                     activity.startActivity(chooser)
@@ -119,9 +119,9 @@ object Phone {
         if (isPhone(host.activity)) PhonePlayer(host, stream) else null
 
     /**
-     * Installs a downloaded update through Android's package installer: from Android 12, once dx.bi
+     * Installs a downloaded update through Android's package installer: from Android 12, once StreamFlix
      * installed the copy it's replacing (every update after the first), it installs without asking,
-     * and dx.bi closes to restart as the new version. Otherwise Android asks first (UpdateReceiver
+     * and StreamFlix closes to restart as the new version. Otherwise Android asks first (UpdateReceiver
      * brings that up). False: older Androids, which get the installer screen instead.
      */
     fun install(activity: MainActivity, apk: File): Boolean {
@@ -142,7 +142,7 @@ object Phone {
                     activity, id, Intent(activity, UpdateReceiver::class.java),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
                 )
-                activity.runOnUiThread { Toast.makeText(activity, "Installing the update: dx.bi will close and open as the new version", Toast.LENGTH_LONG).show() }
+                activity.runOnUiThread { Toast.makeText(activity, "Installing the update: StreamFlix will close and open as the new version", Toast.LENGTH_LONG).show() }
                 session.commit(done.intentSender)
             }
             true

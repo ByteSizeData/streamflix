@@ -144,7 +144,7 @@ data class Stream(
     }
 }
 
-/** A stream as dx.bi's stream list reads it (api.phone.streams: describeStream in the plugin) */
+/** A stream as StreamFlix's stream list reads it (api.phone.streams: describeStream in the plugin) */
 data class StreamOption(
     val index: Int,
     val play: String,
@@ -277,7 +277,7 @@ data class Account(val signedIn: Boolean, val email: String?, val avatar: String
     }
 }
 
-/** dx.bi's own Home rows (window.__dxbi.phone) */
+/** StreamFlix's own Home rows (window.__dxbi.phone) */
 data class ListRow(val name: String, val items: List<Title>)
 
 data class Airing(

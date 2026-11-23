@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 enum Dx {
-    /** dx.bi's red (Netflix's): progress, what's chosen */
+    /** StreamFlix's red (Netflix's): progress, what's chosen */
     static let accent = Color(red: 0.898, green: 0.035, blue: 0.078)
     static let background = Color.black
     static let raised = Color(white: 0.12)
@@ -12,15 +12,15 @@ enum Dx {
     static let gutter: CGFloat = 20
 }
 
-/** DX.BI in Bebas Neue, as on the desktop */
+/** STREAMFLIX in Bebas Neue, as on the desktop */
 struct Logo: View {
     var size: CGFloat = 30
     var body: some View {
-        Text("DX.BI")
+        Text("STREAMFLIX")
             .font(.custom("BebasNeue-Regular", size: size))
             .foregroundStyle(Dx.accent)
             .shadow(color: Dx.accent.opacity(0.55), radius: size / 5)
-            .accessibilityLabel("dx.bi")
+            .accessibilityLabel("StreamFlix")
     }
 }
 
