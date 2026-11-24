@@ -273,6 +273,8 @@ object TvReceiver {
     /**
      * The app's screen that is showing. When the TV sleeps with the app on top, it's woken first
      * (the TV set follows over HDMI); behind another app there's none, and nothing can be started.
+     * Only a TV that lets a sleeping app hear the network gets this far: a SHIELD doesn't (asleep,
+     * nothing reaches this port), so there the TV is woken with its remote.
      */
     private fun awake(context: Context): Activity? {
         showing.get()?.let { return it }
