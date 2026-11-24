@@ -97,7 +97,7 @@ import com.notdxbi.dxbi.tv.phone.Video
  * A title: art, what it is, Play, My List, reviews, and for a series its seasons and episodes.
  *
  * Play is instant: the streams for what Play would start are fetched as soon as the title's details
- * arrive. With dx.bi's Just press Play on, Play starts dx.bi's pick straight away; otherwise (or to
+ * arrive. With StreamFlix's Just press Play on, Play starts StreamFlix's pick straight away; otherwise (or to
  * choose) the streams come up with that pick on top. Held sideways on a big enough screen, the
  * details sit on the left and the episodes (or a film's streams) on the right.
  */
@@ -121,7 +121,7 @@ fun DetailScreen(stremio: Stremio, type: String, id: String, preview: Title?, pl
     var paneStreams by rememberSaveable { mutableStateOf(!episodic) }
     var season by rememberSaveable { mutableStateOf<Int?>(null) }
     var choices by remember(type, id) { mutableStateOf<StreamChoices?>(null) }
-    // what Play was pressed for, while dx.bi's pick for it is worked out (Just press Play)
+    // what Play was pressed for, while StreamFlix's pick for it is worked out (Just press Play)
     var waitingFor by remember { mutableStateOf<String?>(null) }
     // the streams are open to pick one to download ("Choose the source myself")
     var downloadMode by remember { mutableStateOf(false) }
@@ -130,7 +130,7 @@ fun DetailScreen(stremio: Stremio, type: String, id: String, preview: Title?, pl
     fun savedOf(videoId: String) = saved.firstOrNull { it.metaId == id && it.videoId == videoId }
 
     LaunchedEffect(type, id) { stremio.open(type, id) }
-    // scores and reviews (with the TMDB and MDBList keys from dx.bi settings), fetched alongside
+    // scores and reviews (with the TMDB and MDBList keys from StreamFlix settings), fetched alongside
     var reviews by remember(type, id) { mutableStateOf<Reviews?>(null) }
     var reviewsOpen by rememberSaveable(type, id) { mutableStateOf(false) }
     LaunchedEffect(type, id) { reviews = stremio.reviews(type, id) }
@@ -146,7 +146,7 @@ fun DetailScreen(stremio: Stremio, type: String, id: String, preview: Title?, pl
     LaunchedEffect(details?.state, details?.metaId) {
         if (details?.state == Load.Ready && episodic && details.videoId == null) nextVideo(details)?.let { stremio.open(type, id, it.id) }
     }
-    // dx.bi's reading of them, again as more addons answer
+    // StreamFlix's reading of them, again as more addons answer
     LaunchedEffect(details) { if (details?.videoId != null) choices = stremio.streams() }
     // the episode picked shows in its season (back from the player, the page picks the next one
     // when the last was finished: dxbi-engine.js afterPlaying)
@@ -187,7 +187,7 @@ fun DetailScreen(stremio: Stremio, type: String, id: String, preview: Title?, pl
     }
     fun downloadVideos(videoIds: List<String>, detail: String) = downloader.request(type, id, videoIds, title.name, detail)
 
-    // Just press Play: dx.bi's pick plays as soon as it's sure (the stream chosen last time at once,
+    // Just press Play: StreamFlix's pick plays as soon as it's sure (the stream chosen last time at once,
     // anything else once every addon has answered, or after 6 seconds)
     LaunchedEffect(waitingFor, current) {
         val c = current ?: return@LaunchedEffect
@@ -257,7 +257,7 @@ fun DetailScreen(stremio: Stremio, type: String, id: String, preview: Title?, pl
             when {
                 r == null -> Text("Gathering reviews…", color = Dx.Muted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(Gutter, 14.dp))
                 r.critics.isEmpty() && r.audience.isEmpty() && r.audienceProblem == null && r.problem == null ->
-                    Text("No reviews found for this one yet." + if ("tmdb" in r.missing) " A TMDB key in dx.bi settings adds audience reviews." else "",
+                    Text("No reviews found for this one yet." + if ("tmdb" in r.missing) " A TMDB key in StreamFlix settings adds audience reviews." else "",
                         color = Dx.Muted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(Gutter, 14.dp))
                 else -> ReviewsSection(r)
             }
@@ -598,7 +598,7 @@ private fun Episode(v: Video, resumeHere: Boolean, inProgress: Boolean, onWatche
 }
 
 // ---------------------------------------------------------------------------------------------------
-// Scores and reviews (dx.bi's Reviews: MDBList or Wikidata scores, Wikipedia, TMDB audience reviews)
+// Scores and reviews (StreamFlix's Reviews: MDBList or Wikidata scores, Wikipedia, TMDB audience reviews)
 
 /** Each site's score in its own colours: Rotten Tomatoes fresh or rotten, Metacritic green, yellow or red */
 private fun scoreColour(s: Score): Color {
@@ -672,7 +672,7 @@ private fun ReviewsSection(r: Reviews) {
             }
         }
         val notes = listOfNotNull(
-            r.audienceProblem?.let { "$it. Check the TMDB key in dx.bi settings." },
+            r.audienceProblem?.let { "$it. Check the TMDB key in StreamFlix settings." },
             r.problem?.let { "$it, so these scores come from Wikidata." },
         )
         notes.forEach { Text(it, color = Dx.Faint, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = Gutter, vertical = 4.dp)) }

@@ -20,7 +20,7 @@ class Bridge(private val activity: MainActivity) {
     private fun allowed(token: String): Boolean =
         MessageDigest.isEqual(token.toByteArray(), TOKEN.toByteArray())
 
-    /** The dx.bi plugin: the one built in, or a newer one it has updated itself to */
+    /** The StreamFlix plugin: the one built in, or a newer one it has updated itself to */
     @JavascriptInterface
     fun pluginSource(token: String): String = if (!allowed(token)) "" else try {
         Updates.forTv(Updates.pluginSource(activity))

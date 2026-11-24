@@ -6,7 +6,7 @@ import androidx.media3.common.util.UnstableApi
 import org.json.JSONObject
 import java.io.File
 
-/** dx.bi TV has none of the phone app's parts (they're src/mobile's): see PhoneHooks.kt */
+/** StreamFlix TV has none of the phone app's parts (they're src/mobile's): see PhoneHooks.kt */
 object Phone {
     fun attach(activity: MainActivity, root: FrameLayout, js: (String) -> Unit) = Unit
     fun pageScript(context: Context) = ""
