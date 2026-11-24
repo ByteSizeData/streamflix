@@ -5056,7 +5056,7 @@
     const spoken = langList.filter((l) => l !== NOT_LISTED && l !== "Dual audio" && l !== "Multi audio");
     const second = /\b(?:dual(?:[ .-]?audio)?|multi[ .-]?audio)\b/i.test(all);
     const dub = /\b(?:eng(?:lish)?[ .-]?dub(?:bed)?|dub(?:bed)?[ .-]?(?:eng|english))\b/i.test(all)
-      || /(?<!\b(?:hindi|tamil|telugu|latino|spanish|castellano|french|german|italian|portuguese|russian|korean|arabic|turkish|polish)[ .-])\bdub(?:bed|s)?\b/i.test(all)
+      || /(?<!\b(?:hindi|tamil|telugu|bengali|malayalam|kannada|marathi|punjabi|urdu|latino|spanish|castellano|french|german|italian|portuguese|russian|ukrainian|korean|japanese|chinese|mandarin|cantonese|thai|vietnamese|indonesian|arabic|persian|hebrew|turkish|polish|czech|hungarian|dutch|greek)[ .-])\bdub(?:bed|s)?\b/i.test(all)
       || (second && spoken.includes("Japanese"));
     const dual = second && !spoken.length;
     // English audio, which on a title not in English is its English dub. Addons list a release's
@@ -18671,6 +18671,9 @@
       return bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.round(bytes / 1e6)} MB`;
     },
 
+    // Is this row an English dub of the title on screen, to be marked as one?
+    dub(d) { return !this.isLink(d) && streamPrefs.dubbed && streamPrefs.englishDub(d); },
+
     html(d, file) {
       if (this.isLink(d)) {
         return `<span class="dxv-q"><b>Link</b></span><span class="dxv-main"><strong>${esc(d.provider)}</strong>${file ? `<small>${esc(file)}</small>` : ""}</span>`;
@@ -18685,7 +18688,7 @@
       const extra = more.length ? ` <span class="dxv-more">${more.slice(0, 6).map(flagTag).join("")}${more.length > 6 ? `+${more.length - 6}` : ""}</span>` : "";
       const state = d.instant ? ["is-ready", "Ready"] : d.pending ? ["is-wait", "Download"] : null;
       return `<span class="dxv-q"><b>${esc(QUALITY_LABEL[d.res])}</b>${d.dv || d.hdr ? `<i>${d.dv ? "Dolby Vision" : "HDR"}</i>` : ""}</span>
-        <span class="dxv-main"><em class="dxv-best">Best match</em>${streamPrefs.dubbed && streamPrefs.englishDub(d) ? '<em class="dxv-dub">English dub</em>' : ""}<span class="dxv-top"><strong>${esc([this.SOURCES[d.source], d.codec].filter(Boolean).join(" · "))}</strong>${state ? `<span class="dxv-state ${state[0]}">${esc(state[1])}</span>` : ""}</span><small>${facts.join(" · ")}${extra}</small>${file ? `<u>${esc(file)}</u>` : ""}</span>`;
+        <span class="dxv-main"><em class="dxv-best">Best match</em>${this.dub(d) ? '<em class="dxv-dub">English dub</em>' : ""}<span class="dxv-top"><strong>${esc([this.SOURCES[d.source], d.codec].filter(Boolean).join(" · "))}</strong>${state ? `<span class="dxv-state ${state[0]}">${esc(state[1])}</span>` : ""}</span><small>${facts.join(" · ")}${extra}</small>${file ? `<u>${esc(file)}</u>` : ""}</span>`;
     },
 
     // TV: a long list is not drawn in one go. Fifty rows built at once, in the task in which
@@ -18771,6 +18774,13 @@
         const listed = new Set(shown);
         due = due.concat(items.filter((el) => !listed.has(el)));
       }
+      // (a row drawn before its title was known not to be in English says nothing of its dub, and
+      // one drawn with "English dub first" on still says it once that is off: those rows, a few of
+      // the list, are drawn again)
+      for (const el of items) {
+        const hit = tools.cache.get(el);
+        if (this.drawn(el, hit) && !!hit.dub !== this.dub(tools.data(el))) this.draw(el);
+      }
       due = due.filter((el) => !this.drawn(el, tools.cache.get(el)));
       for (const el of due.splice(0, IN_TV ? this.FIRST : due.length)) this.draw(el);
       this.queue = due;
@@ -18787,6 +18797,7 @@
         hit.file = desc ? desc.textContent.trim().split("\n")[0].slice(0, 140) : "";
       }
       const html = this.html(d, hit.file);
+      hit.dub = this.dub(d);
       let row = el.querySelector(":scope > .dxv-row");
       if (!row) {
         row = document.createElement("span");
