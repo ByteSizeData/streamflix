@@ -41,7 +41,7 @@ import org.json.JSONObject
 import java.text.DateFormat
 import java.util.Date
 
-/** Your stats: how long you've watched, what and when (dx.bi's Watch stats, counted on this phone) */
+/** Your stats: how long you've watched, what and when (StreamFlix's Watch stats, counted on this phone) */
 @Composable
 fun StatsScreen(stremio: Stremio, onBack: () -> Unit) {
     var stats by remember { mutableStateOf<JSONObject?>(null) }
@@ -55,7 +55,7 @@ fun StatsScreen(stremio: Stremio, onBack: () -> Unit) {
         val s = stats
         when {
             s != null -> StatsList(s)
-            loaded -> Text("Watch stats are off. Turn them on in dx.bi settings to count how long you watch.", color = Dx.Muted, modifier = Modifier.padding(Gutter))
+            loaded -> Text("Watch stats are off. Turn them on in StreamFlix settings to count how long you watch.", color = Dx.Muted, modifier = Modifier.padding(Gutter))
             else -> Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Dx.Accent) }
         }
     }
@@ -135,7 +135,7 @@ private fun StatsList(s: JSONObject) {
             Fact("In your Library", "${s.optInt("movies")} films · ${s.optInt("series")} series")
         }
         item {
-            Text("Stats stay on this phone (saved with dx.bi's data). Only time spent actually playing counts.", color = Dx.Faint, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 12.dp))
+            Text("Stats stay on this phone (saved with StreamFlix's data). Only time spent actually playing counts.", color = Dx.Faint, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 12.dp))
         }
     }
 }

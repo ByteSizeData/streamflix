@@ -59,7 +59,7 @@ struct DownloadsView: View {
     }
 }
 
-/** Report a problem: what went wrong, sent with dx.bi's own report (as on the desktop and TV) */
+/** Report a problem: what went wrong, sent with StreamFlix's own report (as on the desktop and TV) */
 struct ReportView: View {
     @Environment(Stremio.self) private var stremio
     @Environment(\.dismiss) private var dismiss
@@ -84,7 +84,7 @@ struct ReportView: View {
                     TextField("What went wrong, and what were you doing?", text: $text, axis: .vertical)
                         .lineLimit(5...12)
                 } footer: {
-                    Text("dx.bi adds its version, this phone's model, your settings, addon names and recent errors. No passwords, keys or stream links are sent.")
+                    Text("StreamFlix adds its version, this phone's model, your settings, addon names and recent errors. No passwords, keys or stream links are sent.")
                 }
                 if let problem { Section { Text(problem).foregroundStyle(.red) } }
                 Section {

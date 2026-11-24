@@ -1,6 +1,6 @@
 // dx.bi TV — Copyright (C) 2026 dx.bi. GNU General Public License, version 3 or later (see LICENSE).
-// dx.bi TV: runs in web.stremio.com before the page's own scripts. It stands in for Stremio Enhanced
-// (the plugin API dx.bi expects), loads the built-in dx.bi plugin, fits the page to a TV, and hands
+// StreamFlix TV: runs in web.stremio.com before the page's own scripts. It stands in for Stremio Enhanced
+// (the plugin API StreamFlix expects), loads the built-in StreamFlix plugin, fits the page to a TV, and hands
 // every stream to the app's native player, keeping Stremio's watch progress in step.
 (function () {
   "use strict";
@@ -39,11 +39,11 @@
 
   // ---------------------------------------------------------------------------
   // Fit the page to the TV: lay it out 1280 CSS pixels wide (a 10-foot size on any screen). A phone
-  // held upright gets a 600-pixel-wide page instead, which Stremio and dx.bi lay out as a column.
+  // held upright gets a 600-pixel-wide page instead, which Stremio and StreamFlix lay out as a column.
   // ---------------------------------------------------------------------------
   const PHONE = (() => { try { return !!bridge.isPhone(); } catch (_) { return false; } })();
   tv.phone = PHONE;
-  // (Android phones download torrents themselves, with dx.bi's torrent engine: Downloads.kt. An
+  // (Android phones download torrents themselves, with StreamFlix's torrent engine: Downloads.kt. An
   // iPhone has no engine, so no torrentUrl)
   tv.torrentDownloads = PHONE && !!bridge.torrentUrl;
   // Words written for a TV, as a phone shows them
@@ -54,7 +54,7 @@
     text = text.replace(/\bthis PC\b/g, own).replace(/\bthis computer\b/g, own);
     if (!PHONE) return text;
     return text.replace(/ On a TV, only[^.]*\./, "").replace(/\bthis TV's\b/g, "this phone's").replace(/\bthis TV\b/g, "this phone")
-      .replace(/\bdx\.bi TV\b/g, "dx.bi").replace(/under your profile menu → /g, "in Profile → ").replace(/in your profile menu\b/g, "in Profile");
+      .replace(/\bStreamFlix TV\b/g, "StreamFlix").replace(/under your profile menu → /g, "in Profile → ").replace(/in your profile menu\b/g, "in Profile");
   };
   const upright = () => PHONE && window.screen && screen.height > screen.width;
   let VIEWPORT = "width=1280, user-scalable=no";
@@ -89,10 +89,10 @@
   if (PHONE) window.addEventListener("resize", () => fitViewport());
 
   // ---------------------------------------------------------------------------
-  // What Stremio Enhanced provides and dx.bi relies on
+  // What Stremio Enhanced provides and StreamFlix relies on
   // ---------------------------------------------------------------------------
 
-  // Stremio's router changes the address with pushState, which fires no event: dx.bi listens for hashchange
+  // Stremio's router changes the address with pushState, which fires no event: StreamFlix listens for hashchange
   for (const method of ["pushState", "replaceState"]) {
     const original = history[method];
     history[method] = function (...args) {
@@ -126,7 +126,7 @@
   const schemas = {};
   const savedListeners = {};
 
-  // The app is asked once per plugin, not once per setting: dx.bi reads about 75 settings as it
+  // The app is asked once per plugin, not once per setting: StreamFlix reads about 75 settings as it
   // starts, and each answer was the whole settings object crossing from the app and parsed again.
   // The page keeps what it was given and what it saves (the app itself only writes settings while
   // the page is gone, after a crash).
@@ -158,16 +158,16 @@
       }
       return true;
     },
-    // a promise, like Stremio Enhanced's (dx.bi chains on it: without one it stopped before loading
-    // the TV's saved settings, so changes in dx.bi settings never took effect)
+    // a promise, like Stremio Enhanced's (StreamFlix chains on it: without one it stopped before loading
+    // the TV's saved settings, so changes in StreamFlix settings never took effect)
     registerSettings: async (plugin, schema) => { schemas[plugin] = schema; },
     onSettingsSaved: (plugin, callback) => { (savedListeners[plugin] = savedListeners[plugin] || []).push(callback); },
     showAlert: (type, title, message, buttons) => dialog({ title, message, buttons: buttons && buttons.length ? buttons : ["OK"] }),
     showPrompt: (plugin, title, message, defaultValue) => dialog({ title, message, buttons: ["OK", "Cancel"], input: defaultValue == null ? "" : String(defaultValue) })
       .then((r) => (r && r.button === 0 ? r.value : null)),
-    // dx.bi's "Open in mpv / VLC" goes to the app's own player here
+    // StreamFlix's "Open in mpv / VLC" goes to the app's own player here
     launchExternalPlayer: async (player, url) => {
-      native.play(JSON.stringify({ url, title: document.title || "dx.bi", hash: location.hash }));
+      native.play(JSON.stringify({ url, title: document.title || "StreamFlix", hash: location.hash }));
       return { success: true };
     },
     getExternalPlayerPaths: async () => ({ vlc: null, mpv: null }),
@@ -283,7 +283,7 @@
   tv.toast = (text, ms) => toast(text, ms);
 
   // ---------------------------------------------------------------------------
-  // Streaming server: a TV has none of its own, and torrents need one. dx.bi or Stremio running on
+  // Streaming server: a TV has none of its own, and torrents need one. StreamFlix or Stremio running on
   // a computer on the same network has one (it listens on the network), so the app looks for it.
   // ---------------------------------------------------------------------------
   let serversWaiting = null;
@@ -314,13 +314,13 @@
   // server the choice to let this TV play it is still there
   async function findServer(playHere) {
     for (;;) {
-      toast("Looking for dx.bi on your network…", 6000);
+      toast("Looking for StreamFlix on your network…", 6000);
       const urls = await scanForServers();
       document.querySelectorAll(".dxtv-toast").forEach((n) => n.remove());
       if (!urls.length) {
         const again = await dialog({
           title: "No streaming server found",
-          message: "Open dx.bi or Stremio on a computer connected to the same network as this TV, leave it running, then try again. On Windows, it also has to be allowed through the firewall on private networks.\n\nDebrid streams play without a streaming server.",
+          message: "Open StreamFlix or Stremio on a computer connected to the same network as this TV, leave it running, then try again. On Windows, it also has to be allowed through the firewall on private networks.\n\nDebrid streams play without a streaming server.",
           buttons: playHere ? ["Try again", "Play it on this TV", "Close"] : ["Try again", "Close"],
         });
         if (again === 0) continue;
@@ -342,10 +342,10 @@
   // Report a problem: a description typed with the remote, then the plugin's report goes to the developer
   const reportProblem = tv.reportProblem = async () => {
     const dx = window.__dxbi;
-    if (!dx || !dx.report) { toast("dx.bi hasn't finished loading yet. Try again in a moment."); return; }
+    if (!dx || !dx.report) { toast("StreamFlix hasn't finished loading yet. Try again in a moment."); return; }
     const r = await dialog({
       title: "Report a problem",
-      message: "What went wrong, and what were you doing? dx.bi adds its version, this TV's model, your settings, addon names and recent errors. No passwords, keys or stream links are sent.",
+      message: "What went wrong, and what were you doing? StreamFlix adds its version, this TV's model, your settings, addon names and recent errors. No passwords, keys or stream links are sent.",
       buttons: ["Send report", "Cancel"],
       input: "",
     });
@@ -361,16 +361,16 @@
     }
   };
 
-  // Support dx.bi: many TVs have no browser, so a TV shows a code for the phone instead of a link
+  // Support StreamFlix: many TVs have no browser, so a TV shows a code for the phone instead of a link
   const DONATE_URL = "https://buymeacoffee.com/notdxbi";
   const DONATE_QR = "M0 0h7v1h-7zM8 0h1v1h-1zM10 0h2v1h-2zM13 0h1v1h-1zM17 0h4v1h-4zM22 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM12 1h2v1h-2zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM8 2h1v1h-1zM12 2h4v1h-4zM20 2h1v1h-1zM22 2h1v1h-1zM24 2h3v1h-3zM28 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM8 3h1v1h-1zM11 3h2v1h-2zM15 3h1v1h-1zM18 3h1v1h-1zM20 3h1v1h-1zM22 3h1v1h-1zM24 3h3v1h-3zM28 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h1v1h-1zM11 4h1v1h-1zM15 4h2v1h-2zM19 4h2v1h-2zM22 4h1v1h-1zM24 4h3v1h-3zM28 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h2v1h-2zM12 5h2v1h-2zM17 5h3v1h-3zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h7v1h-7zM9 7h5v1h-5zM16 7h3v1h-3zM20 7h1v1h-1zM2 8h6v1h-6zM10 8h1v1h-1zM13 8h1v1h-1zM18 8h1v1h-1zM21 8h1v1h-1zM23 8h4v1h-4zM28 8h1v1h-1zM0 9h6v1h-6zM7 9h2v1h-2zM14 9h1v1h-1zM17 9h2v1h-2zM21 9h1v1h-1zM25 9h4v1h-4zM0 10h2v1h-2zM3 10h2v1h-2zM6 10h2v1h-2zM13 10h3v1h-3zM18 10h2v1h-2zM24 10h1v1h-1zM0 11h1v1h-1zM3 11h1v1h-1zM10 11h2v1h-2zM17 11h1v1h-1zM20 11h1v1h-1zM25 11h2v1h-2zM28 11h1v1h-1zM0 12h4v1h-4zM5 12h2v1h-2zM8 12h3v1h-3zM16 12h1v1h-1zM18 12h1v1h-1zM20 12h4v1h-4zM27 12h2v1h-2zM0 13h3v1h-3zM9 13h3v1h-3zM17 13h3v1h-3zM25 13h2v1h-2zM0 14h2v1h-2zM3 14h1v1h-1zM6 14h2v1h-2zM9 14h2v1h-2zM12 14h1v1h-1zM15 14h1v1h-1zM17 14h2v1h-2zM20 14h1v1h-1zM23 14h1v1h-1zM25 14h3v1h-3zM0 15h5v1h-5zM9 15h5v1h-5zM17 15h3v1h-3zM22 15h1v1h-1zM24 15h1v1h-1zM26 15h2v1h-2zM1 16h1v1h-1zM4 16h1v1h-1zM6 16h3v1h-3zM10 16h1v1h-1zM13 16h1v1h-1zM15 16h1v1h-1zM18 16h1v1h-1zM21 16h1v1h-1zM25 16h1v1h-1zM28 16h1v1h-1zM0 17h2v1h-2zM3 17h2v1h-2zM8 17h3v1h-3zM12 17h3v1h-3zM16 17h3v1h-3zM20 17h1v1h-1zM24 17h1v1h-1zM28 17h1v1h-1zM0 18h1v1h-1zM4 18h1v1h-1zM6 18h1v1h-1zM8 18h2v1h-2zM13 18h1v1h-1zM15 18h1v1h-1zM17 18h1v1h-1zM23 18h1v1h-1zM25 18h1v1h-1zM27 18h1v1h-1zM0 19h1v1h-1zM2 19h1v1h-1zM4 19h1v1h-1zM7 19h3v1h-3zM13 19h1v1h-1zM17 19h1v1h-1zM19 19h1v1h-1zM22 19h2v1h-2zM26 19h1v1h-1zM28 19h1v1h-1zM0 20h2v1h-2zM4 20h1v1h-1zM6 20h2v1h-2zM10 20h2v1h-2zM13 20h3v1h-3zM17 20h1v1h-1zM19 20h7v1h-7zM27 20h1v1h-1zM9 21h1v1h-1zM13 21h2v1h-2zM17 21h2v1h-2zM20 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM0 22h7v1h-7zM8 22h2v1h-2zM13 22h1v1h-1zM17 22h1v1h-1zM19 22h2v1h-2zM22 22h1v1h-1zM24 22h1v1h-1zM26 22h3v1h-3zM0 23h1v1h-1zM6 23h1v1h-1zM8 23h4v1h-4zM13 23h2v1h-2zM16 23h5v1h-5zM24 23h3v1h-3zM0 24h1v1h-1zM2 24h3v1h-3zM6 24h1v1h-1zM8 24h3v1h-3zM13 24h2v1h-2zM17 24h8v1h-8zM26 24h1v1h-1zM28 24h1v1h-1zM0 25h1v1h-1zM2 25h3v1h-3zM6 25h1v1h-1zM8 25h1v1h-1zM11 25h2v1h-2zM14 25h1v1h-1zM16 25h1v1h-1zM21 25h2v1h-2zM25 25h3v1h-3zM0 26h1v1h-1zM2 26h3v1h-3zM6 26h1v1h-1zM8 26h1v1h-1zM12 26h1v1h-1zM14 26h1v1h-1zM16 26h3v1h-3zM20 26h3v1h-3zM24 26h3v1h-3zM28 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM11 27h1v1h-1zM15 27h1v1h-1zM19 27h3v1h-3zM23 27h5v1h-5zM0 28h7v1h-7zM9 28h1v1h-1zM13 28h1v1h-1zM17 28h1v1h-1zM20 28h2v1h-2zM25 28h1v1h-1z";
   const donate = () => {
     if (PHONE) { native.openExternal(DONATE_URL); return; }
-    dialog({ title: "Support dx.bi", message: "Scan this with your phone, or go to buymeacoffee.com/notdxbi", qr: DONATE_QR, buttons: ["Done"] });
+    dialog({ title: "Support StreamFlix", message: "Scan this with your phone, or go to buymeacoffee.com/notdxbi", qr: DONATE_QR, buttons: ["Done"] });
   };
 
-  // dx.bi's settings: an entry at the top of Stremio's Settings, opening a list made for the remote
-  // Options for dx.bi's in-page player, which the TV doesn't use (it has its own player)
+  // StreamFlix's settings: an entry at the top of Stremio's Settings, opening a list made for the remote
+  // Options for StreamFlix's in-page player, which the TV doesn't use (it has its own player)
   const DESKTOP_ONLY = new Set(["playerExtras", "enhance", "seekPreviews", "subtitleStyle", "subtitleFont", "subtitleCustomFont",
     "convertVideo", "subtitlesStart", "hdrSubtitles", "pictureSound", "streamStats", "preloadNext", "skipFiller",
     "rememberPlayback", "playerKeys", "pip", "externalPlayer", "remainingTime"]);
@@ -392,7 +392,7 @@
     };
     const render = (focusKey) => {
       const current = values();
-      el.innerHTML = `<div class="dxtv-sheet" role="dialog"><h2>dx.bi settings</h2>
+      el.innerHTML = `<div class="dxtv-sheet" role="dialog"><h2>StreamFlix settings</h2>
         ${schema.map((o, i) => {
           const v = current[o.key] === undefined ? o.defaultValue : current[o.key];
           // a heading wherever a new group of settings starts
@@ -431,7 +431,7 @@
     render();
   }
 
-  // dx.bi's phone app draws the same list itself: what's in it, and saving a change
+  // StreamFlix's phone app draws the same list itself: what's in it, and saving a change
   tv.settings = () => {
     const plugin = PLUGIN.replace(/\.plugin\.js$/, "");
     const values = readSettings(plugin);
@@ -448,7 +448,7 @@
   tv.saveSetting = (key, value) => api.saveSetting(PLUGIN.replace(/\.plugin\.js$/, ""), key, value);
 
   // Stremio's redesigned Settings (November 2026): one page at a time, picked from a menu on the left
-  // (Preferences / This browser / Help). dx.bi's entries are a group of their own at the top of that
+  // (Preferences / This browser / Help). StreamFlix's entries are a group of their own at the top of that
   // menu, wearing the classes of Stremio's own items (read from the page as it is, so they keep
   // matching when Stremio rebuilds its styles).
   const SETTINGS_ICONS = {
@@ -488,9 +488,9 @@
     group.className = `${first.className} dxtv-menu`;
     const heading = document.createElement("div");
     heading.className = classOf(first.querySelector(':scope > [class*="label-"]'));
-    heading.textContent = "dx.bi";
+    heading.textContent = "StreamFlix";
     group.append(heading);
-    const loaded = (act) => () => { if (window.__dxbi) act(window.__dxbi); else toast("dx.bi hasn't finished loading yet. Try again in a moment."); };
+    const loaded = (act) => () => { if (window.__dxbi) act(window.__dxbi); else toast("StreamFlix hasn't finished loading yet. Try again in a moment."); };
     const add = (name, icon, act) => {
       const item = document.createElement("a");
       item.className = `${itemClass} dxtv-item`;
@@ -503,13 +503,13 @@
       item.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); run(); } });
       group.append(item);
     };
-    add("dx.bi settings", "sliders", settingsSheet);
+    add("StreamFlix settings", "sliders", settingsSheet);
     add("Who's watching?", "people", loaded((dx) => dx.whoIsWatching && dx.whoIsWatching.open()));
     add("Simkl", "list", loaded((dx) => dx.simkl && dx.simkl.open()));
     add("Customise Home", "home", loaded((dx) => dx.homeLayout && dx.homeLayout.open()));
     add("Streaming server", "server", () => findServer());
     add("Report a problem", "flag", reportProblem);
-    add("Support dx.bi", "heart", donate);
+    add("Support StreamFlix", "heart", donate);
     menu.insertBefore(group, first);
   }
 
@@ -526,8 +526,8 @@
       const side = document.createElement("div");
       side.className = `${shortcuts.className} dxtv-side`;
       side.tabIndex = 0;
-      side.title = "dx.bi";
-      side.textContent = "dx.bi";
+      side.title = "StreamFlix";
+      side.textContent = "StreamFlix";
       side.addEventListener("click", settingsSheet);
       side.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); settingsSheet(); } });
       shortcuts.after(side);
@@ -537,7 +537,7 @@
     ensureStyle();
     const entry = document.createElement("button");
     entry.className = "dxtv-row dxtv-settings-entry";
-    entry.innerHTML = `<span>dx.bi settings<small>Look, Home rows, previews, trailers, reviews, sounds and more</small></span><b>Open</b>`;
+    entry.innerHTML = `<span>StreamFlix settings<small>Look, Home rows, previews, trailers, reviews, sounds and more</small></span><b>Open</b>`;
     entry.addEventListener("click", settingsSheet);
     const problem = document.createElement("button");
     problem.className = "dxtv-row dxtv-settings-entry";
@@ -545,7 +545,7 @@
     problem.addEventListener("click", reportProblem);
     const server = document.createElement("button");
     server.className = "dxtv-row dxtv-settings-entry";
-    server.innerHTML = forDevice(`<span>Streaming server for torrents<small>Torrents play through dx.bi running on a computer on your network, or on this TV if you switch on Play torrents on this TV (dx.bi settings). Debrid streams don't need either</small></span><b>Find</b>`);
+    server.innerHTML = forDevice(`<span>Streaming server for torrents<small>Torrents play through StreamFlix running on a computer on your network, or on this TV if you switch on Play torrents on this TV (StreamFlix settings). Debrid streams don't need either</small></span><b>Find</b>`);
     server.addEventListener("click", () => findServer());
     const who = document.createElement("button");
     who.className = "dxtv-row dxtv-settings-entry";
@@ -553,15 +553,15 @@
     who.addEventListener("click", () => { if (window.__dxbi && window.__dxbi.whoIsWatching) window.__dxbi.whoIsWatching.open(); });
     const simkl = document.createElement("button");
     simkl.className = "dxtv-row dxtv-settings-entry";
-    simkl.innerHTML = forDevice(`<span>Simkl<small>Your Simkl lists (Watching, Plan to Watch…) as rows on Home. Connect with a code you type at simkl.com/pin on your phone or computer; which lists show is under dx.bi settings → Simkl</small></span><b>Open</b>`);
-    simkl.addEventListener("click", () => { if (window.__dxbi && window.__dxbi.simkl) window.__dxbi.simkl.open(); else toast("dx.bi hasn't finished loading yet. Try again in a moment."); });
+    simkl.innerHTML = forDevice(`<span>Simkl<small>Your Simkl lists (Watching, Plan to Watch…) as rows on Home. Connect with a code you type at simkl.com/pin on your phone or computer; which lists show is under StreamFlix settings → Simkl</small></span><b>Open</b>`);
+    simkl.addEventListener("click", () => { if (window.__dxbi && window.__dxbi.simkl) window.__dxbi.simkl.open(); else toast("StreamFlix hasn't finished loading yet. Try again in a moment."); });
     const layout = document.createElement("button");
     layout.className = "dxtv-row dxtv-settings-entry";
     layout.innerHTML = `<span>Customise Home<small>Move, hide or rename Home's rows, whichever addon they come from</small></span><b>Open</b>`;
     layout.addEventListener("click", () => { if (window.__dxbi && window.__dxbi.homeLayout) window.__dxbi.homeLayout.open(); });
     const support = document.createElement("button");
     support.className = "dxtv-row dxtv-settings-entry";
-    support.innerHTML = `<span>Support dx.bi<small>dx.bi is free. If you enjoy it, you can buy its developer a coffee</small></span><b>Open</b>`;
+    support.innerHTML = `<span>Support StreamFlix<small>StreamFlix is free. If you enjoy it, you can buy its developer a coffee</small></span><b>Open</b>`;
     support.addEventListener("click", donate);
     content.prepend(entry, who, simkl, layout, server, problem, support);
   }
@@ -611,13 +611,13 @@
     });
   }
 
-  // Into dx.bi's own log, which Report a problem sends: what the native player was given and how it
+  // Into StreamFlix's own log, which Report a problem sends: what the native player was given and how it
   // ended (on its own the console isn't in a report, so a stream that wouldn't play left no trace)
   function note(text) {
     try {
       const dx = window.__dxbi;
       if (dx && typeof dx.note === "function") dx.note(`[TV] ${text}`);
-      else console.info("[dx.bi TV]", text);
+      else console.info("[StreamFlix TV]", text);
     } catch (_) { /* never in the way */ }
   }
 
@@ -643,7 +643,7 @@
   function dispatch(action) {
     const d = core().dispatch;
     if (!d) return;
-    try { d(action, "player"); } catch (err) { console.warn("[dx.bi TV] dispatch failed", err); }
+    try { d(action, "player"); } catch (err) { console.warn("[StreamFlix TV] dispatch failed", err); }
   }
 
   async function playerState() {
@@ -677,7 +677,7 @@
     return a === b || subtitleLabel(a).toLowerCase() === subtitleLabel(b).toLowerCase();
   }
 
-  // The subtitle language a video starts in: Stremio's (Settings → Player), unless dx.bi's
+  // The subtitle language a video starts in: Stremio's (Settings → Player), unless StreamFlix's
   // "Subtitles when a video starts" is Off
   async function startSubtitleLanguage() {
     const dx = window.__dxbi;
@@ -709,7 +709,7 @@
     return state;
   }
 
-  // Thai subtitles (dx.bi settings → Thai subtitles, on by default): Thai files are first under the
+  // Thai subtitles (StreamFlix settings → Thai subtitles, on by default): Thai files are first under the
   // player's subtitles button whenever the film or episode has some. They start on by themselves only
   // with "Start with Thai subtitles" (off by default: nothing shows until the viewer picks it).
   // Stremio's subtitle addon has next to none, so the app looks them up on
@@ -718,7 +718,7 @@
   const THAI = /^(th|tha|thai)$/i;
   const thaiOn = () => readSettings(PLUGIN.replace(/\.plugin\.js$/, "")).thaiSubtitles !== false;
   const thaiStart = () => thaiOn() && readSettings(PLUGIN.replace(/\.plugin\.js$/, "")).thaiStart === true;
-  // (dx.bi settings → Only Thai and English subtitles, on by default in this build)
+  // (StreamFlix settings → Only Thai and English subtitles, on by default in this build)
   const thaiEnglishOnly = () => readSettings(PLUGIN.replace(/\.plugin\.js$/, "")).subtitlesThaiEnglish !== false;
   function thaiLookup(videoId, stream) {
     const m = /^(tt\d{5,10})(?::(\d{1,4}):(\d{1,5}))?$/.exec(typeof videoId === "string" ? videoId : "");
@@ -844,7 +844,7 @@
     if (location.hash !== hash || !state || !state.selected) { handoff = null; return; }
     const stream = state.selected.stream || {};
     // Trailers are YouTube videos, which Stremio plays through a streaming server (none on a TV).
-    // dx.bi's trailer player shows them; only one whose owner forbids embedding goes to the YouTube app
+    // StreamFlix's trailer player shows them; only one whose owner forbids embedding goes to the YouTube app
     if (stream.ytId) {
       const youtube = () => native.openExternal(`https://www.youtube.com/watch?v=${encodeURIComponent(stream.ytId)}`);
       const dx = window.__dxbi;
@@ -860,8 +860,8 @@
     const ready = state.stream && state.stream.type === "Ready" && state.stream.content;
     // (for a torrent, Stremio gives a streaming server address even when none is running)
     let url = (ready && ready.url && (serverUp || !stream.infoHash) ? ready.url : null) || stream.url || null;
-    // A torrent and no streaming server. dx.bi TV can download it itself, but only when that's switched
-    // on in dx.bi settings (off by default: debrid, or a computer's streaming server, is the usual way);
+    // A torrent and no streaming server. StreamFlix TV can download it itself, but only when that's switched
+    // on in StreamFlix settings (off by default: debrid, or a computer's streaming server, is the usual way);
     // otherwise the choice is offered for this stream
     let torrent = false;
     // (an iPhone can't download torrents itself: without a streaming server they can't play)
@@ -875,7 +875,7 @@
       handoff = null;
       if (location.hash === hash) history.back();
       toast(server
-        ? `Couldn't reach your streaming server (${server.replace(/^https?:\/\/|\/$/g, "")}). Check that dx.bi is running there, and that this iPhone is on the same network (or the same VPN, like Tailscale).`
+        ? `Couldn't reach your streaming server (${server.replace(/^https?:\/\/|\/$/g, "")}). Check that StreamFlix is running there, and that this iPhone is on the same network (or the same VPN, like Tailscale).`
         : "This is a torrent, and it needs a streaming server: set one in Settings, or pick a debrid stream.", 9000);
       return;
     }
@@ -892,14 +892,14 @@
         } else {
           handoff = null;
           if (location.hash === hash) history.back();
-          if (choice === null) toast("This is a torrent, and it needs a streaming server. Pick a debrid stream, set a streaming server in Profile → Playback, or turn on dx.bi settings → Player → Play torrents on this phone.", 9000);
+          if (choice === null) toast("This is a torrent, and it needs a streaming server. Pick a debrid stream, set a streaming server in Profile → Playback, or turn on StreamFlix settings → Player → Play torrents on this phone.", 9000);
           return;
         }
       }
       if (!onTv) {
         const choice = await dialog({
           title: "This stream needs a streaming server",
-          message: "It's a torrent, and this TV has no streaming server. Use the one in dx.bi or Stremio on a computer on your network, or let this TV download it itself (it connects to other people sharing the file).\n\nDebrid streams play without either. To always play torrents on this TV: dx.bi settings → Play torrents on this TV.",
+          message: "It's a torrent, and this TV has no streaming server. Use the one in StreamFlix or Stremio on a computer on your network, or let this TV download it itself (it connects to other people sharing the file).\n\nDebrid streams play without either. To always play torrents on this TV: StreamFlix settings → Play torrents on this TV.",
           buttons: ["Find one on my network", "Play it on this TV", "Cancel"],
         });
         if (choice === 1 && location.hash === hash) onTv = true;
@@ -953,7 +953,7 @@
 
     const profile = await profileSettings();
     const subtitleLanguage = await startSubtitleLanguage();
-    // Skip intro / recap / credits: the times dx.bi has for this episode (looked up while the player
+    // Skip intro / recap / credits: the times StreamFlix has for this episode (looked up while the player
     // gets ready, never holding it up for long). Meanwhile the subtitle addons get a moment to answer
     const metaPath = state.selected.metaRequest && state.selected.metaRequest.path;
     const dx = window.__dxbi;
@@ -975,7 +975,7 @@
     tv.partyVideo = new NativeVideo();
     tv.scrobbleVideo = new ScrobbleVideo(hash);
     partySeen = "";
-    note(`playing in dx.bi's player: ${describeStream(stream, url, torrent, headers)}`);
+    note(`playing in StreamFlix's player: ${describeStream(stream, url, torrent, headers)}`);
     native.play(JSON.stringify({
       hash,
       videoId,
@@ -1000,7 +1000,7 @@
         opacity: profile.subtitlesOpacity,
       },
       url,
-      title: meta.name || state.title || stream.title || "dx.bi",
+      title: meta.name || state.title || stream.title || "StreamFlix",
       subtitle: episode,
       startMs: resumeMs,
       headers,
@@ -1143,7 +1143,7 @@
     if (tv.scrobbleVideo) tv.scrobbleVideo.update(timeMs, durationMs, !!paused, !!buffering);
   };
 
-  // The title's own colour for the player's seek bar when dx.bi has one quickly, else the accent
+  // The title's own colour for the player's seek bar when StreamFlix has one quickly, else the accent
   async function accentFor(meta) {
     const dx = window.__dxbi;
     const colour = dx && dx.titleColourOf
@@ -1236,7 +1236,7 @@
       if (error) note(`player closed (page had moved on), error: ${error}`);
       handoff = null;
     }
-    // A stream dx.bi picked by itself: on to the next best before asking the viewer to choose
+    // A stream StreamFlix picked by itself: on to the next best before asking the viewer to choose
     const dx = window.__dxbi;
     if (error && dx && dx.quickPlayNext) {
       await new Promise((r) => setTimeout(r, 500));
@@ -1256,7 +1256,7 @@
       const c = JSON.parse(raw);
       closeHandoff(c.timeMs, c.durationMs, c.ended, c.error, c.next);
     } catch (err) {
-      console.warn("[dx.bi TV] couldn't read how the player closed", err);
+      console.warn("[StreamFlix TV] couldn't read how the player closed", err);
     }
   };
 
@@ -1342,16 +1342,16 @@
   // ---------------------------------------------------------------------------
   // Stremio's web app updates itself: a new build's service worker fetches it and waits, and Stremio
   // shows "A new version of Stremio is available · Reload the user interface" along the bottom, again
-  // every time the app comes to the front, until it's pressed. On a TV that read as dx.bi nagging. The
+  // every time the app comes to the front, until it's pressed. On a TV that read as StreamFlix nagging. The
   // bar stays hidden (STYLE above) and the TV presses it itself, always, at a moment when nobody is in
   // the middle of anything:
   //  - as the page starts (an update found last time), while the intro or the first screen covers it;
-  //  - when dx.bi leaves the screen (Home, another app, the TV going to sleep: the app says so);
+  //  - when StreamFlix leaves the screen (Home, another app, the TV going to sleep: the app says so);
   //  - when the remote has been put down for a few minutes.
   // Never while the native player has a stream, since the page is keeping its watch progress, and never
   // on a player screen, in a watch party or with no network.
   // Stremio only looks for a new build when its page comes back into view, and a TV's page can stay in
-  // view for days: the TV asks too, each time dx.bi comes to the front and every few hours.
+  // view for days: the TV asks too, each time StreamFlix comes to the front and every few hours.
   // ---------------------------------------------------------------------------
   const webUpdate = {
     // when one was last taken: a build that can't take over isn't pressed again and again
@@ -1382,7 +1382,7 @@
       const button = banner.querySelector('[class*="button"]:not([class*="close"])');
       if (!button) return false;
       try { localStorage.setItem(this.LAST, String(Date.now())); } catch (_) { /* no storage */ }
-      console.log(`[dx.bi TV] taking Stremio's update (${why})`);
+      console.log(`[StreamFlix TV] taking Stremio's update (${why})`);
       button.click();
       return true;
     },
@@ -1403,7 +1403,7 @@
       const starting = setInterval(() => {
         if (Date.now() - since > this.START_MS || this.apply("start")) clearInterval(starting);
       }, 500);
-      // One found while dx.bi is on: once the remote has been down for a while
+      // One found while StreamFlix is on: once the remote has been down for a while
       setInterval(() => {
         const now = Date.now();
         if (now - this.checked > this.CHECK_MS) this.check();
@@ -1412,16 +1412,16 @@
     },
   };
   for (const type of ["keydown", "pointerdown"]) window.addEventListener(type, () => { webUpdate.used = Date.now(); }, { capture: true, passive: true });
-  // the app: dx.bi has left the screen (what's open is still there when it comes back)
+  // the app: StreamFlix has left the screen (what's open is still there when it comes back)
   tv.hidden = () => !webUpdate.busy() && webUpdate.apply("background");
-  // the app: dx.bi is back on screen
+  // the app: StreamFlix is back on screen
   tv.shown = () => {
     webUpdate.used = Date.now();
     webUpdate.check();
   };
 
   // ---------------------------------------------------------------------------
-  // Load the built-in dx.bi plugin once the page is up, the way Stremio Enhanced does
+  // Load the built-in StreamFlix plugin once the page is up, the way Stremio Enhanced does
   // ---------------------------------------------------------------------------
   function loadPlugin() {
     if (document.getElementById(PLUGIN)) return;
@@ -1447,7 +1447,7 @@
       try {
         ${source}
       } catch (err) {
-        console.error("[dx.bi TV] plugin crashed", err);
+        console.error("[StreamFlix TV] plugin crashed", err);
       }
     })();`;
     document.body.append(script);
