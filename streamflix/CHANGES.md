@@ -2,7 +2,11 @@
 
 StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes below. dx.bi's own
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
-still called "dx.bi, Simkl build", newest first.
+still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
+
+## StreamFlix 2.38.404
+
+- **Play on TV.** The phone, tablet and iPad apps have a TV button beside the cast button. It lists the TVs on your Wi-Fi that have StreamFlix open (or takes a TV's address), and the first time the TV asks on its own screen whether to let that phone in. While a TV is chosen, Play sends the film or episode to it: the TV app opens it as if it had been picked with the TV's remote, so the TV keeps the watch progress, the subtitles and the next episode itself, and the phone can sleep or leave. The phone shows what the TV is playing, with pause, a seek bar, ten seconds back and forward, stop, and the remote's arrows, OK, Back and volume for the TV's own screens. "Play on this device" in a stream's menu plays on the phone anyway. A TV asleep with StreamFlix on top is woken; behind another app it can't be started, and the phone says to open it. How the two talk is at the top of `tv/app/src/main/java/com/notdxbi/dxbi/tv/TvReceiver.kt`: plain HTTP on the home network, port 47821, only for phones allowed on the TV's screen.
 
 ## 2.38.3-simkl.4 (custom build)
 

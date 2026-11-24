@@ -84,6 +84,14 @@ class PlayerActivity : AppCompatActivity() {
             "play" -> exo.play()
             "pause" -> exo.pause()
             "seek" -> exo.seekTo(c.optLong("ms"))
+            // (a phone working this TV's player: TvReceiver)
+            "toggle" -> if (exo.playWhenReady) exo.pause() else exo.play()
+            "seekBy" -> {
+                val duration = durationOf(exo)
+                var to = maxOf(0L, exo.currentPosition + c.optLong("ms"))
+                if (duration > 0) to = minOf(to, maxOf(0L, duration - SKIP_END_MS))
+                exo.seekTo(to)
+            }
             "rate" -> exo.setPlaybackSpeed(c.optDouble("rate", 1.0).toFloat())
             "close" -> finishWith()
             "party" -> {
@@ -103,6 +111,20 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
     }
+
+    /** What's playing and where it is, for a phone working this TV (TvReceiver) */
+    fun status(): JSONObject {
+        val exo = player ?: return JSONObject().put("open", false).put("screen", "home")
+        val state = exo.playbackState
+        return JSONObject().put("open", true).put("screen", "player")
+            .put("title", findViewById<TextView>(R.id.title).text.toString())
+            .put("subtitle", findViewById<TextView>(R.id.subtitle).text.toString())
+            .put("positionMs", exo.currentPosition)
+            .put("durationMs", durationOf(exo))
+            .put("paused", !exo.playWhenReady || state == Player.STATE_ENDED || state == Player.STATE_IDLE)
+            .put("buffering", state == Player.STATE_BUFFERING)
+    }
+
     private val sound = SoundMode()
     @Volatile private var subtitleDelayMs = 0L
     private val refreshSubtitles = Runnable { player?.let { it.seekTo(it.currentPosition) } }

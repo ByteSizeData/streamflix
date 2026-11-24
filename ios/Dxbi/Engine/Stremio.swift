@@ -252,6 +252,13 @@ final class Stremio {
 
     /** Plays one of [streams] (dx.bi keeps the next best ready in case it won't play) */
     func play(_ option: StreamOption, in target: Target = .player) {
+        // Play on TV: while a TV is chosen it plays there. The TV is sent Stremio's link to the stream
+        // and plays it itself (TvRemote), so nothing opens here
+        if target == .player, TvRemote.shared.takesPlay() {
+            let link = option.play
+            Task { show(await TvRemote.shared.play(link: link)) }
+            return
+        }
         nextTarget = target == .player && otherApp != nil ? .otherApp : target
         Task {
             let link = await dx("phone.play", option.index) as? String ?? option.play
@@ -261,6 +268,10 @@ final class Stremio {
 
     /** Continue Watching: Stremio's own player link for where they left off */
     func play(link: String) {
+        if TvRemote.shared.takesPlay() {
+            Task { show(await TvRemote.shared.play(link: link)) }
+            return
+        }
         nextTarget = otherApp != nil ? .otherApp : .player
         Task { await ask("play", ["link": link]) }
     }

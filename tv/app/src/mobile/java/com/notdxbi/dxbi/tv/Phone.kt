@@ -30,8 +30,9 @@ object Phone {
     /**
      * Where the next stream the page hands over goes (the screens choose before asking the page to
      * play): dx.bi's own player, another app, a Chromecast, or a download. Back to [Target.Player] once used.
+     * ([Target.Here]: this phone's player even while a TV is chosen for Play on TV, see TvRemote)
      */
-    enum class Target { Player, External, Cast, Download }
+    enum class Target { Player, External, Cast, Download, Here }
 
     @Volatile
     var nextTarget = Target.Player
@@ -76,7 +77,7 @@ object Phone {
     fun play(activity: MainActivity, json: String): Boolean {
         val target = nextTarget.also { nextTarget = Target.Player }
         when (target) {
-            Target.Player -> return false
+            Target.Player, Target.Here -> return false
             Target.External -> external?.let { ExternalPlayer.open(activity, json, it) } ?: return false
             Target.Cast -> Cast.play(activity, json)
             Target.Download -> {

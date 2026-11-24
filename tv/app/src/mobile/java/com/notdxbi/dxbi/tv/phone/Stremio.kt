@@ -226,7 +226,15 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
             else com.notdxbi.dxbi.tv.Downloads.toast(app, answer?.optString("error")?.ifEmpty { null } ?: "Couldn't download that one. Try again.", long = true)
             return@launch
         }
+        // Play on TV: while a TV is chosen it plays there. The TV is sent Stremio's link to the stream
+        // and plays it itself (TvRemote), so nothing opens here
+        if (target == Phone.Target.Player && com.notdxbi.dxbi.tv.TvRemote.tv.value != null) {
+            val link = option.play.ifBlank { dx("phone.play", option.index) as? String ?: "" }
+            com.notdxbi.dxbi.tv.TvRemote.play(app, link)
+            return@launch
+        }
         Phone.nextTarget = when {
+            target == Phone.Target.Here -> Phone.Target.Player
             target != Phone.Target.Player -> target
             !option.torrent && Cast.connected(app) -> Phone.Target.Cast
             playInOtherApp.value -> Phone.Target.External
@@ -249,7 +257,9 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
 
     /** Plays through Stremio's player route, which dxbi-tv.js hands to the native player */
     fun play(stream: Stream) = scope.launch {
-        stream.play?.let { ask("play", JSONObject().put("link", it)) }
+        val link = stream.play ?: return@launch
+        if (com.notdxbi.dxbi.tv.TvRemote.tv.value != null) com.notdxbi.dxbi.tv.TvRemote.play(app, link)
+        else ask("play", JSONObject().put("link", link))
     }
 
     // ---------------------------------------------------------------------------------------------

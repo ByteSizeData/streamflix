@@ -328,7 +328,10 @@ fun DetailScreen(stremio: Stremio, type: String, id: String, preview: Title?, pl
                 title.name, color = Dx.Text.copy(alpha = barAlpha), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
             )
-            if (!wide) CastButton(Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.5f * (1f - barAlpha))))
+            if (!wide) {
+                TvButton(Modifier.padding(end = 8.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f * (1f - barAlpha))))
+                CastButton(Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.5f * (1f - barAlpha))))
+            }
         }
     }
 

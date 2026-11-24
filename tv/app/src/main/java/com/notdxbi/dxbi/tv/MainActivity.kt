@@ -95,6 +95,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(root)
         // dx.bi for phones: its own screens over the page (nothing in dx.bi TV: see PhoneHooks.kt)
         Phone.attach(this, root, ::js)
+        // Play on TV: a phone with the app can send this TV what to play (nothing on a phone)
+        TvReceiver.attach(this)
         // Only when dx.bi is opened, not when the screen is rebuilt (after a page crash, a turned phone).
         // (not in the phone app: the film is made for a TV screen)
         if (savedInstanceState == null && !BuildConfig.PHONE_UI) intro = Intro(this, root).also { it.start() }

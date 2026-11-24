@@ -189,9 +189,11 @@ private fun TopBar(
                 if (filter == HomeFilter.All) Logo()
                 else Text(filter.label, color = Dx.Text, fontWeight = FontWeight.Black, fontSize = 24.sp, modifier = Modifier.clickable { onFilter(HomeFilter.All) })
             }
-            IconButton(onClick = onParty) { Icon(Icons.Filled.Groups, contentDescription = "Watch party", tint = Dx.Text) }
+            // (four buttons beside the name: a little closer together, so the name keeps its room on a narrow phone)
+            IconButton(onClick = onParty, modifier = Modifier.size(42.dp)) { Icon(Icons.Filled.Groups, contentDescription = "Watch party", tint = Dx.Text) }
+            TvButton(Modifier.size(42.dp))
             CastButton()
-            IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Search", tint = Dx.Text) }
+            IconButton(onClick = onSearch, modifier = Modifier.size(42.dp)) { Icon(Icons.Filled.Search, contentDescription = "Search", tint = Dx.Text) }
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = chips,

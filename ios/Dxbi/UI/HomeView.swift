@@ -8,6 +8,7 @@ struct HomeView: View {
     @Environment(Stremio.self) private var stremio
     @State private var account = false
     @State private var party = false
+    @State private var tv = false
     @State private var kind: String?
     @State private var pastBillboard = false
 
@@ -72,9 +73,15 @@ struct HomeView: View {
         .navigationTitle("Home")
         .toolbarTitleDisplayMode(.inlineLarge)
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
-        .modifier(HomeToolbar(party: $party, account: $account, email: stremio.account?.email))
+        .modifier(HomeToolbar(party: $party, tv: $tv, account: $account, email: stremio.account?.email))
         .sheet(isPresented: $account) { AccountView() }
         .sheet(isPresented: $party) { PartyView() }
+        // Play on TV: the TVs to pick from, then the chosen TV's remote
+        .sheet(isPresented: $tv) {
+            TvSheet()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .refreshable { stremio.refreshExtras() }
     }
 
@@ -314,6 +321,7 @@ struct Avatar: View {
 /// iOS 26 there's no capsule, so the two plain buttons sit side by side.
 private struct HomeToolbar: ViewModifier {
     @Binding var party: Bool
+    @Binding var tv: Bool
     @Binding var account: Bool
     let email: String?
 
@@ -321,6 +329,7 @@ private struct HomeToolbar: ViewModifier {
         if #available(iOS 26.0, *) {
             content.toolbar {
                 ToolbarItem(placement: .topBarTrailing) { partyButton }
+                ToolbarItem(placement: .topBarTrailing) { TvButton(open: $tv) }
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
                 // The picture is the button, a perfect circle (not inside the bar's glass capsule)
                 ToolbarItem(placement: .topBarTrailing) { accountButton }
@@ -329,6 +338,7 @@ private struct HomeToolbar: ViewModifier {
         } else {
             content.toolbar {
                 ToolbarItem(placement: .topBarTrailing) { partyButton }
+                ToolbarItem(placement: .topBarTrailing) { TvButton(open: $tv) }
                 ToolbarItem(placement: .topBarTrailing) { accountButton }
             }
         }

@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -194,6 +195,8 @@ private fun StreamRow(s: StreamOption, picked: Boolean, onPlayIn: (Phone.Target)
                     modifier = Modifier.padding(start = 4.dp).size(22.dp).clip(CircleShape).clickable { menu = true },
                 )
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    // (Play goes to the TV while one is chosen: this is the way to watch here instead)
+                    if (com.notdxbi.dxbi.tv.TvRemote.tv.collectAsState().value != null) DropdownMenuItem(text = { Text("Play on this device") }, onClick = { menu = false; onPlayIn(Phone.Target.Here) })
                     DropdownMenuItem(text = { Text("Play with external player") }, onClick = { menu = false; onPlayIn(Phone.Target.External) })
                     // (a torrent plays from the phone itself: a TV can't reach it)
                     if (!s.torrent) DropdownMenuItem(text = { Text("Cast to a TV") }, onClick = { menu = false; onPlayIn(Phone.Target.Cast) })

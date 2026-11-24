@@ -152,6 +152,10 @@ struct StreamsSheet: View {
         .buttonStyle(.plain)
         .contextMenu {
             Button { onPlay(s, .player) } label: { Label("Play", systemImage: "play.fill") }
+            // (Play goes to the TV while one is chosen: this is the way to watch here instead)
+            if TvRemote.shared.tv != nil {
+                Button { TvRemote.shared.hereOnce = true; onPlay(s, .player) } label: { Label("Play on This Device", systemImage: "ipad.and.iphone") }
+            }
             Button { onPlay(s, .otherApp) } label: { Label("Play with External Player", systemImage: "arrow.up.forward.app") }
             Button { onPlay(s, .download) } label: { Label("Download", systemImage: "arrow.down.circle") }
             if !s.filename.isEmpty { Button { UIPasteboard.general.string = s.filename } label: { Label("Copy File Name", systemImage: "doc.on.doc") } }

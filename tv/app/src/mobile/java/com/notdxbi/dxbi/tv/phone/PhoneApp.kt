@@ -326,6 +326,9 @@ private fun Screens(stremio: Stremio) {
         }
 
         if (tab != null && !sideways) TabBar(tabs, tab, haze, bottom, Modifier.align(Alignment.BottomCenter)) { nav.switchTo(it) }
+        // Play on TV: what the chosen TV is playing, above the tabs, and its sheet (the TVs, then the remote)
+        com.notdxbi.dxbi.tv.phone.ui.TvBar(Modifier.align(Alignment.BottomCenter).padding(bottom = if (tab != null && !sideways) 58.dp + bottom else bottom))
+        com.notdxbi.dxbi.tv.phone.ui.TvSheetHost()
     }
     }
 }
