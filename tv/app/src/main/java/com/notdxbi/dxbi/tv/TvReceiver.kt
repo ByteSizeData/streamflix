@@ -62,9 +62,14 @@ object TvReceiver {
     /** The app's screen that is showing right now (none: the app is behind another, or the TV sleeps) */
     @Volatile private var showing = WeakReference<Activity>(null)
     @Volatile private var asking = false
+    @Volatile private var refusedAt = -60_000L
 
-    /** A TV or TV box, rather than a phone or tablet (which send, and don't listen) */
+    /**
+     * The TV app, wherever it's installed, or the phone app on a TV or TV box (where it is the TV
+     * app): a phone or tablet with the phone app sends, and doesn't listen
+     */
     fun isTv(context: Context): Boolean {
+        if (!BuildConfig.PHONE_UI) return true
         val mode = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
         return mode.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
@@ -180,10 +185,20 @@ object TvReceiver {
         return null
     }
 
+    private val address = Regex("\\d{1,3}(\\.\\d{1,3}){3}")
+
+    /** The name a request was sent to: an address on the network, or a name that only means something on it */
+    private fun localName(host: String?): Boolean {
+        val name = host?.substringBefore(':')?.lowercase() ?: return true
+        return address.matches(name) || !name.contains('.') || name.endsWith(".local")
+    }
+
     private fun route(method: String, path: String, headers: Map<String, String>, body: JSONObject): Answer {
         if (!path.startsWith("/streamflix/")) return no(404, "not here")
-        // (a page in a browser can't add this header to a request to another machine: only the apps do)
-        if (headers["x-streamflix"] != "1") return no(403, "not the app")
+        // (a page in a browser can't add this header to a request to another machine: only the apps do.
+        // And the apps ask for the TV by its number on the network, never by a web site's name, which
+        // is how a page would get round that: by having its own name point here)
+        if (headers["x-streamflix"] != "1" || !localName(headers["host"])) return no(403, "not the app")
         val context = app ?: return no(409, "closed")
         if (method == "GET" && path == "/streamflix/info") {
             return ok(JSONObject().put("app", "StreamFlix").put("v", 1).put("name", tvName(context)).put("version", BuildConfigVersion.name(context)))
@@ -221,7 +236,8 @@ object TvReceiver {
         if (!validKey(key)) return no(400, "key")
         if (allowed(context, key)) return ok()
         val name = body.optString("name").filter { !it.isISOControl() }.trim().take(40).ifEmpty { "A phone" }
-        if (asking) return no(409, "busy")
+        // (one question at a time, and none for half a minute after a no)
+        if (asking || android.os.SystemClock.elapsedRealtime() - refusedAt < 30_000) return no(409, "busy")
         val screen = awake(context) ?: return no(409, "background")
         asking = true
         try {
@@ -240,7 +256,10 @@ object TvReceiver {
             }
             val answered = done.await(PAIR_WAIT_S, TimeUnit.SECONDS)
             if (!answered) ui.post { try { dialog?.dismiss() } catch (_: Exception) { /* its screen is gone */ } }
-            if (!yes) return no(403, if (answered) "declined" else "unanswered")
+            if (!yes) {
+                if (answered) refusedAt = android.os.SystemClock.elapsedRealtime()
+                return no(403, if (answered) "declined" else "unanswered")
+            }
             prefs(context).edit().putString("phone." + digest(key), name).apply()
             return ok()
         } finally {
