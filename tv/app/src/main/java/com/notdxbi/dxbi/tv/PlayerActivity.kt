@@ -125,6 +125,17 @@ class PlayerActivity : AppCompatActivity() {
             .put("buffering", state == Player.STATE_BUFFERING)
     }
 
+    /** The settings a phone working this TV can show and change (TvReceiver, PlayerOptions) */
+    fun options(): JSONObject {
+        val exo = player ?: return JSONObject().put("open", false)
+        return PlayerOptions.read(exo, playerView, sound, zoom, subtitleDelayMs).put("open", true)
+    }
+
+    fun setOption(name: String, value: String): Boolean {
+        val exo = player ?: return false
+        return PlayerOptions.set(exo, playerView, sound, zoom, ::shiftSubtitles, name, value)
+    }
+
     private val sound = SoundMode()
     @Volatile private var subtitleDelayMs = 0L
     private val refreshSubtitles = Runnable { player?.let { it.seekTo(it.currentPosition) } }

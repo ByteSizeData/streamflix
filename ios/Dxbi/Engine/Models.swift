@@ -177,6 +177,10 @@ struct StreamOption: Identifiable, Hashable {
     var seeds: Int
     var source: String
     var langs: [String]
+    /// Each language's flag as a two-letter country code, in the same order as `langs` ("" for none)
+    var flags: [String]
+    /// An English dub of the title open (an anime, or a title not in English)
+    var englishDub: Bool
     var id: Int { index }
 
     init(_ i: Int, _ o: JSON) {
@@ -199,6 +203,30 @@ struct StreamOption: Identifiable, Hashable {
         seeds = o.int("seeds", -1)
         source = o.string("source")
         langs = o.strings("langs")
+        flags = o.strings("flags")
+        englishDub = o.bool("englishDub")
+    }
+
+    /// The languages with their flags: "🇬🇧 English · 🇯🇵 Japanese" (nothing when the release lists none)
+    var languages: String {
+        var parts: [String] = []
+        for (i, lang) in langs.enumerated() where !lang.hasPrefix("Not listed") {
+            let flag = i < flags.count ? StreamOption.flagEmoji(flags[i]) : ""
+            parts.append(flag.isEmpty ? lang : flag + " " + lang)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// A two-letter country code as its flag
+    static func flagEmoji(_ code: String) -> String {
+        let letters = Array(code.unicodeScalars)
+        guard letters.count == 2 else { return "" }
+        var flag = String.UnicodeScalarView()
+        for letter in letters {
+            guard letter.value >= 65, letter.value <= 90, let sign = Unicode.Scalar(0x1F1E6 + letter.value - 65) else { return "" }
+            flag.append(sign)
+        }
+        return String(flag)
     }
 
     var quality: String {

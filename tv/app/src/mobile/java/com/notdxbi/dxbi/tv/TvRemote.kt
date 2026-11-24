@@ -55,6 +55,32 @@ object TvRemote {
         }
     }
 
+    /** One thing to choose in the TV player's settings, and whether it is the one chosen */
+    data class Choice(val id: String, val name: String, val on: Boolean)
+
+    /** The TV player's settings (PlayerOptions.kt on the TV): each a list to choose from */
+    data class Options(
+        val audio: List<Choice>,
+        val subtitles: List<Choice>,
+        val subtitleDelayMs: Long,
+        val speed: List<Choice>,
+        val picture: List<Choice>,
+        val zoom: List<Choice>,
+        val sound: List<Choice>,
+        val boost: List<Choice>,
+    ) {
+        companion object {
+            private fun list(o: JSONObject, name: String): List<Choice> {
+                val a = o.optJSONArray(name) ?: return emptyList()
+                return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { Choice(it.optString("id"), it.optString("name"), it.optBoolean("on")) }
+            }
+            fun from(o: JSONObject) = Options(
+                list(o, "audio"), list(o, "subtitles"), o.optLong("subtitleDelayMs"),
+                list(o, "speed"), list(o, "picture"), list(o, "zoom"), list(o, "sound"), list(o, "boost"),
+            )
+        }
+    }
+
     /** The TV that Play goes to (none: this phone plays) */
     val tv = MutableStateFlow<Tv?>(null)
     /** TVs found on the network, the last one used first */
@@ -64,6 +90,8 @@ object TvRemote {
     val connecting = MutableStateFlow<String?>(null)
     /** What the TV is playing; null until it has answered */
     val status = MutableStateFlow<Status?>(null)
+    /** The TV player's settings, once asked for; null when nothing plays or the TV app is an older one */
+    val options = MutableStateFlow<Options?>(null)
     /** The chosen TV has stopped answering (asleep, or the app closed there) */
     val lost = MutableStateFlow(false)
     /** Something to tell the viewer, shown in the sheet until the next thing happens */
@@ -247,6 +275,7 @@ object TvRemote {
         poll?.cancel()
         tv.value = null
         status.value = null
+        options.value = null
         lost.value = false
         problem.value = null
     }
@@ -298,6 +327,28 @@ object TvRemote {
         scope.launch {
             val reply = asked(app, on, "control", JSONObject().put("cmd", cmd).put("ms", ms))
             if (reply?.ok == true) status.value = Status.from(reply.json) else if (reply != null && reply.error != "nothing playing") problem.value = explain(reply, on)
+        }
+    }
+
+    /** Asks the TV for its player's settings (the remote does, every few seconds while it shows them) */
+    fun loadOptions(context: Context) {
+        val on = tv.value ?: return
+        val app = context.applicationContext
+        scope.launch {
+            val reply = call(on, "GET", "options", key = key(app))
+            if (tv.value != on) return@launch
+            options.value = if (reply?.ok == true) Options.from(reply.json) else null
+        }
+    }
+
+    /** Changes one of the TV player's settings (audio, subtitles, subtitleDelay, speed, picture, zoom, sound, boost) */
+    fun setOption(context: Context, name: String, value: String) {
+        val on = tv.value ?: return
+        val app = context.applicationContext
+        scope.launch {
+            val reply = asked(app, on, "option", JSONObject().put("name", name).put("value", value))
+            if (reply?.ok == true) options.value = Options.from(reply.json)
+            else if (reply != null && reply.error != "nothing playing") problem.value = explain(reply, on)
         }
     }
 

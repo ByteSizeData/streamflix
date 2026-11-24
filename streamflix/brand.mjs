@@ -100,11 +100,19 @@ function ownReports(text) {
   return text.replace(relay, "$1$2");
 }
 
+// "English dub first" is on in StreamFlix until someone turns it off: on an anime, or a title that
+// isn't in English, the English dubs lead the stream list and are marked in blue. (dx.bi has it off.)
+function dubsFirst(text) {
+  const setting = /(\n    streamDubbed: )false,/;
+  if (!setting.test(text)) throw new Error("the English dub setting's default wasn't found in the plugin");
+  return text.replace(setting, "$1true,");
+}
+
 let renamed = 0;
 for (const file of files) {
   const before = readFileSync(file, "utf8");
   let after = rename(before);
-  if (file === PLUGIN) after = ownReports(restyle(after));
+  if (file === PLUGIN) after = dubsFirst(ownReports(restyle(after)));
   if (file === PLUGIN && version) after = stamp(after);
   if (after !== before) { writeFileSync(file, after); renamed++; }
 }

@@ -45,6 +45,43 @@ final class TvRemote {
         }
     }
 
+    /// One thing to choose in the TV player's settings, and whether it is the one chosen
+    struct Choice: Identifiable, Hashable {
+        var id: String
+        var name: String
+        var on: Bool
+    }
+
+    /// The TV player's settings (PlayerOptions.kt on the TV): each a list to choose from
+    struct Options {
+        var audio: [Choice] = []
+        var subtitles: [Choice] = []
+        var subtitleDelayMs: Double = 0
+        var speed: [Choice] = []
+        var picture: [Choice] = []
+        var zoom: [Choice] = []
+        var sound: [Choice] = []
+        var boost: [Choice] = []
+
+        init(_ o: [String: Any]) {
+            func list(_ name: String) -> [Choice] {
+                let raw = o[name] as? [[String: Any]] ?? []
+                return raw.map { Choice(id: $0["id"] as? String ?? "", name: $0["name"] as? String ?? "", on: ($0["on"] as? NSNumber)?.boolValue ?? false) }
+            }
+            audio = list("audio")
+            subtitles = list("subtitles")
+            subtitleDelayMs = (o["subtitleDelayMs"] as? NSNumber)?.doubleValue ?? 0
+            speed = list("speed")
+            picture = list("picture")
+            zoom = list("zoom")
+            sound = list("sound")
+            boost = list("boost")
+        }
+    }
+
+    /// The TV player's settings, once asked for; nil when nothing plays or the TV app is an older one
+    var options: Options?
+
     /// The TV that Play goes to (none: this device plays)
     var tv: Tv?
     /// TVs found on the network, the last one used first
@@ -282,6 +319,7 @@ final class TvRemote {
         poll = nil
         tv = nil
         status = nil
+        options = nil
         lost = false
         problem = nil
     }
@@ -331,6 +369,29 @@ final class TvRemote {
             let reply = await asked(on, "control", ["cmd": cmd, "ms": Int(ms)])
             if let reply, reply.ok {
                 status = Status(reply.json)
+            } else if let reply, reply.error != "nothing playing" {
+                problem = explain(reply, on)
+            }
+        }
+    }
+
+    /// Asks the TV for its player's settings (the remote does, every few seconds while it shows them)
+    func loadOptions() {
+        guard let on = tv else { return }
+        Task {
+            let reply = await call(on, "GET", "options", keyed: true)
+            guard tv == on else { return }
+            if let reply, reply.ok { options = Options(reply.json) } else { options = nil }
+        }
+    }
+
+    /// Changes one of the TV player's settings (audio, subtitles, subtitleDelay, speed, picture, zoom, sound, boost)
+    func setOption(_ name: String, _ value: String) {
+        guard let on = tv else { return }
+        Task {
+            let reply = await asked(on, "option", ["name": name, "value": value])
+            if let reply, reply.ok {
+                options = Options(reply.json)
             } else if let reply, reply.error != "nothing playing" {
                 problem = explain(reply, on)
             }

@@ -4265,6 +4265,28 @@ html[data-dx-rows] [class*="streams-list-container"] [class*="stream-placeholder
     display: block;
 }
 
+/* An English dub of an anime, or of a film or show that isn't in English ("English dub first" in
+   the settings is what has them looked for): a blue label, and a blue line round the row where the
+   gold of the best match isn't already. */
+.dxv-dub {
+    display: inline-block;
+    align-self: flex-start;
+    margin: 0.15rem 0;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    font: 800 0.68rem/1 Inter, system-ui, sans-serif !important;
+    font-style: normal !important;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #fff;
+    background: #2f80ed;
+}
+
+#app [data-dxv]:has(.dxv-dub):not([data-dx-best]) {
+    box-shadow: inset 0 0 0 2px #2f80ed;
+    border-radius: var(--dx-radius-s);
+}
+
 /* TV: the best match and the Trailer button in colours of their own, plain to pick out from the
    sofa. The best match is the stream selected as a title opens (OK plays it), in gold; the Trailer
    is one press to its left, in blue. Flat colours and one inset line: nothing here moves or blurs.

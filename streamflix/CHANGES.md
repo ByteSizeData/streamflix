@@ -4,6 +4,13 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.407
+
+- **Volume boost.** For a film that is quiet with the volume all the way up: 150%, 200% or 300%, in the player's Picture & sound menu on the TV, under More on a phone or tablet, and as its own button on an iPhone or iPad. On Android a loud moment is held back instead of distorting. Sound sent to a receiver as Dolby or DTS can't be changed by the app.
+- **The TV's video settings from the phone.** While something plays on the TV through Play on TV, the remote on the phone, tablet or iPad lists the TV player's own settings and changes them: the sound track, the subtitles and their timing, volume boost, sound mode, speed, picture and zoom. The TV's remote isn't needed for any of it.
+- **The stream list on phones, tablets and iPad.** The best match is always the first row, framed in gold. Each release's languages are on a line of their own behind their flags. English dubs of an anime, or of a film or show that isn't in English, are framed and labelled in blue, and come right after the best match.
+- **The TV's stream list marks English dubs in blue** too, and "English dub first" is on unless it is turned off in the settings.
+
 ## StreamFlix 2.38.406
 
 - **"Report a problem" sends nothing.** In dx.bi it sends the app's details (version, device, settings, addon names, recent errors) to a relay its developer runs, for dx.bi's own Discord. StreamFlix's reports don't belong there, so StreamFlix is built without the relay: the screen is still there, and Send says that reporting isn't set up in this version. (The other thing that goes through a dx.bi server is unchanged: with two or more viewers, "Who's watching" keeps them in step across devices through dx.bi's profile sync.)

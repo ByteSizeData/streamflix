@@ -41,6 +41,8 @@ import java.util.concurrent.TimeUnit
  *                              the subtitles and the next episode itself
  *   POST /streamflix/control   {cmd: toggle | play | pause | seek | seekBy | close, ms}
  *   POST /streamflix/key       {key: up | down | left | right | ok | back | volup | voldown}
+ *   GET  /streamflix/options   the player's settings and what there is to choose from (PlayerOptions)
+ *   POST /streamflix/option    {name, value}: one of them changed; answers with the settings as they are now
  *   GET  /streamflix/status    what's playing and where it is
  *
  * Every request carries the header "X-StreamFlix: 1" (a web page in a browser can't send it to
@@ -210,6 +212,8 @@ object TvReceiver {
             method == "POST" && path == "/streamflix/play" -> play(context, body)
             method == "POST" && path == "/streamflix/control" -> control(body)
             method == "POST" && path == "/streamflix/key" -> key(context, body.optString("key"))
+            method == "GET" && path == "/streamflix/options" -> options(null, null)
+            method == "POST" && path == "/streamflix/option" -> options(body.optString("name"), body.optString("value"))
             else -> no(404, "not here")
         }
     }
@@ -337,6 +341,18 @@ object TvReceiver {
             if (cmd == "close") JSONObject().put("open", false).put("screen", "home") else open.status()
         } ?: return no(409, "nothing playing")
         return ok(state)
+    }
+
+    /** The player's settings; with a [name], that one changed first */
+    private fun options(name: String?, value: String?): Answer {
+        var known = true
+        val now = onUi {
+            val open = PlaybackBus.player ?: return@onUi null
+            if (name != null) known = open.setOption(name, value.orEmpty())
+            open.options()
+        } ?: return no(409, "nothing playing")
+        if (!now.optBoolean("open")) return no(409, "nothing playing")
+        return if (known) ok(now) else no(400, "option")
     }
 
     private val keys = mapOf(

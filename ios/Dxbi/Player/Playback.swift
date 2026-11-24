@@ -57,6 +57,8 @@ final class Playback: Identifiable {
     var paused = false
     var buffering = true
     var speed: Double = 1
+    /** Volume boost (1: off), for a film that is quiet with the volume all the way up */
+    var boost: Double = 1 { didSet { mpv.setBoost(boost) } }
     var tracks: [MPV.Track] = []
     var fit = Fit.fit {
         didSet { mpv.gravity(fit.gravity) }

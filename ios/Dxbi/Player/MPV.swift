@@ -160,6 +160,11 @@ final class MPV {
     func seek(to seconds: Double) { command(["seek", String(format: "%.3f", max(0, seconds)), "absolute+exact"]) }
     func seek(by seconds: Double) { command(["seek", String(format: "%.3f", seconds), "relative+exact"]) }
     func setSpeed(_ rate: Double) { property("speed", String(format: "%.2f", rate)) }
+    /** Volume boost: this many times louder than the sound is (1: as it is) */
+    func setBoost(_ times: Double) {
+        property("volume-max", "300")
+        property("volume", String(format: "%.0f", min(max(times, 1), 3) * 100))
+    }
     func select(_ type: String, _ id: Int?) { property(type == "audio" ? "aid" : "sid", id.map(String.init) ?? "no") }
     /** Fit the screen, fill it (cropping the edges) or stretch to it */
     func gravity(_ g: AVLayerVideoGravity) { layer.videoGravity = g }

@@ -301,6 +301,8 @@ class PlayerControls(
         for ((value, name) in zooms) row(name, zoom.mode == value) { zoom.set(value) }
         heading("Sound")
         for (mode in SoundMode.MODES) row(mode.label, sound.mode === mode) { sound.mode = mode }
+        heading("Volume boost")
+        for (boost in SoundMode.BOOSTS) row(SoundMode.boostLabel(boost), sound.boost == boost) { sound.boost = boost }
         focusFirst()
     }
 

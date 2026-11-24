@@ -55,6 +55,14 @@ struct TvSheet: View {
         .preferredColorScheme(.dark)
         .tint(.white)
         .task { if TvRemote.shared.tv == nil { TvRemote.shared.search() } }
+        // (the TV player's settings, asked for again every few seconds: the tracks change with the
+        // episode, and the TV's own remote may change the rest)
+        .task {
+            while !Task.isCancelled {
+                if TvRemote.shared.tv != nil { TvRemote.shared.loadOptions() }
+                try? await Task.sleep(for: .seconds(4))
+            }
+        }
         // (the TV is asked where it is every second while this is open)
         .onAppear { TvRemote.shared.sheet = true }
         .onDisappear { TvRemote.shared.sheet = false }
@@ -187,6 +195,57 @@ struct TvSheet: View {
             Spacer()
             round("stop.fill", "Stop") { remote.control("close") }
             Spacer()
+        }
+        settings(remote)
+    }
+
+    /// The TV player's own settings, the ones its remote's menus have. Chosen here, they change on the TV.
+    @ViewBuilder
+    private func settings(_ remote: TvRemote) -> some View {
+        if let o = remote.options {
+            Text("Video settings").font(.headline).padding(.top, 6)
+            chips("Audio", o.audio) { remote.setOption("audio", $0) }
+            chips("Subtitles", o.subtitles) { remote.setOption("subtitles", $0) }
+            if o.subtitles.contains(where: { $0.on && $0.id != "off" }) {
+                let moved = o.subtitleDelayMs == 0 ? "on time" : String(format: "%+.2f s", o.subtitleDelayMs / 1000)
+                chips("Subtitle timing · \(moved)", [
+                    TvRemote.Choice(id: "-250", name: "Earlier", on: false),
+                    TvRemote.Choice(id: "250", name: "Later", on: false),
+                    TvRemote.Choice(id: "0", name: "Reset", on: o.subtitleDelayMs == 0),
+                ]) { remote.setOption("subtitleDelay", $0) }
+            }
+            chips("Volume boost", o.boost) { remote.setOption("boost", $0) }
+            chips("Sound", o.sound) { remote.setOption("sound", $0) }
+            chips("Speed", o.speed) { remote.setOption("speed", $0) }
+            chips("Picture", o.picture) { remote.setOption("picture", $0) }
+            chips("Zoom", o.zoom) { remote.setOption("zoom", $0) }
+        }
+    }
+
+    /// One setting: its name, then what there is to choose from in a row that slides sideways
+    @ViewBuilder
+    private func chips(_ label: String, _ choices: [TvRemote.Choice], pick: @escaping (String) -> Void) -> some View {
+        if !choices.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(label).font(.caption).foregroundStyle(Dx.faint)
+                ScrollView(.horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(choices) { c in
+                            Button { pick(c.id) } label: {
+                                Text(c.name)
+                                    .font(.subheadline.weight(c.on ? .bold : .medium))
+                                    .lineLimit(1)
+                                    .foregroundStyle(c.on ? Color.black : Color.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 9)
+                                    .background(c.on ? Color.white : Dx.raised, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+            }
         }
     }
 

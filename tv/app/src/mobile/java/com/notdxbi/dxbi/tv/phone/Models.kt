@@ -165,14 +165,27 @@ data class StreamOption(
     val seeds: Int,
     val source: String,
     val langs: List<String>,
+    /** Each language's flag as a two-letter country code, in the same order as [langs] ("" for none) */
+    val flags: List<String> = emptyList(),
+    /** An English dub of the title open (an anime, or a title not in English) */
+    val englishDub: Boolean = false,
 ) {
     val quality: String get() = when (res) { 2160 -> "4K"; 1440 -> "1440p"; 1080 -> "1080p"; 720 -> "720p"; 0 -> "?"; else -> "SD" }
     val sizeText: String? get() = if (size <= 0) null else if (size >= 1e9) "%.1f GB".format(size / 1e9) else "%.0f MB".format(size / 1e6)
+
+    /** The languages with their flags: "🇬🇧 English · 🇯🇵 Japanese" (nothing when the release lists none) */
+    val languages: String get() = langs.mapIndexedNotNull { i, lang ->
+        if (lang.startsWith("Not listed")) null else (flagEmoji(flags.getOrNull(i).orEmpty()) + " " + lang).trim()
+    }.joinToString(" · ")
 
     /** The picture's quality, as the desktop's Best quality sort scores it: resolution, then Dolby Vision or HDR, then the source */
     val score: Int get() = res * 10 + (if (dv) 3 else if (hdr) 2 else 0) + (SOURCE_RANK[source] ?: 0)
 
     companion object {
+        /** A two-letter country code as its flag */
+        fun flagEmoji(code: String): String =
+            if (code.length == 2 && code.all { it in 'A'..'Z' }) code.map { String(Character.toChars(0x1F1E6 + (it - 'A'))) }.joinToString("") else ""
+
         private val SOURCE_RANK = mapOf("Remux" to 4, "BluRay" to 3, "WEB" to 2, "HDTV" to 1, "CAM" to -10)
 
         /** Best quality first; of the same quality, ready to play, then most seeds, then largest */
@@ -182,6 +195,7 @@ data class StreamOption(
             i, o.optString("play"), o.optString("addon"), o.optString("filename"), o.optString("label"), o.optBoolean("torrent"), o.optString("provider"), o.optString("site"),
             o.optString("codec"), o.optBoolean("instant"), o.optBoolean("pending"), o.optBoolean("lesser"), o.optInt("res"), o.optBoolean("hdr"),
             o.optBoolean("dv"), o.optDouble("size", 0.0), o.optInt("seeds", -1), o.optString("source"), o.optJSONArray("langs").strings(),
+            o.optJSONArray("flags").strings(), o.optBoolean("englishDub"),
         )
     }
 }

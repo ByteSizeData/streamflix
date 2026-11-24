@@ -75,15 +75,20 @@ fun StreamPicker(
     var sort by rememberSaveable { mutableStateOf(Sort.Best) }
     var instantOnly by rememberSaveable { mutableStateOf(false) }
     val all = choices?.items.orEmpty()
-    val shown = remember(all, quality, provider, sort, instantOnly) {
+    val pick = choices?.pick ?: -1
+    val shown = remember(all, quality, provider, sort, instantOnly, pick) {
         val kept = all.filter { (quality == null || it.quality == quality) && (provider == null || it.provider == provider) && (!instantOnly || it.instant) }
-        when (sort) {
+        val sorted = when (sort) {
             Sort.Best -> kept.sortedWith(StreamOption.BEST)
             Sort.Seeds -> kept.sortedByDescending { it.seeds }
             Sort.Largest -> kept.sortedByDescending { it.size }
             Sort.Smallest -> kept.sortedBy { if (it.size > 0) it.size else Double.MAX_VALUE }
             Sort.Addon -> kept
         }
+        // The best match is always the first row; in the best-first order the English dubs come next
+        // (a stable sort: the order above holds within each)
+        if (sort == Sort.Best) sorted.sortedWith(compareBy({ it.index != pick }, { !it.englishDub }))
+        else sorted.sortedBy { it.index != pick }
     }
     val searching = choices == null || !choices.settled
 
@@ -173,9 +178,20 @@ private fun StreamRow(s: StreamOption, picked: Boolean, onPlayIn: (Phone.Target)
     var menu by remember { mutableStateOf(false) }
     Column(
         Modifier.padding(horizontal = Gutter, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Dx.Surface)
-            .then(if (picked) Modifier.border(1.dp, Dx.Accent, RoundedCornerShape(10.dp)) else Modifier)
+            // gold for the best match, blue for an English dub
+            .then(when {
+                picked -> Modifier.border(2.dp, BestGold, RoundedCornerShape(10.dp))
+                s.englishDub -> Modifier.border(1.5.dp, DubBlue, RoundedCornerShape(10.dp))
+                else -> Modifier
+            })
             .clickable(onClick = onPlay).padding(12.dp),
     ) {
+        if (picked || s.englishDub) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
+                if (picked) Text("★ BEST MATCH", color = BestGold, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black)
+                if (s.englishDub) Tag("ENGLISH DUB", colour = DubBlue)
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Tag(s.quality, strong = true)
             if (s.dv) Tag("DOLBY VISION") else if (s.hdr) Tag("HDR")
@@ -213,16 +229,20 @@ private fun StreamRow(s: StreamOption, picked: Boolean, onPlayIn: (Phone.Target)
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        // the languages on a line of their own, each behind its flag
+        if (s.languages.isNotEmpty()) Text(s.languages, color = Dx.Text, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         val facts = listOfNotNull(
             s.sizeText,
             s.seeds.takeIf { it >= 0 }?.let { "$it seeds" },
-            s.langs.filterNot { it.startsWith("Not listed") }.takeIf { it.isNotEmpty() }?.joinToString(", "),
             s.addon.takeIf { it.isNotBlank() && it != s.provider },
         )
         if (facts.isNotEmpty()) Text(facts.joinToString(" · "), color = Dx.Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (s.lesser) Text("Upscaled, high frame rate or 3D: may not look as good as it says", color = Dx.Faint, style = MaterialTheme.typography.bodySmall)
     }
 }
+
+private val BestGold = Color(0xFFFFC53D)
+private val DubBlue = Color(0xFF2F80ED)
 
 @Composable
 private fun Tag(text: String, strong: Boolean = false, colour: Color? = null) {

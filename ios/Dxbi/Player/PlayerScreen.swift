@@ -231,6 +231,7 @@ struct PlayerScreen: View {
                 // (opening a menu keeps the controls up until the screen is tapped: they hid, and took
                 // the open menu with them)
                 SpeedMenu(playback: playback, onOpen: hold)
+                BoostMenu(playback: playback, onOpen: hold)
                 TracksMenu(playback: playback, onOpen: hold)
                 Button { stremio.playExternally(playback) } label: { Image(systemName: "arrow.up.forward.app").frame(width: 24, height: 24) }
                     .dxGlassButton()
@@ -546,6 +547,24 @@ private struct SpeedMenu: View {
         .dxGlassButton()
         .simultaneousGesture(TapGesture().onEnded(onOpen))
         // (opening upward, iOS turned the list upside down: Off ended up at the bottom)
+        .menuOrder(.fixed)
+    }
+}
+
+/** Volume boost: louder than the sound is */
+private struct BoostMenu: View {
+    let playback: Playback
+    var onOpen: () -> Void
+    var body: some View {
+        Menu {
+            Picker("Volume Boost", selection: Binding(get: { playback.boost }, set: { playback.boost = $0 })) {
+                ForEach([1.0, 1.5, 2.0, 3.0], id: \.self) { b in Text(b == 1 ? "Off" : "\(Int(b * 100))%").tag(b) }
+            }
+        } label: {
+            Label(playback.boost == 1 ? "Boost" : "\(Int(playback.boost * 100))%", systemImage: "speaker.wave.3.fill").frame(height: 24)
+        }
+        .dxGlassButton()
+        .simultaneousGesture(TapGesture().onEnded(onOpen))
         .menuOrder(.fixed)
     }
 }

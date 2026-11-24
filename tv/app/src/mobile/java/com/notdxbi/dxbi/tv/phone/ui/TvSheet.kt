@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -70,6 +73,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.notdxbi.dxbi.tv.TvRemote
+import kotlinx.coroutines.delay
 
 // Play on TV (TvRemote.kt): the button that opens it, the sheet with the TVs to pick from, which
 // becomes that TV's remote once one is picked, and the strip that says what the TV is playing.
@@ -273,6 +277,61 @@ private fun Playing(context: Context, now: TvRemote.Status) {
         Round(if (now.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, if (now.paused) "Play" else "Pause", big = true) { TvRemote.control(context, "toggle") }
         Round(Icons.Filled.Forward10, "Forward 10 seconds") { TvRemote.control(context, "seekBy", 10_000) }
         Round(Icons.Filled.Stop, "Stop") { TvRemote.control(context, "close") }
+    }
+    Settings(context)
+}
+
+/**
+ * The TV player's own settings, the ones its remote's menus have: sound track, subtitles and their
+ * timing, speed, picture, zoom, sound mode and volume boost. Chosen here, they change on the TV.
+ */
+@Composable
+private fun Settings(context: Context) {
+    val options by TvRemote.options.collectAsState()
+    // (asked for again every few seconds: the tracks change with the episode, and the TV's remote may change the rest)
+    LaunchedEffect(Unit) {
+        while (true) {
+            TvRemote.loadOptions(context)
+            delay(4000)
+        }
+    }
+    val o = options ?: return
+    Spacer(Modifier.height(14.dp))
+    Text("Video settings", color = Dx.Text, style = MaterialTheme.typography.titleMedium)
+    Chips("Audio", o.audio) { TvRemote.setOption(context, "audio", it) }
+    Chips("Subtitles", o.subtitles) { TvRemote.setOption(context, "subtitles", it) }
+    if (o.subtitles.any { it.on && it.id != "off" }) {
+        val moved = if (o.subtitleDelayMs == 0L) "on time" else "%+.2f s".format(o.subtitleDelayMs / 1000f)
+        Chips("Subtitle timing · $moved", listOf(
+            TvRemote.Choice("-250", "Earlier", false), TvRemote.Choice("250", "Later", false), TvRemote.Choice("0", "Reset", o.subtitleDelayMs == 0L),
+        )) { TvRemote.setOption(context, "subtitleDelay", it) }
+    }
+    Chips("Volume boost", o.boost) { TvRemote.setOption(context, "boost", it) }
+    Chips("Sound", o.sound) { TvRemote.setOption(context, "sound", it) }
+    Chips("Speed", o.speed) { TvRemote.setOption(context, "speed", it) }
+    Chips("Picture", o.picture) { TvRemote.setOption(context, "picture", it) }
+    Chips("Zoom", o.zoom) { TvRemote.setOption(context, "zoom", it) }
+}
+
+/** One setting: its name, then what there is to choose from in a row that slides sideways */
+@Composable
+private fun Chips(label: String, choices: List<TvRemote.Choice>, onPick: (String) -> Unit) {
+    if (choices.isEmpty()) return
+    Spacer(Modifier.height(10.dp))
+    Text(label, color = Dx.Faint, style = MaterialTheme.typography.labelMedium)
+    Spacer(Modifier.height(6.dp))
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(end = 8.dp)) {
+        items(choices) { c ->
+            Text(
+                c.name,
+                color = if (c.on) Color.Black else Dx.Text,
+                fontWeight = if (c.on) FontWeight.Bold else FontWeight.Medium,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (c.on) Color.White else Dx.Raised)
+                    .clickable { onPick(c.id) }.padding(horizontal = 14.dp, vertical = 9.dp),
+            )
+        }
     }
 }
 

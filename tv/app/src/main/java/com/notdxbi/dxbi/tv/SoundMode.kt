@@ -31,11 +31,24 @@ class SoundMode : BaseAudioProcessor() {
             Mode("Dialogue boost", 1.2f, 0.5f, -3f, 5f, -26f, 3f, 1.4f),
             Mode("Night mode", 1.2f, 0.45f, -6f, 4f, -42f, 8f, 2.4f),
         )
+
+        /** Volume boost: how many times louder than the sound is (1: as it is) */
+        val BOOSTS = listOf(1f, 1.5f, 2f, 3f)
+        fun boostLabel(boost: Float) = if (boost == 1f) "Off" else "${(boost * 100).toInt()}%"
     }
 
     @Volatile var mode = MODES[0]
         set(value) { field = value; retune = true }
     @Volatile private var retune = true
+
+    /**
+     * Volume boost, for a film that is quiet even with the volume all the way up: everything is
+     * made this many times louder, and where that would clip (a loud moment) it is held back for
+     * that moment instead of distorting.
+     */
+    @Volatile var boost = 1f
+    private var held = 1f
+    private var letGo = 0f
 
     private class Biquad {
         var b0 = 1f; var b1 = 0f; var b2 = 0f; var a1 = 0f; var a2 = 0f
@@ -65,6 +78,9 @@ class SoundMode : BaseAudioProcessor() {
         peak.size(input.channelCount)
         attack = exp(-1.0 / (input.sampleRate * 0.005)).toFloat()
         release = exp(-1.0 / (input.sampleRate * 0.12)).toFloat()
+        // (a held-back boost comes back over about a third of a second)
+        letGo = (1 - exp(-1.0 / (input.sampleRate * 0.3))).toFloat()
+        held = 1f
         retune = true
         return input
     }
@@ -94,7 +110,9 @@ class SoundMode : BaseAudioProcessor() {
         if (!input.hasRemaining()) return
         val out = replaceOutputBuffer(input.remaining())
         val m = mode
-        if (m === MODES[0]) {
+        val louder = boost
+        val plain = m === MODES[0]
+        if (plain && louder == 1f) {
             out.put(input)
             out.flip()
             return
@@ -110,8 +128,10 @@ class SoundMode : BaseAudioProcessor() {
             for (c in 0 until channels) {
                 var v = samples.short / 32768f
                 // 5.1 and 7.1: FL FR C LFE then the rest
-                if (channels >= 6) { if (c == 2) v *= centre else if (c >= 4) v *= surround }
-                v = peak.step(shelf.step(v, c), c)
+                if (!plain) {
+                    if (channels >= 6) { if (c == 2) v *= centre else if (c >= 4) v *= surround }
+                    v = peak.step(shelf.step(v, c), c)
+                }
                 frame[c] = v
                 level = maxOf(level, abs(v))
             }
@@ -120,6 +140,14 @@ class SoundMode : BaseAudioProcessor() {
             if (envelope > 0.00001f) {
                 val over = 20 * log10(envelope) - m.threshold
                 if (over > 0) gain *= 10f.pow(-over * (1 - 1 / m.ratio) / 20)
+            }
+            if (louder != 1f) {
+                gain *= louder
+                // (down at once when this frame would clip, back up slowly)
+                val top = level * gain
+                val room = if (top > 0.98f) 0.98f / top else 1f
+                held = if (room < held) room else held + (1f - held) * letGo
+                gain *= held
             }
             for (c in 0 until channels) out.putShort(((frame[c] * gain).coerceIn(-1f, 1f) * 32767).toInt().toShort())
         }

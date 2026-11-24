@@ -497,6 +497,15 @@ class PhoneControls(
             items(SoundMode.MODES) { mode ->
                 @Suppress("UNUSED_EXPRESSION") now
                 ChoiceRow(Choice(mode.label, sound.mode === mode) { sound.mode = mode; now = System.currentTimeMillis() }) }
+            item { Heading("Volume boost") }
+            item {
+                LazyRow(contentPadding = PaddingValues(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(SoundMode.BOOSTS) { boost ->
+                        @Suppress("UNUSED_EXPRESSION") now
+                        Pill(SoundMode.boostLabel(boost), on = sound.boost == boost) { sound.boost = boost; now = System.currentTimeMillis() }
+                    }
+                }
+            }
             item { Heading("Stream") }
             item { Text(stats(), color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) }
             item { ChoiceRow(Choice("Play with external player", false) { onExternal() }) }

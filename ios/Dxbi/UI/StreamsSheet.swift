@@ -22,15 +22,25 @@ struct StreamsSheet: View {
 
     private var all: [StreamOption] { choices?.items ?? [] }
 
+    private static let bestGold = Color(red: 1.0, green: 0.773, blue: 0.239)
+    private static let dubBlue = Color(red: 0.184, green: 0.502, blue: 0.929)
+
     private var shown: [StreamOption] {
         let kept = all.filter { (quality == nil || $0.quality == quality) && (provider == nil || $0.provider == provider) && (!instantOnly || $0.instant) }
+        let sorted: [StreamOption]
         switch sort {
-        case .best: return kept.sorted(by: StreamOption.best)
-        case .seeds: return kept.sorted { $0.seeds > $1.seeds }
-        case .largest: return kept.sorted { $0.size > $1.size }
-        case .smallest: return kept.sorted { ($0.size > 0 ? $0.size : .infinity) < ($1.size > 0 ? $1.size : .infinity) }
-        case .addon: return kept
+        case .best: sorted = kept.sorted(by: StreamOption.best)
+        case .seeds: sorted = kept.sorted { $0.seeds > $1.seeds }
+        case .largest: sorted = kept.sorted { $0.size > $1.size }
+        case .smallest: sorted = kept.sorted { ($0.size > 0 ? $0.size : .infinity) < ($1.size > 0 ? $1.size : .infinity) }
+        case .addon: sorted = kept
         }
+        // The best match is always the first row; in the best-first order the English dubs come next
+        let pick = choices?.pick ?? -1
+        let first = sorted.filter { $0.index == pick }
+        let rest = sorted.filter { $0.index != pick }
+        if sort == .best { return first + rest.filter { $0.englishDub } + rest.filter { !$0.englishDub } }
+        return first + rest
     }
 
     var body: some View {
@@ -121,6 +131,13 @@ struct StreamsSheet: View {
     private func row(_ s: StreamOption, picked: Bool) -> some View {
         Button { onPlay(s, .player) } label: {
             VStack(alignment: .leading, spacing: 6) {
+                // gold for the best match, blue for an English dub
+                if picked || s.englishDub {
+                    HStack(spacing: 8) {
+                        if picked { Text("★ BEST MATCH").font(.caption2.weight(.black)).foregroundStyle(Self.bestGold) }
+                        if s.englishDub { Badge(text: "ENGLISH DUB", colour: Self.dubBlue) }
+                    }
+                }
                 HStack(spacing: 6) {
                     Badge(text: s.quality, filled: true)
                     if s.dv { Badge(text: "DOLBY VISION") } else if s.hdr { Badge(text: "HDR") }
@@ -139,15 +156,17 @@ struct StreamsSheet: View {
                     .font(s.filename.isEmpty ? .headline : .footnote.weight(.semibold))
                     .foregroundStyle(s.filename.isEmpty ? .white : Dx.muted)
                     .lineLimit(1)
-                let facts = [s.sizeText, s.seeds >= 0 ? "\(s.seeds) seeds" : nil, s.langs.filter { !$0.hasPrefix("Not listed") }.joined(separator: ", ").ifEmpty("-"), s.addon != s.provider ? s.addon : nil]
-                    .compactMap { $0 }.filter { !$0.isEmpty && $0 != "-" }
+                // the languages on a line of their own, each behind its flag
+                if !s.languages.isEmpty { Text(s.languages).font(.footnote).lineLimit(2).multilineTextAlignment(.leading) }
+                let facts = [s.sizeText, s.seeds >= 0 ? "\(s.seeds) seeds" : nil, s.addon != s.provider ? s.addon : nil]
+                    .compactMap { $0 }.filter { !$0.isEmpty }
                 if !facts.isEmpty { Text(facts.joined(separator: " · ")).font(.footnote).foregroundStyle(Dx.muted).lineLimit(2) }
                 if s.lesser { Text("Upscaled, high frame rate or 3D: may not look as good as it says").font(.caption).foregroundStyle(Dx.faint) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .background(Dx.raised.opacity(0.7), in: .rect(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(picked ? Dx.accent : .clear, lineWidth: 1.5))
+            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(picked ? Self.bestGold : s.englishDub ? Self.dubBlue : Color.clear, lineWidth: picked ? 2 : 1.5))
         }
         .buttonStyle(.plain)
         .contextMenu {
