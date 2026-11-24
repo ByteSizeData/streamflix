@@ -10,14 +10,14 @@ import android.os.SystemClock
 import java.io.File
 
 /**
- * Starts dx.bi afresh, in a new process.
+ * Starts StreamFlix afresh, in a new process.
  *
  * A TV app is rarely closed: it comes back from the home screen, or from the TV's sleep, for days. A
  * page and a web engine that have sat that long come back with connections that died hours ago and
- * everything they ever loaded still in memory, and that looks like dx.bi frozen (nothing loads, the
+ * everything they ever loaded still in memory, and that looks like StreamFlix frozen (nothing loads, the
  * remote answers late) until someone thinks to force it closed. So after a long time away
  * [MainActivity] hands over to this screen instead of carrying on. It runs in a process of its own
- * (see the manifest), so it outlives the dx.bi it replaces.
+ * (see the manifest), so it outlives the StreamFlix it replaces.
  */
 class RestartActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {

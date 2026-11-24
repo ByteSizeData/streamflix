@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
- * Thai subtitles, on by default (dx.bi settings → Thai subtitles). Stremio's subtitle addon
+ * Thai subtitles, on by default (StreamFlix settings → Thai subtitles). Stremio's subtitle addon
  * (OpenSubtitles v3) has next to none, but OpenSubtitles' older REST API has them, needs no key and
  * takes the app's own name. The page asks as soon as a film's or an episode's streams are on screen
  * (Bridge.thaiSubtitles), so the files are usually here before one is played; the page and the player
