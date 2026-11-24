@@ -51,7 +51,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
     val account: StateFlow<Account?> = ctxState.map(Account::from).stateIn(scope, SharingStarted.Eagerly, Account.from(ctxState.value))
     val continueWatching: StateFlow<List<Continue>> = continueState.map { Continue.list(it).orEmpty() }.stateIn(scope, SharingStarted.Eagerly, Continue.list(continueState.value).orEmpty())
 
-    // dx.bi's own Home pieces, asked for from the plugin and remembered the same way
+    // StreamFlix's own Home pieces, asked for from the plugin and remembered the same way
     private companion object {
         /** Where the page waits, out of sight: a screen Stremio has nothing on */
         const val PARKED = "#/dxbi"
@@ -89,7 +89,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
     val discover: StateFlow<Discover?> = engine.state("discover").map(Discover::from).stateIn(scope, SharingStarted.Eagerly, null)
 
     init {
-        // Every time the page (re)starts: Home's rows, then dx.bi's pieces
+        // Every time the page (re)starts: Home's rows, then StreamFlix's pieces
         scope.launch {
             engine.ready.collect { up ->
                 if (!up) return@collect
@@ -101,7 +101,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
                 refreshExtras()
             }
         }
-        // The library changing (watched something, added to My List, another device) changes dx.bi's rows
+        // The library changing (watched something, added to My List, another device) changes StreamFlix's rows
         scope.launch {
             var last: String? = null
             continueState.collect { now ->
@@ -198,7 +198,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
     }
 
     /**
-     * Report a problem, as dx.bi does everywhere: what they typed, with dx.bi's version, the phone,
+     * Report a problem, as StreamFlix does everywhere: what they typed, with StreamFlix's version, the phone,
      * settings, addon names and recent errors (no passwords, keys or stream links). The report's code
      * to post in dx.bi's Discord, or what went wrong
      */
@@ -208,15 +208,15 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
 
     fun removeFromContinue(id: String) = scope.launch { ask("dismiss", JSONObject().put("id", id)) }
 
-    /** The open title's streams, described by dx.bi, with Just press Play's pick */
+    /** The open title's streams, described by StreamFlix, with Just press Play's pick */
     suspend fun streams(): StreamChoices? = (dx("phone.streams") as? JSONObject)?.let(StreamChoices::from)
 
     /**
-     * Plays one of [streams] (dx.bi keeps the next best ready in case it won't play): in dx.bi's
+     * Plays one of [streams] (StreamFlix keeps the next best ready in case it won't play): in StreamFlix's
      * player, another app, on a Chromecast (where Play goes anyway while one is connected) or as a download
      */
     fun play(option: StreamOption, target: Phone.Target = Phone.Target.Player) = scope.launch {
-        // a torrent to download: dx.bi's torrent engine fetches it, no player (or streaming server) needed
+        // a torrent to download: StreamFlix's torrent engine fetches it, no player (or streaming server) needed
         if (target == Phone.Target.Download && option.torrent) {
             val answer = runCatching {
                 engine.call("dx", JSONObject().put("method", "phone.downloadOption").put("args", JSONArray().put(option.index)), 60_000) as? JSONObject
@@ -246,12 +246,12 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
 
     /**
      * The stream to download for one film or episode in a quality ("best", "2160", "1080", "720",
-     * "small"): dx.bi picks it from the addons (checking its link is really ready), with subtitles.
+     * "small"): StreamFlix picks it from the addons (checking its link is really ready), with subtitles.
      * The details for [com.notdxbi.dxbi.tv.Downloads.add], or why there's none.
      */
     suspend fun downloadStream(type: String, metaId: String, videoId: String, quality: String): Result<JSONObject> = runCatching {
         val args = JSONObject().put("method", "phone.download").put("args", JSONArray(listOf(type, metaId, videoId, quality)))
-        val answer = engine.call("dx", args, 60_000) as? JSONObject ?: error("dx.bi didn't answer. Try again.")
+        val answer = engine.call("dx", args, 60_000) as? JSONObject ?: error("StreamFlix didn't answer. Try again.")
         answer.optJSONObject("stream") ?: error(answer.optString("error").ifEmpty { "Couldn't find a stream to download." })
     }
 
@@ -310,7 +310,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
         ask("signIn", JSONObject().put("email", email).put("password", password))
         val answer = withTimeoutOrNull(20_000) {
             engine.events.filter { it.first == "UserAuthenticated" || it.first == "Error" }.first()
-        } ?: return "dx.bi couldn't connect. Check your connection and try again."
+        } ?: return "StreamFlix couldn't connect. Check your connection and try again."
         if (answer.first == "UserAuthenticated") return null
         return answer.second?.optJSONObject("error")?.text("message") ?: "That email and password didn't work."
     }
@@ -321,7 +321,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
         ask("signOut")
     }
 
-    /** dx.bi settings → Play videos in: another app (VLC, mpv…) rather than dx.bi's player */
+    /** StreamFlix settings → Play videos in: another app (VLC, mpv…) rather than StreamFlix's player */
     val playInOtherApp = MutableStateFlow(cache.getBoolean("playInOtherApp", false))
 
     fun setPlayInOtherApp(on: Boolean) {
@@ -329,7 +329,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
         cache.edit().putBoolean("playInOtherApp", on).apply()
     }
 
-    /** dx.bi settings → Player → Turn with my phone (off: the player is always full screen, sideways) */
+    /** StreamFlix settings → Player → Turn with my phone (off: the player is always full screen, sideways) */
     val playerTurns = MutableStateFlow(cache.getBoolean("playerTurns", false))
 
     fun setPlayerTurns(on: Boolean) {
@@ -337,7 +337,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
         cache.edit().putBoolean("playerTurns", on).apply()
     }
 
-    /** dx.bi settings → Library in the tab bar: a Library tab beside Home, Discover… (off: it's under Profile) */
+    /** StreamFlix settings → Library in the tab bar: a Library tab beside Home, Discover… (off: it's under Profile) */
     val libraryTab = MutableStateFlow(cache.getBoolean("libraryTab", false))
 
     fun setLibraryTab(on: Boolean) {
@@ -407,12 +407,12 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
         refreshExtras()
     }
 
-    /** A title's scores and reviews (dx.bi's Reviews: MDBList, Wikidata, Wikipedia, TMDB with the keys set) */
+    /** A title's scores and reviews (StreamFlix's Reviews: MDBList, Wikidata, Wikipedia, TMDB with the keys set) */
     suspend fun reviews(type: String, id: String): Reviews? =
         (engine.runCatching { call("dx", JSONObject().put("method", "phone.reviews").put("args", JSONArray().put(type).put(id)), 40_000) }.getOrNull() as? JSONObject)?.let(Reviews::from)
 
     // ---------------------------------------------------------------------------------------------
-    // Watch party (dx.bi's own: end-to-end encrypted, everyone streams from their own addons)
+    // Watch party (StreamFlix's own: end-to-end encrypted, everyone streams from their own addons)
 
     suspend fun party(): JSONObject? = dx("phone.party.state") as? JSONObject
 
@@ -423,10 +423,10 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
     fun leaveParty() = scope.launch { dx("phone.party.leave") }
     fun sayInParty(text: String) = scope.launch { dx("phone.party.say", text) }
 
-    /** dx.bi settings, as the TV lists them */
+    /** StreamFlix settings, as the TV lists them */
     suspend fun settings(): List<Setting> = (ask("settings") as? JSONArray).objects().map(Setting::from)
 
-    /** Your stats (dx.bi's Watch stats), or null when they're switched off */
+    /** Your stats (StreamFlix's Watch stats), or null when they're switched off */
     suspend fun stats(): JSONObject? = dx("phone.stats") as? JSONObject
 
     suspend fun saveSetting(key: String, value: Any?) {
@@ -446,7 +446,7 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
         refreshExtras()
     }
 
-    /** (never the last one: dx.bi always has someone watching) */
+    /** (never the last one: StreamFlix always has someone watching) */
     fun removeViewer(id: String) = scope.launch {
         dx("viewers.remove", id)
         refreshExtras()

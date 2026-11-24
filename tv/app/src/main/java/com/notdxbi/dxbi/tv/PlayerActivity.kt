@@ -176,7 +176,7 @@ class PlayerActivity : AppCompatActivity() {
     private var thai: ThaiSubtitles.Job? = null
     private var mediaItem: MediaItem? = null
     private var thaiLate = false
-    // (dx.bi settings → Start with Thai subtitles: a Thai one comes on by itself. Off: Thai is only listed)
+    // (StreamFlix settings → Start with Thai subtitles: a Thai one comes on by itself. Off: Thai is only listed)
     private var thaiStart = false
     private var thaiResetting = false
     private var pickedAudio: String? = null
@@ -192,7 +192,7 @@ class PlayerActivity : AppCompatActivity() {
     }
     private val hideFlash = Runnable { seekFlash.visibility = View.GONE }
 
-    // Skip intro / recap / credits: the episode's times (seconds; end -1 = to the end), whether dx.bi
+    // Skip intro / recap / credits: the episode's times (seconds; end -1 = to the end), whether StreamFlix
     // skips by itself ("intro": intros and recaps, "all": credits too), and which were skipped already
     private class Segment(val type: String, val start: Double, val end: Double)
     private var segments: List<Segment> = emptyList()
@@ -241,7 +241,7 @@ class PlayerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         Diary.start(this)
         // Phones play full screen sideways, like Netflix (either way round), unless the viewer chose
-        // dx.bi settings → Player → Turn with my phone; TVs stay landscape
+        // StreamFlix settings → Player → Turn with my phone; TVs stay landscape
         if (phone) requestedOrientation =
             if (getSharedPreferences("phone-cache", MODE_PRIVATE).getBoolean("playerTurns", false)) ActivityInfo.SCREEN_ORIENTATION_FULL_USER
             else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -260,7 +260,7 @@ class PlayerActivity : AppCompatActivity() {
 
         val stream = JSONObject(intent.getStringExtra(EXTRA_STREAM) ?: "{}")
         Diary.note("player opened: ${stream.optString("url").take(200)} from ${stream.optLong("startMs", 0L) / 1000} s${if (savedInstanceState != null) " (made again by Android)" else ""}")
-        // dx.bi for phones: its controls, gestures, small window and downloads (none in dx.bi TV)
+        // StreamFlix for phones: its controls, gestures, small window and downloads (none in StreamFlix TV)
         extras = Phone.player(host, stream)
         segments = stream.optJSONArray("skips")?.let { list ->
             (0 until list.length()).mapNotNull { i ->
@@ -339,10 +339,10 @@ class PlayerActivity : AppCompatActivity() {
             hideUpNext()
         }
 
-        // Subtitles start in Stremio's subtitle language (Settings → Player) when dx.bi's "Subtitles when
+        // Subtitles start in Stremio's subtitle language (Settings → Player) when StreamFlix's "Subtitles when
         // a video starts" is on: the page sends that language, and marks the subtitle file to start
-        // with. Off (dx.bi's default, like Netflix): pick one from the subtitles button.
-        // With dx.bi's Thai subtitles on (dx.bi settings, on by default), the Thai ones are listed first
+        // with. Off (StreamFlix's default, like Netflix): pick one from the subtitles button.
+        // With StreamFlix's Thai subtitles on (StreamFlix settings, on by default), the Thai ones are listed first
         // under the subtitles button; with "Start with Thai subtitles" too (off by default), a Thai one
         // starts on whenever the film or episode has one, before any other language.
         // With neither a start language nor Thai to start with, nothing shows by itself: a release's
@@ -843,10 +843,10 @@ class PlayerActivity : AppCompatActivity() {
         report()
     }
 
-    // dx.bi left with the player open (Home, the TV asleep): MainActivity stopped when the player opened
+    // StreamFlix left with the player open (Home, the TV asleep): MainActivity stopped when the player opened
     // and doesn't see it, so when it began is kept, and whether that was long enough to leave the page
-    // stale (MainActivity.onStart) is worked out once dx.bi is back on screen: here, or in MainActivity
-    // when the home screen's start closes the player instead (or it closed while dx.bi was away)
+    // stale (MainActivity.onStart) is worked out once StreamFlix is back on screen: here, or in MainActivity
+    // when the home screen's start closes the player instead (or it closed while StreamFlix was away)
     override fun onStart() {
         super.onStart()
         PlaybackBus.backOnScreen()
@@ -862,7 +862,7 @@ class PlayerActivity : AppCompatActivity() {
         extras?.leaving()
     }
 
-    /** The phone app's small window (dx.bi TV never opens one): just the picture in it, a little bigger subtitles */
+    /** The phone app's small window (StreamFlix TV never opens one): just the picture in it, a little bigger subtitles */
     override fun onPictureInPictureModeChanged(inPip: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(inPip, newConfig)
         if (inPip) {
