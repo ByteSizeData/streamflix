@@ -91,11 +91,20 @@ function restyle(text) {
   return text.replace(theme, () => "/*@bundled-theme*/" + JSON.stringify(JSON.parse(found[1]) + BAR));
 }
 
+// "Report a problem" sends the app's details (version, device, settings, addon names, recent errors)
+// to a relay that dx.bi's developer runs, for dx.bi's own Discord. StreamFlix's reports have no
+// business there: its plugin is built with no relay, and Send says that reporting isn't set up.
+function ownReports(text) {
+  const relay = /(const REPORT_ENDPOINT = ")https:\/\/[^"]+(";)/;
+  if (!relay.test(text)) throw new Error("the report relay's address wasn't found in the plugin");
+  return text.replace(relay, "$1$2");
+}
+
 let renamed = 0;
 for (const file of files) {
   const before = readFileSync(file, "utf8");
   let after = rename(before);
-  if (file === PLUGIN) after = restyle(after);
+  if (file === PLUGIN) after = ownReports(restyle(after));
   if (file === PLUGIN && version) after = stamp(after);
   if (after !== before) { writeFileSync(file, after); renamed++; }
 }

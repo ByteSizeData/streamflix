@@ -4,6 +4,10 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.406
+
+- **"Report a problem" sends nothing.** In dx.bi it sends the app's details (version, device, settings, addon names, recent errors) to a relay its developer runs, for dx.bi's own Discord. StreamFlix's reports don't belong there, so StreamFlix is built without the relay: the screen is still there, and Send says that reporting isn't set up in this version. (The other thing that goes through a dx.bi server is unchanged: with two or more viewers, "Who's watching" keeps them in step across devices through dx.bi's profile sync.)
+
 ## StreamFlix 2.38.405
 
 - **Phones and tablets: an update installs without Android asking again.** Android 12 and later let an app update itself without the "Update this app?" question, but only for an app that declares it will; the app asked for no question and never declared it, so Android asked every time. From this version on, tapping Update in the app is all it takes (seen on Android 15: 2.38.398 to 2.38.404 with no question). The first time, Android still sends you to "Install unknown apps" to allow it once.
