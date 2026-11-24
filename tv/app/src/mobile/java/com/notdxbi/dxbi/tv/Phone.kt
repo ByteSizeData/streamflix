@@ -122,7 +122,7 @@ object Phone {
     /**
      * Installs a downloaded update through Android's package installer: from Android 12, once dx.bi
      * installed the copy it's replacing (every update after the first), it installs without asking,
-     * and dx.bi closes to restart as the new version. Otherwise Android asks first (UpdateReceiver
+     * and dx.bi closes (Android doesn't let an app open itself again). Otherwise Android asks first (UpdateReceiver
      * brings that up). False: older Androids, which get the installer screen instead.
      */
     fun install(activity: MainActivity, apk: File): Boolean {
@@ -143,7 +143,7 @@ object Phone {
                     activity, id, Intent(activity, UpdateReceiver::class.java),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
                 )
-                activity.runOnUiThread { Toast.makeText(activity, "Installing the update: dx.bi will close and open as the new version", Toast.LENGTH_LONG).show() }
+                activity.runOnUiThread { Toast.makeText(activity, "Installing the update. dx.bi closes when it's in: open it again for the new version", Toast.LENGTH_LONG).show() }
                 session.commit(done.intentSender)
             }
             true

@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- An update the app downloaded installs without Android asking again (Android 12 and later,
+         Phone.install): without this one, asking for no question is ignored and Android asks every time -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <!-- The larger memory allowance: a 4K stream's buffer (ExoPlayer keeps ~130 MB of it in Java
          memory) took the app past 3/4 of the normal one, and Android then closed the screen under the
