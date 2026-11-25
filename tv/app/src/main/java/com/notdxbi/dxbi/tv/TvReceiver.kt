@@ -44,6 +44,10 @@ import java.util.concurrent.TimeUnit
  *   GET  /streamflix/options   the player's settings and what there is to choose from (PlayerOptions)
  *   POST /streamflix/option    {name, value}: one of them changed; answers with the settings as they are now
  *   GET  /streamflix/status    what's playing and where it is
+ *   GET  /streamflix/torrent/<infoHash>/<fileIdx>?n=<file name>&tr=<tracker>…
+ *                              the file of a torrent, fetched by this TV and passed on as it arrives
+ *                              (ranges too): an iPhone or iPad can't fetch a torrent itself, and
+ *                              plays or downloads it this way when it has no streaming server
  *
  * Every request carries the header "X-StreamFlix: 1" (a web page in a browser can't send it to
  * another machine), and all but info and pair carry the phone's key in "X-StreamFlix-Key". Only
@@ -138,6 +142,11 @@ object TvReceiver {
                 val at = line.indexOf(':')
                 if (at > 0) headers[line.substring(0, at).trim().lowercase()] = line.substring(at + 1).trim()
             }
+            // (a torrent's file goes out as it is, not as JSON)
+            if (request[0] == "GET" && request[1].startsWith("/streamflix/torrent/")) {
+                torrent(client, request[1], headers)
+                return
+            }
             val length = headers["content-length"]?.toIntOrNull() ?: 0
             val answer = if (length < 0 || length > BODY_MAX) no(413, "too long") else {
                 val body = ByteArray(length)
@@ -166,6 +175,54 @@ object TvReceiver {
             // a phone that went away mid-request
         } finally {
             try { client.close() } catch (_: Exception) { /* closed already */ }
+        }
+    }
+
+    /**
+     * A torrent's file for a phone or iPad that has picked this TV (the same checks as the other
+     * requests), fetched by the TV's torrent engine and passed on from its local web server.
+     */
+    private fun torrent(client: Socket, target: String, headers: Map<String, String>) {
+        val out = client.getOutputStream()
+        fun refuse(code: Int, text: String) {
+            out.write("HTTP/1.1 $code $text\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray(Charsets.US_ASCII))
+            out.flush()
+        }
+        val context = app ?: return refuse(409, "Conflict")
+        if (headers["x-streamflix"] != "1" || !localName(headers["host"])) return refuse(403, "Forbidden")
+        if (!allowed(context, headers["x-streamflix-key"] ?: "")) return refuse(401, "Unauthorized")
+        val asked = android.net.Uri.parse("http://tv$target")
+        val hash = asked.pathSegments.getOrNull(2)?.lowercase()?.takeIf { it.matches(Regex("[0-9a-f]{40}")) } ?: return refuse(400, "Bad Request")
+        val fileIdx = asked.pathSegments.getOrNull(3)?.toIntOrNull() ?: -1
+        val source = TorrentEngine.downloadUri(hash, fileIdx, asked.getQueryParameters("tr").filter { it.isNotEmpty() }, asked.getQueryParameter("n").orEmpty())
+        // (the torrent's details come from peers first: up to a minute)
+        client.soTimeout = 0
+        val local = try {
+            TorrentEngine.readForPhone(context, android.net.Uri.parse(source))
+        } catch (e: Exception) {
+            Log.w(TAG, "Play on TV: a torrent for a phone didn't start: ${e.message}")
+            return refuse(503, "Service Unavailable")
+        }
+        try {
+            val conn = (java.net.URL(local.toString()).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 150_000
+                headers["range"]?.let { setRequestProperty("Range", it) }
+            }
+            try {
+                val code = conn.responseCode
+                val text = when (code) { 200 -> "OK"; 206 -> "Partial Content"; 404 -> "Not Found"; 416 -> "Range Not Satisfiable"; else -> "Error" }
+                val head = StringBuilder("HTTP/1.1 $code $text\r\n")
+                for (name in listOf("Content-Type", "Content-Length", "Content-Range", "Accept-Ranges")) conn.getHeaderField(name)?.let { head.append("$name: $it\r\n") }
+                head.append("Cache-Control: no-store\r\nConnection: close\r\n\r\n")
+                out.write(head.toString().toByteArray(Charsets.ISO_8859_1))
+                if (code < 400) conn.inputStream.use { it.copyTo(out, 1 shl 16) }
+                out.flush()
+            } finally {
+                conn.disconnect()
+            }
+        } finally {
+            TorrentEngine.doneReading(hash)
         }
     }
 

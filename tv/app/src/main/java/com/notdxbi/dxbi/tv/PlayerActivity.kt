@@ -62,6 +62,8 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var playerView: PlayerView
     private lateinit var controls: Controls
     private var extras: PlayerHooks? = null
+    /** A download being played (Downloads.kt): its id. It plays from the device, and keeps its own place */
+    private var offlineId: String? = null
     // the subtitles' size (Stremio's setting), put back after the phone app's small window's bigger one
     private var subtitleSize = SubtitleView.DEFAULT_TEXT_SIZE_FRACTION
     private lateinit var zoom: PictureZoom
@@ -272,6 +274,7 @@ class PlayerActivity : AppCompatActivity() {
         val stream = JSONObject(intent.getStringExtra(EXTRA_STREAM) ?: "{}")
         Diary.note("player opened: ${stream.optString("url").take(200)} from ${stream.optLong("startMs", 0L) / 1000} s${if (savedInstanceState != null) " (made again by Android)" else ""}")
         // dx.bi for phones: its controls, gestures, small window and downloads (none in dx.bi TV)
+        offlineId = stream.optString("offline").takeIf { it.isNotEmpty() }
         extras = Phone.player(host, stream)
         segments = stream.optJSONArray("skips")?.let { list ->
             (0 until list.length()).mapNotNull { i ->
@@ -314,7 +317,8 @@ class PlayerActivity : AppCompatActivity() {
             .setDefaultRequestProperties(headers)
         // (a link that leads on to the file is followed once a play, not at every seek: StickyRedirects)
         val followed = StickyRedirects(online)
-        val dataSource = extras?.dataSource(followed) ?: followed
+        // (a download plays from the TV itself: the phone app's extras do the same on a phone)
+        val dataSource = extras?.dataSource(followed) ?: if (offlineId != null) Downloads.playback(this) else followed
 
         // The TV's own decoders first, falling back to software ones when a format isn't supported
         val renderers = Renderers()
@@ -828,7 +832,18 @@ class PlayerActivity : AppCompatActivity() {
         // stall at the moment of a report for the viewer pausing (Stremio's progress treats both as not playing)
         val state = exo.playbackState
         val paused = !exo.playWhenReady || state == Player.STATE_ENDED || state == Player.STATE_IDLE
-        if (extras?.keep(exo.currentPosition, duration, ended = false) != true) PlaybackBus.listener?.onProgress(exo.currentPosition, duration, paused, state == Player.STATE_BUFFERING)
+        if (!keep(exo.currentPosition, duration, ended = false)) PlaybackBus.listener?.onProgress(exo.currentPosition, duration, paused, state == Player.STATE_BUFFERING)
+    }
+
+    /**
+     * Where the video got to, kept by the phone app's extras or by a download itself: true when the
+     * page isn't to be told (it didn't start this one)
+     */
+    private fun keep(positionMs: Long, durationMs: Long, ended: Boolean): Boolean {
+        extras?.let { return it.keep(positionMs, durationMs, ended) }
+        val id = offlineId ?: return false
+        Downloads.leftAt(id, positionMs, durationMs, ended)
+        return true
     }
 
     /** Closes the player and says how it went ([positionMs]/[durationMs]: where another app left it, instead of this one) */
@@ -841,7 +856,7 @@ class PlayerActivity : AppCompatActivity() {
         val exo = player
         val duration = durationMs?.takeIf { it > 0 } ?: exo?.let { durationOf(it) } ?: 0L
         val position = if (ended) duration else positionMs ?: exo?.currentPosition ?: 0L
-        if (extras?.keep(position, duration, ended) != true) PlaybackBus.closed(position, duration, ended, error, next)
+        if (!keep(position, duration, ended)) PlaybackBus.closed(position, duration, ended, error, next)
         if (torrent) TorrentEngine.close()
         finish()
     }

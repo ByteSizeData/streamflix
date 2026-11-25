@@ -20,6 +20,8 @@ import java.io.InputStream
 import java.io.RandomAccessFile
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Torrents played on the TV itself, with no streaming server anywhere: libtorrent fetches the file
@@ -256,7 +258,7 @@ object TorrentEngine {
      */
     fun keepRunning(running: Set<String>) {
         for ((hash, a) in kept) {
-            if (hash in running || a.paused || active === a) continue
+            if (hash in running || a.paused || active === a || (readers[hash]?.get() ?: 0) > 0) continue
             runCatching { a.handle.pause() }
             a.paused = true
         }
@@ -288,6 +290,61 @@ object TorrentEngine {
                 val hash = f.name.removeSuffix(".torrent")
                 if (hash.matches(Regex("[0-9a-f]{40}")) && hash !in wanted && !kept.containsKey(hash)) f.deleteRecursively()
             }
+        }
+    }
+
+    // ---- Torrents a phone or iPad reads through this TV (TvReceiver: an iPad can't fetch one itself) ----
+
+    /** How many of a torrent's reads are going on now */
+    private val readers = ConcurrentHashMap<String, AtomicInteger>()
+    /** The ones started for a phone or iPad (not for the TV's own downloads), and when last read */
+    private val forPhones = ConcurrentHashMap<String, Long>()
+    private val tidier = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "dxbi-torrent-tidy").apply { isDaemon = true } }
+    @Volatile private var tidying = false
+    /** How long a torrent read by a phone stays once nothing reads it (a paused download carries on later) */
+    private const val PHONE_IDLE_MS = 30 * 60 * 1000L
+
+    private fun phoneDir(context: Context) = File(context.noBackupFilesDir, "phone-parts")
+
+    /**
+     * Where to read [uri] (a [downloadUri]) for a phone or iPad: started (or carried on) like a
+     * download, in its own folder. Blocks while the torrent's details come from peers. Every call is
+     * matched by a [doneReading].
+     */
+    fun readForPhone(context: Context, uri: Uri): Uri {
+        val hash = hashOf(uri.toString()) ?: throw IOException("Not a torrent")
+        readers.getOrPut(hash) { AtomicInteger() }.incrementAndGet()
+        if (!kept.containsKey(hash) || forPhones.containsKey(hash)) forPhones[hash] = System.currentTimeMillis()
+        if (!tidying) {
+            tidying = true
+            val app = context.applicationContext
+            tidier.scheduleWithFixedDelay({ tidyPhones(app) }, 5, 5, TimeUnit.MINUTES)
+        }
+        return try {
+            resolveDownload(context, uri, phoneDir(context))
+        } catch (e: Exception) {
+            doneReading(hash)
+            throw e
+        }
+    }
+
+    fun doneReading(hash: String) {
+        readers[hash]?.decrementAndGet()
+        if (forPhones.containsKey(hash)) forPhones[hash] = System.currentTimeMillis()
+    }
+
+    /** Torrents no phone has read for a while go, with their copy on the TV */
+    private fun tidyPhones(context: Context) {
+        val now = System.currentTimeMillis()
+        for ((hash, at) in forPhones) {
+            if ((readers[hash]?.get() ?: 0) > 0 || now - at < PHONE_IDLE_MS) continue
+            forPhones.remove(hash)
+            readers.remove(hash)
+            drop(context, hash, phoneDir(context))
+        }
+        File(context.noBackupFilesDir, "phone-parts").listFiles()?.forEach { f ->
+            val hash = f.name.removeSuffix(".torrent")
+            if (hash.matches(Regex("[0-9a-f]{40}")) && !forPhones.containsKey(hash) && !kept.containsKey(hash)) f.deleteRecursively()
         }
     }
 

@@ -43,9 +43,9 @@
   // ---------------------------------------------------------------------------
   const PHONE = (() => { try { return !!bridge.isPhone(); } catch (_) { return false; } })();
   tv.phone = PHONE;
-  // (Android phones download torrents themselves, with dx.bi's torrent engine: Downloads.kt. An
-  // iPhone has no engine, so no torrentUrl)
-  tv.torrentDownloads = PHONE && !!bridge.torrentUrl;
+  // (Android phones download torrents themselves, with dx.bi's torrent engine: Downloads.kt, and so
+  // does dx.bi TV from 2.38.408. An iPhone has no engine, so no torrentUrl)
+  tv.torrentDownloads = !!bridge.torrentUrl && (PHONE || !!bridge.downloadAdd);
   // Words written for a TV, as a phone shows them
   // (and words written for a computer, as a TV or phone shows them: settings said "on this PC only")
   const forDevice = (text) => {
@@ -175,6 +175,33 @@
     getGpuRenderer: async () => "auto",
     setGpuRenderer: async () => {},
   };
+  // Downloads on the TV (Downloads.kt): the plugin's Downloads, the same as a computer's, saved by the
+  // app. (A phone has its own screens for them, over the page)
+  if (!PHONE && bridge.downloadAdd) {
+    const heard = [];
+    const list = () => { try { return JSON.parse(bridge.downloads(TOKEN) || "[]"); } catch (_) { return []; } };
+    let asked = false;
+    // (the app says so after every change, every second while one runs: one look at a time)
+    tv.downloadsChanged = () => {
+      if (asked || !heard.length) return;
+      asked = true;
+      setTimeout(() => {
+        asked = false;
+        const now = list();
+        for (const cb of heard) { try { cb(now); } catch (err) { console.error(err); } }
+      }, 0);
+    };
+    api.downloads = {
+      list: async () => list(),
+      settings: async (changes) => { try { return JSON.parse(bridge.downloadSettings(TOKEN, JSON.stringify(changes || null)) || "{}"); } catch (_) { return {}; } },
+      onChange: (cb) => { heard.push(cb); },
+      add: async (spec) => { try { return JSON.parse(bridge.downloadAdd(TOKEN, JSON.stringify(spec)) || "{}"); } catch (_) { return { ok: false }; } },
+      action: async (verb, id) => { bridge.downloadAct(TOKEN, String(verb), String(id || "")); return true; },
+      pickFolder: async () => { throw new Error("a TV has no folders to pick"); },
+      // (a download plays in the TV's own player, from the TV)
+      play: (id) => bridge.downloadAct(TOKEN, "play", String(id)),
+    };
+  }
   window.StremioEnhancedAPI = api;
 
   // ---------------------------------------------------------------------------
@@ -871,12 +898,23 @@
       const trackers = [...(stream.announce || []), ...(stream.sources || [])].filter((x) => /^tracker:/.test(x)).map((x) => `tr=${encodeURIComponent(x.replace(/^tracker:/, ""))}`);
       url = `${server.replace(/\/?$/, "/")}${encodeURIComponent(stream.infoHash)}/${Number.isInteger(stream.fileIdx) ? stream.fileIdx : -1}${trackers.length ? `?${trackers.join("&")}` : ""}`;
     }
+    // An iPhone or iPad with a TV chosen for Play on TV, and no streaming server to hand: the TV's app
+    // fetches the torrent and passes it on (TvReceiver.kt), to play here or to download. The TV has to
+    // be on, with the app open. (__dxbiIos.tvTorrents: { base, key }, from TvRemote.swift)
+    let viaTv = null;
+    const tvSource = !url && stream.infoHash && !bridge.torrentUrl && window.__dxbiIos && window.__dxbiIos.tvTorrents;
+    if (tvSource && tvSource.base && tvSource.key) {
+      const tr = [...(stream.announce || []), ...(stream.sources || [])].filter((x) => /^tracker:/.test(x)).map((x) => `&tr=${encodeURIComponent(x.replace(/^tracker:/, ""))}`).join("");
+      const name = (stream.behaviorHints && stream.behaviorHints.filename) || "";
+      url = `${tvSource.base}/streamflix/torrent/${encodeURIComponent(String(stream.infoHash).toLowerCase())}/${Number.isInteger(stream.fileIdx) ? stream.fileIdx : -1}?n=${encodeURIComponent(name)}${tr}`;
+      viaTv = { "X-StreamFlix": "1", "X-StreamFlix-Key": tvSource.key };
+    }
     if (!url && stream.infoHash && !bridge.torrentUrl) {
       handoff = null;
       if (location.hash === hash) history.back();
       toast(server
         ? `Couldn't reach your streaming server (${server.replace(/^https?:\/\/|\/$/g, "")}). Check that dx.bi is running there, and that this iPhone is on the same network (or the same VPN, like Tailscale).`
-        : "This is a torrent, and it needs a streaming server: set one in Settings, or pick a debrid stream.", 9000);
+        : "This is a torrent, and it needs a streaming server: choose your TV with the TV button (with the app open on the TV), set a streaming server in Settings, or pick a debrid stream.", 9000);
       return;
     }
     if (!url && stream.infoHash) {
@@ -948,7 +986,7 @@
     const video = (meta.videos || []).find((v) => v.id === videoId);
     const lib = state.libraryItem && state.libraryItem.state;
     const resumeMs = lib && lib.video_id === videoId && lib.timeOffset > 0 ? lib.timeOffset : 0;
-    const headers = (stream.behaviorHints && stream.behaviorHints.proxyHeaders && stream.behaviorHints.proxyHeaders.request) || {};
+    const headers = { ...((stream.behaviorHints && stream.behaviorHints.proxyHeaders && stream.behaviorHints.proxyHeaders.request) || {}), ...(viaTv || {}) };
     const episode = video && video.season != null ? `S${video.season} E${video.episode}${video.title || video.name ? ` · ${video.title || video.name}` : ""}` : "";
 
     const profile = await profileSettings();
@@ -1296,6 +1334,14 @@
   // ---------------------------------------------------------------------------
   tv.back = () => {
     if (openModal) { closeModal(); menuAgain(); return true; }
+    // the small menu on a download button (Play, Delete…): Back shuts it, the remote stays on the button
+    const pop = document.querySelector(".dxd-pop");
+    if (pop) {
+      const btn = pop._btn;
+      pop.remove();
+      if (btn && btn.isConnected) btn.focus({ preventScroll: true });
+      return true;
+    }
     const who = window.__dxbi && window.__dxbi.whoIsWatching;
     if (who && who.el) { who.back(); menuAgain(); return true; }
     const sheet = document.querySelector(".dxe-modal");

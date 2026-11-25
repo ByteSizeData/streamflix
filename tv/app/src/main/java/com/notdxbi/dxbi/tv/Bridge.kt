@@ -154,6 +154,67 @@ class Bridge(private val activity: MainActivity) {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Downloads on the TV (Downloads.kt), for the page's Downloads: the plugin's `downloads`, the same
+    // as a computer's, through dxbi-tv.js. The phone app has its own screens for them.
+
+    /** Runs [work] on the main thread (where Media3's downloads live) and waits for its answer */
+    private fun <T> onMain(fallback: T, work: () -> T): T {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return work()
+        val task = java.util.concurrent.FutureTask(work)
+        activity.runOnUiThread(task)
+        return try { task.get(10, java.util.concurrent.TimeUnit.SECONDS) } catch (_: Exception) { fallback }
+    }
+
+    private var listening = false
+
+    /** From the first question on, the page hears of every change (__dxbiTv.downloadsChanged) */
+    private fun listen() {
+        if (listening) return
+        listening = true
+        Downloads.listener = { activity.js("window.__dxbiTv && window.__dxbiTv.downloadsChanged && window.__dxbiTv.downloadsChanged()") }
+    }
+
+    @JavascriptInterface
+    fun downloads(token: String): String {
+        if (!allowed(token)) return "[]"
+        return onMain("[]") {
+            listen()
+            Downloads.manager(activity)
+            Downloads.pageList()
+        }
+    }
+
+    /** [json]: a computer's download (the plugin's downloads.spec). Answers { ok } or { ok: false, error } */
+    @JavascriptInterface
+    fun downloadAdd(token: String, json: String): String {
+        if (!allowed(token)) return "{\"ok\":false}"
+        return onMain(JSONObject().put("ok", false).put("error", "The TV didn't answer. Try again.").toString()) {
+            listen()
+            try {
+                Downloads.pageAdd(activity, json)
+            } catch (e: Exception) {
+                JSONObject().put("ok", false).put("error", "Couldn't download that one: ${e.message ?: "?"}").toString()
+            }
+        }
+    }
+
+    /** play, pause, resume, retry, remove, unwatched, finished ([id]), or removeWatched */
+    @JavascriptInterface
+    fun downloadAct(token: String, verb: String, id: String) {
+        if (!allowed(token)) return
+        onMain(Unit) { runCatching { Downloads.pageAct(activity, verb, id) } }
+    }
+
+    /** Downloads → Settings: [json] the changes ("null": none). Answers all of them */
+    @JavascriptInterface
+    fun downloadSettings(token: String, json: String): String {
+        if (!allowed(token)) return "{}"
+        return onMain("{}") {
+            runCatching { Downloads.pageSettings(activity, runCatching { JSONObject(json) }.getOrNull()) }.getOrDefault("{}")
+        }
+    }
+
     /** The device, for problem reports: model, Android, WebView, memory, the torrent engine's state */
     /**
      * Minutes ahead of UTC on the device's own clock. Android's time zone rules are updated with the
@@ -189,6 +250,11 @@ class Bridge(private val activity: MainActivity) {
     /** A phone or tablet rather than a TV: browsing can turn upright */
     @JavascriptInterface
     fun isPhone(): Boolean {
+        // (a debug build on a tablet emulator can be told it's on a TV, to test what only a TV shows:
+        // adb shell setprop debug.streamflix.tv 1)
+        if (BuildConfig.DEBUG && runCatching {
+                Class.forName("android.os.SystemProperties").getMethod("get", String::class.java).invoke(null, "debug.streamflix.tv") == "1"
+            }.getOrDefault(false)) return false
         val ui = activity.getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
         return ui.currentModeType != android.content.res.Configuration.UI_MODE_TYPE_TELEVISION &&
             !activity.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)

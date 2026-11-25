@@ -9357,7 +9357,8 @@
     step("titleStart", () => titleStart.ensure(), onDetail),
     step("quickPlay", () => quickPlay.ensure(), onDetail),
     step("webTorrents", () => webTorrents.ensure(), onDetail),
-    ...(IN_TV ? [] : [step("downloads", () => downloads.ensure())]),
+    // (a TV: when its app saves downloads, dx.bi TV 2.38.408 and later)
+    ...(IN_TV && !(window.StremioEnhancedAPI && window.StremioEnhancedAPI.downloads) ? [] : [step("downloads", () => downloads.ensure())]),
     step("quickPlay.note", () => { quickPlay.note().catch(() => { /* next sync */ }); }),
     step("reviews", () => reviews.ensure()),
     step("hideButton", () => hideButton.ensure()),
@@ -20174,9 +20175,9 @@
     picking: null,
     sig: "",
 
-    // The dx.bi app saves files; Stremio Enhanced and the web can't
+    // The dx.bi app saves files, and so does dx.bi TV (its Downloads.kt); Stremio Enhanced and the web can't
     get api() {
-      const app = IN_APP && window.StremioEnhancedAPI;
+      const app = (IN_APP || IN_TV) && window.StremioEnhancedAPI;
       return app && app.downloads && !miniPlayer.info ? app.downloads : null;
     },
 
@@ -20427,7 +20428,7 @@
         el.innerHTML = `<div class="dxe-sheet dxd-choose" role="dialog" aria-label="Download">
           <div class="dxe-head"><b>Download ${esc(title)}<small>${esc(detail)}</small></b><button class="dxe-btn" data-act="cancel">Cancel</button></div>
           <div class="dxd-qs">${DL_QUALITIES.map(([v, label, note], i) => `<button class="dxd-q${i === 2 ? " is-on" : ""}" data-q="${v}"><b>${esc(label)}</b><span>${esc(note)}</span></button>`).join("")}
-            ${canChoose ? '<button class="dxd-q is-src" data-q="choose"><b>Choose the source myself</b><span>Opens the stream list: press ⬇ on the one you want.</span></button>' : ""}
+            ${canChoose ? `<button class="dxd-q is-src" data-q="choose"><b>Choose the source myself</b><span>${IN_TV ? "Opens the stream list: press OK on the one you want." : "Opens the stream list: press ⬇ on the one you want."}</span></button>` : ""}
           </div>
           <div class="dxe-foot"><label class="dxd-always"><input type="checkbox"> Always use this quality (change it in Downloads → Settings)</label></div>
         </div>`;
@@ -20565,6 +20566,10 @@
     },
 
     async play(x) {
+      if (IN_TV) {
+        if (x && x.state === "done" && this.api && this.api.play) { this.close(); this.api.play(x.id); }
+        return;
+      }
       if (!x || !x.play) return;
       const stream = {
         url: x.play.url,
@@ -20752,9 +20757,27 @@
       if (picking && !banner) {
         const b = document.createElement("div");
         b.className = "dxd-picking";
-        b.innerHTML = `${DL_ICONS.down}<span>Choose a stream to download: press ⬇ on its right.</span><button class="dxe-btn" data-dxd="unpick">Cancel</button>`;
+        b.innerHTML = `${DL_ICONS.down}<span>${IN_TV ? "Choose a stream to download: press OK on it." : "Choose a stream to download: press ⬇ on its right."}</span><button class="dxe-btn" data-dxd="unpick">Cancel</button>`;
         list.prepend(b);
       } else if (!picking && banner) banner.remove();
+      if (IN_TV) {
+        // (a TV remote moves between rows, never to a button inside one: the list starts with its own)
+        let here = list.querySelector(":scope > .dxd-here");
+        if (picking || !path) { if (here) here.remove(); return; }
+        if (!here) {
+          here = document.createElement("button");
+          here.type = "button";
+          here.className = "dxd-here";
+          list.prepend(here);
+        }
+        const x = this.entry(path.id, path.videoId);
+        const s = this.stateIcon(x);
+        const what = path.type === "movie" ? "film" : "episode";
+        const label = !x ? `Download this ${what}` : x.state === "done" ? "Downloaded: press OK to play or delete it" : x.state === "failed" ? "Download failed: try again" : x.state === "paused" ? "Download paused" : x.state === "queued" ? "Waiting to download" : `Downloading ${this.percent(x)}%`;
+        const html = `<span class="dxd-ic ${s.cls}">${s.html}</span><span>${label}</span>`;
+        if (here._html !== html) { here._html = html; here.innerHTML = html; }
+        return;
+      }
       for (const a of dpage.streamItems()) {
         if (a.querySelector(":scope > .dxd-stream")) continue;
         const btn = document.createElement("button");
@@ -20782,7 +20805,16 @@
     onClick(e) {
       const t = e.target && e.target.closest ? e.target : null;
       if (!t) return;
-      const hit = t.closest(".dxd-ep, .dxd-season, .dxd-movie, .dxd-stream, [data-dxd=unpick], .dxd-pop");
+      // (a TV, choosing the stream to download: OK on a stream downloads it rather than playing it)
+      const tvPick = IN_TV && this.picking && !t.closest("[data-dxd=unpick]") ? t.closest(dpage.ITEM) : null;
+      if (tvPick) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        this.streamFor(tvPick).then((st) => (st ? this.addStream(st) : this.toast("Couldn't read that stream. Try again in a moment.")));
+        return;
+      }
+      const hit = t.closest(".dxd-ep, .dxd-season, .dxd-movie, .dxd-stream, .dxd-here, [data-dxd=unpick], .dxd-pop");
       if (!hit) { this.closePop(); return; }
       e.preventDefault();
       e.stopPropagation();
@@ -20801,6 +20833,17 @@
         const ids = this.seasonVideos();
         const season = (/(\d+)/.exec(dpage.seasonText()) || [])[1];
         this.download(at.type, at.id, ids, `${title}${season ? ` · Season ${season}` : ""}`, `${ids.length} episode${ids.length === 1 ? "" : "s"}`);
+        return;
+      }
+      if (hit.matches(".dxd-here")) {
+        const path = quickPlay.videoOf(location.hash);
+        if (!path) return;
+        const x = this.entry(path.id, path.videoId);
+        if (x) return this.openPop(hit, x);
+        const meta = this.meta0 && this.meta0.id === path.id ? this.meta0 : null;
+        const video = meta && (meta.videos || []).find((v) => v.id === path.videoId);
+        const ep = video && video.season != null ? `S${video.season} E${video.episode}${video.title || video.name ? ` · ${video.title || video.name}` : ""}` : "";
+        this.download(path.type, path.id, [path.videoId], title, ep || (path.type === "movie" ? "Film" : ""));
         return;
       }
       const videoId = hit.matches(".dxd-movie") ? at.id : hit.dataset.video;
@@ -20832,6 +20875,11 @@
       pop.dataset.id = x.id;
       pop._hash = location.hash;
       document.body.append(pop);
+      if (IN_TV) {
+        // (a TV remote goes into the menu; Back closes it and goes back to the button: dxbi-tv.js tv.back)
+        pop._btn = btn;
+        setTimeout(() => pop.querySelector("button")?.focus(), 0);
+      }
       const r = btn.getBoundingClientRect();
       pop.style.top = `${Math.min(innerHeight - pop.offsetHeight - 8, r.bottom + 6)}px`;
       pop.style.left = `${Math.max(8, Math.min(innerWidth - pop.offsetWidth - 8, r.right - pop.offsetWidth))}px`;
@@ -20887,6 +20935,8 @@
       this.sig = "";
       this.api.settings().then((p) => { this.prefs = p; this.refreshPage(true); }).catch(() => { /* app too old */ });
       this.refreshPage(true);
+      // (a TV remote starts inside the page: on the first download's Play, else on its tab)
+      if (IN_TV) setTimeout(() => { if (this.el) (this.el.querySelector('.dxd-row [data-a="play"]') || this.el.querySelector(".dxd-tabs .is-on"))?.focus(); }, 60);
     },
 
     close() {
@@ -20958,7 +21008,7 @@
       const scroll = sheet.querySelector(".dxd-body")?.scrollTop || 0;
       const count = this.list.length;
       sheet.innerHTML = `
-        <div class="dxe-head"><b>Downloads<small>Films and episodes saved on this computer, to watch without internet</small></b><button class="dxe-btn" data-act="close">Close</button></div>
+        <div class="dxe-head"><b>Downloads<small>Films and episodes saved on ${IN_TV ? "this TV" : "this computer"}, to watch without internet</small></b><button class="dxe-btn" data-act="close">Close</button></div>
         <div class="dxd-tabs"><button data-tab="list" class="${this.tab === "list" ? "is-on" : ""}">Downloads${count ? ` (${count})` : ""}</button><button data-tab="settings" class="${this.tab === "settings" ? "is-on" : ""}">Settings</button></div>
         <div class="dxd-body">${this.tab === "settings" ? this.settingsHtml() : this.listHtml()}</div>`;
       sheet.querySelector(".dxd-body").scrollTop = scroll;
@@ -20991,7 +21041,7 @@
           x.state === "paused" ? `<button class="dxe-btn" data-a="resume" data-id="${esc(x.id)}">Resume</button>` : "",
           x.state === "failed" ? `<button class="dxe-btn" data-a="retry" data-id="${esc(x.id)}">Try again</button>` : "",
           x.state === "done" && x.watchedAt ? `<button class="dxe-btn" data-a="unwatched" data-id="${esc(x.id)}" title="Keep it: not watched yet">Not watched</button>` : "",
-          x.state === "done" ? `<button class="dxe-btn dxd-icon" data-a="folder" data-id="${esc(x.id)}" title="Show the file">${DL_ICONS.folder}</button>` : "",
+          x.state === "done" && !IN_TV ? `<button class="dxe-btn dxd-icon" data-a="folder" data-id="${esc(x.id)}" title="Show the file">${DL_ICONS.folder}</button>` : "",
           `<button class="dxe-btn dxd-del" data-a="remove" data-id="${esc(x.id)}">Delete</button>`,
         ].join("");
         return `<div class="dxd-row is-${x.state}" data-row="${esc(x.id)}">
@@ -21001,7 +21051,7 @@
       };
       return `<div class="dxd-bar-top"><span class="dxd-total"></span><span class="dxe-spacer"></span>
           ${watched ? `<button class="dxe-btn" data-a="removeWatched">Delete watched (${watched})</button>` : ""}
-          <button class="dxe-btn" data-a="openFolder">${DL_ICONS.folder}Open folder</button></div>
+          ${IN_TV ? "" : `<button class="dxe-btn" data-a="openFolder">${DL_ICONS.folder}Open folder</button>`}</div>
         ${[...groups.values()].map((items) => {
           const first = items[0];
           const name = `${first.name || "Untitled"}${first.year && !String(first.name).includes(first.year) ? ` (${first.year})` : ""}`;
@@ -21013,15 +21063,15 @@
       const p = this.prefs || { folder: "…", quality: "ask", autoDelete: "off", parallel: 2 };
       const select = (key, options) => `<select data-pref="${key}">${options.map(([v, l]) => `<option value="${esc(v)}"${String(p[key]) === String(v) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
       return `<div class="dxd-settings">
-        <div class="dxd-set"><div><b>Download folder</b><small>Where new downloads are saved. Ones already saved stay where they are. ${p.free > 0 ? `${esc(this.size(p.free))} free there.` : ""}</small><code>${esc(p.folder)}</code></div>
-          <div class="dxd-set-btns"><button class="dxe-btn is-primary" data-a="pickFolder">Change…</button><button class="dxe-btn" data-a="openFolder">Open</button>${p.defaultFolder && p.folder !== p.defaultFolder ? '<button class="dxe-btn" data-a="resetFolder">Use the default</button>' : ""}</div></div>
+        ${IN_TV ? `<div class="dxd-set"><div><b>Saved on</b><small>${esc(p.folder)}${p.free > 0 ? `: ${esc(this.size(p.free))} free.` : "."}</small></div></div>` : `<div class="dxd-set"><div><b>Download folder</b><small>Where new downloads are saved. Ones already saved stay where they are. ${p.free > 0 ? `${esc(this.size(p.free))} free there.` : ""}</small><code>${esc(p.folder)}</code></div>
+          <div class="dxd-set-btns"><button class="dxe-btn is-primary" data-a="pickFolder">Change…</button><button class="dxe-btn" data-a="openFolder">Open</button>${p.defaultFolder && p.folder !== p.defaultFolder ? '<button class="dxe-btn" data-a="resetFolder">Use the default</button>' : ""}</div></div>`}
         <div class="dxd-set"><div><b>Quality</b><small>What the Download buttons save. "Ask each time" lets you choose for every download, including picking the exact stream yourself.</small></div>
           ${select("quality", [["ask", "Ask each time"], ...DL_QUALITIES.map(([v, l]) => [v, l])])}</div>
         <div class="dxd-set"><div><b>Delete watched downloads</b><small>A download counts as watched once you play it to the end in dx.bi. You can always delete any download yourself.</small></div>
           ${select("autoDelete", [["off", "Never: I'll delete them"], ["finished", "As soon as I finish one"], ["day", "A day after I finish one"]])}</div>
         <div class="dxd-set"><div><b>Downloads at once</b><small>More at once can be quicker on a fast connection.</small></div>
           ${select("parallel", [[1, "1"], [2, "2"], [3, "3"], [4, "4"]])}</div>
-        <p class="dxe-note">Downloads are ordinary video files with their subtitles beside them, so other players can open them too. Debrid and direct streams download fastest; torrents download through dx.bi's streaming server from the people sharing them.</p>
+        <p class="dxe-note">${IN_TV ? "Downloads play in this TV's own player, with their subtitles, from the TV. Debrid and direct streams download fastest; torrents download with the TV's own torrent engine, from the people sharing them." : "Downloads are ordinary video files with their subtitles beside them, so other players can open them too. Debrid and direct streams download fastest; torrents download through dx.bi's streaming server from the people sharing them."}</p>
       </div>`;
     },
 
@@ -21058,6 +21108,9 @@
   [data-dxv]:has(> .dxd-stream) > .dxv-row { padding-right: 3rem; }
   [class*="stream-container"]:hover > .dxd-stream, a[class*="stream-"]:hover > .dxd-stream, .dxd-stream:focus-visible, .dxd-is-picking .dxd-stream { opacity: 1; }
   .dxd-is-picking .dxd-stream { background: var(--dx-accent, #e50914); }
+  .dxd-here { display: flex; align-items: center; gap: .6rem; width: calc(100% - 1rem); margin: .2rem .5rem .6rem; padding: .7rem 1rem; border: 1.5px solid rgba(255,255,255,.22); border-radius: .8rem; background: rgba(255,255,255,.06); color: #fff; font: 600 .95rem Inter, system-ui, sans-serif; text-align: left; cursor: pointer; }
+  .dxd-here:hover, .dxd-here:focus, .dxd-here:focus-visible { background: #fff; color: #000; border-color: #fff; outline: none; }
+  .dxd-here .dxd-ic { flex: none; }
   .dxd-stream:hover { background: rgba(255,255,255,.22); }
   .dxd-stream svg { width: 1.2rem; height: 1.2rem; }
   .dxd-picking { display: flex; align-items: center; gap: .7rem; margin: .4rem 0 .8rem; padding: .7rem .9rem; border-radius: .7rem; background: color-mix(in srgb, var(--dx-accent, #e50914) 22%, rgba(20,20,22,.9)); color: #fff; font: 600 .9rem Inter, system-ui, sans-serif !important; }

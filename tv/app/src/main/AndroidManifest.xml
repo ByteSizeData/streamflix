@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Play on TV: a phone sending a film wakes a sleeping TV that has the app on top (TvReceiver) -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Downloads (Downloads.kt) keep going in the background, with their progress in a notification -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- A TV app first, but it installs on any Android device -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -78,5 +81,15 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/update_paths" />
         </provider>
+        <!-- Downloads, on phones and TVs (Downloads.kt) -->
+        <service
+            android:name=".DownloadsService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync">
+            <intent-filter>
+                <action android:name="androidx.media3.exoplayer.downloadService.action.RESTART" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

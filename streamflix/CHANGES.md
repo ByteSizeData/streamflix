@@ -4,6 +4,11 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.408
+
+- **Downloads on the TV.** The TV app saves films and episodes too, torrents included (it fetches them with its own torrent engine), and plays them from the TV. On a film there's a Download button under it, and every stream list starts with "Download this film" or "Download this episode". You choose the quality each time, or "Choose the source myself", where OK on a stream downloads it rather than playing it. A series has "Download season". Everything saved is in Downloads in the profile menu (top right), with Play, Pause, Delete, a watched one deleted by itself if you like, and how much space is left. It all works with the TV's remote. Downloads carry on while you watch something else; with the app closed they wait until it's opened again.
+- **iPhone and iPad: torrents through your TV.** An iPhone or iPad can't fetch a torrent itself. Until now it needed a streaming server on a computer to play or download one. With a TV chosen with the TV button, it now gets the torrent through the TV app: the TV fetches it and passes it on as it arrives, to play it there or to download it. The TV has to be on with StreamFlix open, and for a download it has to stay that way until the download is done. A streaming server, when one is set and answers, is still used first.
+
 ## StreamFlix 2.38.407
 
 - **Volume boost.** For a film that is quiet with the volume all the way up: 150%, 200% or 300%, in the player's Picture & sound menu on the TV, under More on a phone or tablet, and as its own button on an iPhone or iPad. On Android a loud moment is held back instead of distorting. Sound sent to a receiver as Dolby or DTS can't be changed by the app.

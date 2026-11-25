@@ -78,6 +78,7 @@ final class Stremio {
         page.onPlay = { [weak self] json in self?.handOver(json) }
         page.onControl = { [weak self] c in self?.playback?.control(c) }
         Downloads.shared.stremio = self
+        TvRemote.shared.page = page
         for field in ["ctx", "board", "continue_watching_preview", "meta_details", "search", "discover", "library", "installed_addons", "remote_addons", "streaming_server"] {
             page.watch(field)
         }

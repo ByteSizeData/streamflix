@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Notification
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -38,7 +39,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
- * Phones: films and episodes saved to watch offline, like Netflix's downloads. A stream (an addon's
+ * Phones and TVs: films and episodes saved to watch offline, like Netflix's downloads. A stream (an addon's
  * link, debrid ones included) is downloaded in the background with Media3's DownloadManager, its
  * subtitles alongside, and plays from the phone in dx.bi's player, picking up where it was left.
  * dx.bi picks the stream (in the quality asked for: plugin api.phone.download), or it's the one
@@ -46,11 +47,15 @@ import kotlin.concurrent.thread
  *
  * Torrents download through dx.bi's own torrent engine (TorrentEngine), which the downloader reads
  * from like any other link (dxbi-torrent://<hash>…, resolved to its local address each time).
+ *
+ * The phone app shows them on its own screens (DownloadUi.kt). dx.bi TV shows them in the page, in
+ * the Downloads a computer has (the plugin's `downloads`), which asks for them through Bridge.kt:
+ * [pageList], [pageAdd], [pageAct], [pageSettings].
  */
 @OptIn(UnstableApi::class)
 object Downloads {
 
-    class Item(val id: String, val stream: JSONObject, val state: Int, val percent: Float, val bytes: Long, val total: Long, val stopped: Boolean, val watchedAt: Long) {
+    class Item(val id: String, val stream: JSONObject, val state: Int, val percent: Float, val bytes: Long, val total: Long, val stopped: Boolean, val watchedAt: Long, val startedAt: Long = 0L) {
         val title: String get() = stream.optString("title")
         val subtitle: String get() = stream.optString("subtitle")
         val art: String? get() = stream.optString("background").takeIf { it.startsWith("http") }
@@ -105,17 +110,20 @@ object Downloads {
         return prefs
     }
 
-    /** The phone's own storage, then any memory card (the app's own folder on each) */
+    /** The phone's own storage, then any memory card (the app's own folder on each). A TV: its own, then a USB drive */
     fun places(context: Context): List<Place> {
         val app = context.applicationContext
         val dirs = app.getExternalFilesDirs(null).toList()
+        val tv = app.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        val own = if (tv) "This TV" else "Phone storage"
+        val card = if (tv) "USB drive" else "Memory card"
         val out = mutableListOf<Place>()
         dirs.forEachIndexed { i, d ->
             if (d == null) return@forEachIndexed
             val free = runCatching { StatFs(d.path).availableBytes }.getOrDefault(-1L)
-            out += Place(i, if (i == 0) "Phone storage" else if (dirs.size > 2) "Memory card $i" else "Memory card", File(d, "downloads"), free)
+            out += Place(i, if (i == 0) own else if (dirs.size > 2) "$card $i" else card, File(d, "downloads"), free)
         }
-        if (out.isEmpty()) out += Place(0, "Phone storage", File(app.filesDir, "downloads"), runCatching { StatFs(app.filesDir.path).availableBytes }.getOrDefault(-1L))
+        if (out.isEmpty()) out += Place(0, own, File(app.filesDir, "downloads"), runCatching { StatFs(app.filesDir.path).availableBytes }.getOrDefault(-1L))
         return out
     }
 
@@ -132,8 +140,8 @@ object Downloads {
         prefsOf(app)
         val db = StandaloneDatabaseProvider(app)
         cache = SimpleCache(folder(app), NoOpCacheEvictor(), db)
-        val m = DownloadManager(app, db, cache, withHeaders(), Executors.newFixedThreadPool(2))
-        m.maxParallelDownloads = 2
+        val m = DownloadManager(app, db, cache, withHeaders(), Executors.newFixedThreadPool(4))
+        m.maxParallelDownloads = prefs.getInt("parallel", 2)
         m.requirements = requirements()
         m.addListener(object : DownloadManager.Listener {
             override fun onDownloadChanged(manager: DownloadManager, download: Download, finalException: Exception?) {
@@ -420,13 +428,13 @@ object Downloads {
                 while (c.moveToNext()) {
                     val d = c.download
                     val stream = runCatching { JSONObject(String(d.request.data)) }.getOrDefault(JSONObject())
-                    list += Item(d.request.id, stream, d.state, d.percentDownloaded.coerceAtLeast(0f), d.bytesDownloaded, d.contentLength, d.stopReason != Download.STOP_REASON_NONE, prefs.getLong("watched:${d.request.id}", 0L))
+                    list += Item(d.request.id, stream, d.state, d.percentDownloaded.coerceAtLeast(0f), d.bytesDownloaded, d.contentLength, d.stopReason != Download.STOP_REASON_NONE, prefs.getLong("watched:${d.request.id}", 0L), d.startTimeMs)
                 }
             }
         }
         // (the index only keeps how far a download got now and then: the ones running are read live)
         val live = m.currentDownloads.associateBy { it.request.id }
-        val items = list.map { i -> live[i.id]?.let { d -> Item(i.id, i.stream, d.state, d.percentDownloaded.coerceAtLeast(0f), d.bytesDownloaded, d.contentLength, d.stopReason != Download.STOP_REASON_NONE, i.watchedAt) } ?: i }
+        val items = list.map { i -> live[i.id]?.let { d -> Item(i.id, i.stream, d.state, d.percentDownloaded.coerceAtLeast(0f), d.bytesDownloaded, d.contentLength, d.stopReason != Download.STOP_REASON_NONE, i.watchedAt, i.startedAt) } ?: i }
             .sortedWith(compareBy({ it.stream.optString("title") }, { it.season ?: 0 }, { it.number ?: 0 }))
         // watched ones go the way Downloads → Settings says
         val wait = when (_settings.value.autoDelete) { "finished" -> 0L; "day" -> 24 * 3600 * 1000L; else -> -1L }
@@ -438,6 +446,169 @@ object Downloads {
         appContext?.let { c -> if (gone.isNotEmpty()) handler.post { gone.forEach { remove(c, it) } } }
         handler.removeCallbacks(tick)
         if (m.currentDownloads.isNotEmpty()) handler.postDelayed(tick, 1000)
+        listener?.invoke()
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // dx.bi TV: the page's Downloads (the plugin's `downloads`, as on a computer), through Bridge.kt.
+    // These run on the main thread (Bridge hands them over).
+
+    /** Told after every change (the TV's page then asks for the list again) */
+    @Volatile var listener: (() -> Unit)? = null
+
+    // how fast each one is going: its bytes a moment ago, and when
+    private val lastBytes = HashMap<String, Pair<Long, Long>>()
+    private val speeds = HashMap<String, Long>()
+
+    /** The downloads, in the shape a computer's list has (the plugin's `downloads.list`) */
+    fun pageList(): String {
+        val out = JSONArray()
+        val now = System.currentTimeMillis()
+        val waitingNow = _waiting.value
+        for (i in _items.value) {
+            val s = i.stream
+            val state = when {
+                i.done -> "done"
+                i.failed -> "failed"
+                i.paused -> "paused"
+                i.state == Download.STATE_DOWNLOADING || i.state == Download.STATE_RESTARTING -> "downloading"
+                else -> "queued"
+            }
+            var speed = 0L
+            if (state == "downloading") {
+                val before = lastBytes[i.id]
+                if (before == null || now - before.second >= 1500) {
+                    if (before != null && i.bytes >= before.first) speeds[i.id] = (i.bytes - before.first) * 1000 / (now - before.second)
+                    lastBytes[i.id] = i.bytes to now
+                }
+                speed = speeds[i.id] ?: 0L
+            } else {
+                lastBytes.remove(i.id)
+                speeds.remove(i.id)
+            }
+            out.put(JSONObject()
+                .put("id", i.id)
+                .put("type", i.type)
+                .put("metaId", i.metaId)
+                .put("videoId", i.videoId)
+                .put("name", s.optString("title"))
+                .put("episode", s.optString("subtitle"))
+                .put("year", s.optString("year"))
+                .put("season", i.season ?: JSONObject.NULL)
+                .put("number", i.number ?: JSONObject.NULL)
+                .put("poster", i.poster ?: "")
+                .put("background", i.art ?: i.poster ?: "")
+                .put("quality", i.quality)
+                .put("provider", i.provider)
+                .put("filename", s.optString("filename"))
+                .put("torrent", TorrentEngine.hashOf(s.optString("url")) != null)
+                .put("state", state)
+                .put("received", i.bytes)
+                .put("size", if (i.total > 0) i.total else s.optLong("size"))
+                .put("speed", speed)
+                .put("watchedAt", i.watchedAt)
+                .put("addedAt", i.startedAt)
+                .put("error", when {
+                    state == "failed" -> "It stopped downloading. Try again, or pick another stream."
+                    waitingNow && state != "done" && state != "paused" -> if (_settings.value.wifiOnly) "Waiting for Wi-Fi" else "Waiting for the internet"
+                    else -> ""
+                }))
+        }
+        return out.toString()
+    }
+
+    /**
+     * A download the page asks for: a computer's download (the plugin's downloads.spec), saved like
+     * the phone saves one. { ok } or { ok: false, error }
+     */
+    fun pageAdd(context: Context, specJson: String): String {
+        val spec = JSONObject(specJson)
+        val metaId = spec.optString("metaId")
+        val videoId = spec.optString("videoId").ifEmpty { metaId }
+        manager(context)
+        find(metaId, videoId)?.takeIf { !it.failed }?.let {
+            return JSONObject().put("ok", false).put("error", if (it.done) "Already downloaded" else "Already downloading").toString()
+        }
+        val subtitles = JSONArray()
+        spec.optJSONArray("subtitles")?.let { a ->
+            for (n in 0 until a.length()) a.optJSONObject(n)?.let { x ->
+                subtitles.put(JSONObject().put("url", x.optString("url")).put("lang", x.optString("lang")).put("label", x.optString("lang")).put("start", n == 0))
+            }
+        }
+        val stream = JSONObject()
+            .put("url", spec.optString("url"))
+            .put("headers", spec.optJSONObject("headers") ?: JSONObject())
+            .put("subtitles", subtitles)
+            .put("title", spec.optString("name"))
+            .put("subtitle", spec.optString("episode"))
+            .put("background", spec.optString("background"))
+            .put("poster", spec.optString("poster"))
+            .put("type", spec.optString("type"))
+            .put("metaId", metaId)
+            .put("videoId", videoId)
+            .put("season", spec.opt("season") ?: JSONObject.NULL)
+            .put("number", spec.opt("number") ?: JSONObject.NULL)
+            .put("year", spec.optString("year"))
+            .put("quality", spec.optString("quality"))
+            .put("provider", spec.optString("provider"))
+            .put("filename", spec.optString("filename"))
+            .put("size", spec.optLong("size"))
+        // a torrent: { infoHash, fileIdx, sources } (its "sources" list its trackers), fetched by the engine
+        spec.optJSONObject("torrent")?.takeIf { spec.optString("url").isEmpty() }?.let { t ->
+            val trackers = JSONArray()
+            t.optJSONArray("sources")?.let { a -> for (n in 0 until a.length()) a.optString(n).takeIf { it.startsWith("tracker:") }?.let { trackers.put(it.removePrefix("tracker:")) } }
+            stream.put("magnet", JSONObject()
+                .put("infoHash", t.optString("infoHash"))
+                .put("fileIdx", if (t.isNull("fileIdx")) -1 else t.optInt("fileIdx", -1))
+                .put("trackers", trackers)
+                .put("name", spec.optString("filename")))
+        }
+        val ok = add(context, stream.toString(), quiet = true)
+        return JSONObject().put("ok", ok).apply { if (!ok) put("error", "Couldn't download that one. Try another stream.") }.toString()
+    }
+
+    /** What the page's buttons do to one download ([id]), or to all of them */
+    fun pageAct(context: Context, verb: String, id: String) {
+        manager(context)
+        val item = _items.value.firstOrNull { it.id == id }
+        when (verb) {
+            "play" -> item?.takeIf { it.done }?.let { play(context, it) }
+            "pause" -> item?.let { pause(context, it) }
+            "resume" -> item?.let { resume(context, it) }
+            "retry" -> item?.let { retry(context, it) }
+            "remove" -> item?.let { remove(context, it) }
+            "unwatched" -> item?.let { setWatched(context, it, false) }
+            "finished" -> item?.let { setWatched(context, it, true) }
+            "removeWatched" -> removeWatched(context)
+        }
+        refresh()
+    }
+
+    /** The page's Downloads → Settings: [changes] made first (null: none), then all of them */
+    fun pageSettings(context: Context, changes: JSONObject?): String {
+        manager(context)
+        if (changes != null) {
+            changes.optString("quality").takeIf { it.isNotEmpty() }?.let { setQuality(context, it) }
+            changes.optString("autoDelete").takeIf { it.isNotEmpty() }?.let { setAutoDelete(context, it) }
+            if (changes.has("wifiOnly")) setWifiOnly(context, changes.optBoolean("wifiOnly"))
+            if (changes.has("parallel")) {
+                val n = changes.optInt("parallel", 2).coerceIn(1, 4)
+                prefsOf(context).edit().putInt("parallel", n).apply()
+                manager?.maxParallelDownloads = n
+            }
+        }
+        val all = places(context)
+        val here = all.firstOrNull { it.index == prefsOf(context).getInt("storage", 0) } ?: all.first()
+        val s = _settings.value
+        return JSONObject()
+            .put("quality", s.quality)
+            .put("autoDelete", s.autoDelete)
+            .put("wifiOnly", s.wifiOnly)
+            .put("parallel", prefsOf(context).getInt("parallel", 2))
+            .put("folder", here.label)
+            .put("defaultFolder", here.label)
+            .put("free", here.free)
+            .toString()
     }
 
 }

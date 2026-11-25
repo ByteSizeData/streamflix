@@ -116,6 +116,17 @@ final class TvRemote {
         return URLSession(configuration: config)
     }
 
+    /// The page, to tell which TV can fetch torrents for this device (Stremio sets it)
+    @ObservationIgnored weak var page: Page?
+
+    /// Tells the page the chosen TV, which fetches torrents for this device when it has no streaming
+    /// server (dxbi-tv.js; the TV's TvReceiver.kt passes them on): to play here or to download
+    func shareTorrents() {
+        var value = "null"
+        if let tv { value = Json.encode(["base": "http://\(tv.host):\(tv.port)", "key": key]) }
+        page?.js("window.__dxbiIos && (window.__dxbiIos.tvTorrents = \(value))")
+    }
+
     /// This device's key: made once, and only ever sent to a TV the viewer picked
     private var key: String {
         if let saved = defaults.string(forKey: "tvRemote.key"), saved.count == 64 { return saved }
@@ -310,6 +321,7 @@ final class TvRemote {
             status = nil
             lost = false
             tv = named
+            shareTorrents()
             watch(named)
         }
     }
@@ -318,6 +330,7 @@ final class TvRemote {
         poll?.cancel()
         poll = nil
         tv = nil
+        shareTorrents()
         status = nil
         options = nil
         lost = false
