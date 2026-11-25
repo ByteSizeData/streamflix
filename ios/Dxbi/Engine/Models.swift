@@ -156,7 +156,7 @@ extension ISO8601DateFormatter {
     }()
 }
 
-/** A stream as dx.bi's stream list reads it (api.phone.streams: describeStream in the plugin) */
+/** A stream as StreamFlix's stream list reads it (api.phone.streams: describeStream in the plugin) */
 struct StreamOption: Identifiable, Hashable {
     var index: Int
     var play: String
@@ -366,7 +366,7 @@ struct Account {
     }
 }
 
-/** dx.bi's own Home rows (window.__dxbi.phone) */
+/** StreamFlix's own Home rows (window.__dxbi.phone) */
 struct ListRow {
     var name: String
     var items: [Title]
@@ -478,7 +478,7 @@ struct Reviews {
     }
 }
 
-/** One of dx.bi's settings, as the TV lists them */
+/** One of StreamFlix's settings, as the TV lists them */
 struct Setting: Identifiable {
     struct Option: Hashable {
         var value: String

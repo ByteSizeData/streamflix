@@ -10,7 +10,7 @@ import UIKit
 @Observable
 final class Stremio {
 
-    /** Where the app's next stream goes: dx.bi's player, another app (Infuse, VLC…), or Downloads */
+    /** Where the app's next stream goes: StreamFlix's player, another app (Infuse, VLC…), or Downloads */
     enum Target { case player, otherApp, download }
 
     @ObservationIgnored let page = Page()
@@ -118,7 +118,7 @@ final class Stremio {
             rows = layout.arrange(allRows)
         case "continue_watching_preview":
             continueWatching = Continue.list(data)
-            // the library changing (watched something, added to the list, another device) changes dx.bi's rows
+            // the library changing (watched something, added to the list, another device) changes StreamFlix's rows
             let sig = Json.encode(data)
             if lastContinue != nil, sig != lastContinue, ready { refreshExtras() }
             lastContinue = sig
@@ -151,7 +151,7 @@ final class Stremio {
         do {
             return try await page.call(op, args, timeout: timeout)
         } catch {
-            print("[dx.bi] \(op) failed: \(error.localizedDescription)")
+            print("[StreamFlix] \(op) failed: \(error.localizedDescription)")
             return nil
         }
     }
@@ -246,12 +246,12 @@ final class Stremio {
 
     func removeFromContinue(_ id: String) { Task { await ask("dismiss", ["id": id]) } }
 
-    /** The open title's streams, described by dx.bi, with Just press Play's pick */
+    /** The open title's streams, described by StreamFlix, with Just press Play's pick */
     func streams() async -> StreamChoices? {
         (await dx("phone.streams") as? JSON).map(StreamChoices.init)
     }
 
-    /** Plays one of [streams] (dx.bi keeps the next best ready in case it won't play) */
+    /** Plays one of [streams] (StreamFlix keeps the next best ready in case it won't play) */
     func play(_ option: StreamOption, in target: Target = .player) {
         // Play on TV: while a TV is chosen it plays there. The TV is sent Stremio's link to the stream
         // and plays it itself (TvRemote), so nothing opens here
@@ -422,7 +422,7 @@ final class Stremio {
         }
     }
 
-    // MARK: - Watch party (dx.bi's own: end-to-end encrypted, everyone streams from their own addons)
+    // MARK: - Watch party (StreamFlix's own: end-to-end encrypted, everyone streams from their own addons)
 
     func party() async -> JSON? { await dx("phone.party.state") as? JSON }
 
@@ -487,7 +487,7 @@ final class Stremio {
         setWatched(video: video, true)
     }
 
-    /** The cast with their photos (TMDB, with a key in dx.bi settings), or nil */
+    /** The cast with their photos (TMDB, with a key in StreamFlix settings), or nil */
     func cast(_ type: String, _ imdb: String, names: [JSON]) async -> [JSON]? {
         (await ask("dx", ["method": "phone.cast", "args": [type, imdb, names]], timeout: 25) as? [Any])?.compactMap { $0 as? JSON }
     }
@@ -498,7 +498,7 @@ final class Stremio {
     func searchFor(_ text: String) { pendingSearch = text }
 
     /**
-     * Report a problem, as dx.bi does everywhere: what they typed, with dx.bi's version, the phone,
+     * Report a problem, as StreamFlix does everywhere: what they typed, with StreamFlix's version, the phone,
      * settings, addon names and recent errors (no passwords, keys or stream links). The report's code
      * to post in dx.bi's Discord, or what went wrong
      */
@@ -524,7 +524,7 @@ final class Stremio {
         Task { await ask("videoWatched", ["id": id, "value": watched, "upTo": upTo]) }
     }
 
-    /** Your stats (dx.bi's Watch stats), or nil when they're switched off */
+    /** Your stats (StreamFlix's Watch stats), or nil when they're switched off */
     func stats() async -> JSON? { await dx("phone.stats") as? JSON }
 
     func progress(position: Double, duration: Double, paused: Bool) {
