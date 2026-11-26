@@ -5659,10 +5659,11 @@
       const dead = d.seeds >= 0 && d.seeds < 2 && !d.instant;
       const extra = (d.dv ? 1 : d.hdr ? 2 : 0) + (this.SOURCE[d.source] || 0);
       // With English dub first on, on an anime or a title not in English, an English dub that will play
-      // leads: the best picture, then ready to play, then the most people sharing it (a 4K dub with 300
-      // seeds before a 4K dub with 3, both before any 1080p)
+      // leads: ready to play first (as everywhere: it has to start and keep playing), then the best
+      // picture, then the most people sharing it (a 4K dub with 300 seeds before a 4K dub with 3,
+      // both before a 1080p one that isn't ready either)
       if (!dead && !d.lesser && streamPrefs.dubbed && (streamPrefs.anime || streamPrefs.foreign) && streamPrefs.englishDub(d)) {
-        return 1e7 + d.res * 1000 + (d.instant ? 500 : 0) + Math.min(100, Math.round(Math.log10(Math.max(0, d.seeds) + 1) * 30)) + extra;
+        return 1e7 + (d.instant ? 5e6 : 0) + d.res * 1000 + Math.min(100, Math.round(Math.log10(Math.max(0, d.seeds) + 1) * 30)) + extra;
       }
       // (a preferred site outranks any resolution, never a ready-to-play stream)
       return (d.instant ? 1e5 : 0) + streamPrefs.weight(d) * 2e4 + d.res * 10 + extra - (d.lesser ? 15000 : 0) - (dead ? 15000 : 0);
@@ -19489,7 +19490,7 @@
       let bestRank = -1;
       for (const el of items) {
         const d = tools.data(el);
-        if (d.source !== "CAM" && !d.pending && !this.isLink(d) && streamChoice.rank(d) > bestRank) {
+        if (d.source !== "CAM" && !d.pending && !this.isLink(d) && !streamFallback.failedRow(el) && streamChoice.rank(d) > bestRank) {
           bestRank = streamChoice.rank(d);
           best = el;
         }
@@ -19725,6 +19726,101 @@
   // Just press Play: Play or an episode click starts the best stream, with this viewer's own
   // choices remembered. Stream addresses are never stored: debrid links carry the API key.
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // A stream that won't play (TV): the app's player gives up on it and the page goes back to the
+  // title's streams. The next best of them then plays, from where the failed one stopped (the
+  // episode's saved place), whether the viewer picked the failed one or dx.bi did; Quick Play's own
+  // spares go first (dxbi-tv.js). A stream that failed is passed over for a day: it is never the
+  // best match nor tried again in that time. Three tries in ten minutes at most for one episode.
+  // ---------------------------------------------------------------------------
+  const streamFallback = {
+    KEY: "dxbi.failedStreams",
+    KEEP: 24 * 60 * 60 * 1000,
+    tries: new Map(),
+    list: null,
+
+    // A stream by its player link (the same stream from the same addon has the same one)
+    key: (link) => String(link || "").replace(/^#/, ""),
+
+    load() {
+      if (this.list) return this.list;
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem(this.KEY) || "{}") || {}; } catch (_) { /* none */ }
+      const now = Date.now();
+      this.list = new Map(Object.entries(saved).filter(([, t]) => now - t < this.KEEP));
+      return this.list;
+    },
+
+    mark(link) {
+      const list = this.load();
+      list.set(this.key(link), Date.now());
+      // (the newest 200 are plenty)
+      const kept = [...list.entries()].sort((a, b) => b[1] - a[1]).slice(0, 200);
+      this.list = new Map(kept);
+      try { localStorage.setItem(this.KEY, JSON.stringify(Object.fromEntries(kept))); } catch (_) { /* kept for this run */ }
+      // (the best match is worked out again with it left out)
+      streamRows.key = "";
+    },
+
+    failed(link) {
+      const t = link && this.load().get(this.key(link));
+      return !!t && Date.now() - t < this.KEEP;
+    },
+
+    failedRow(el) {
+      const link = el.getAttribute("href") || (el.querySelector("a[href]") && el.querySelector("a[href]").getAttribute("href"));
+      return !!link && this.load().size > 0 && this.failed(link);
+    },
+
+    // The player link that failed (as the page had it). Returns the label of the stream now playing,
+    // or "" when there's nothing left to try (the page then says so).
+    async next(failedLink) {
+      if (failedLink) this.mark(failedLink);
+      // (the page goes back to where the play started: a title's streams, or Home when it started
+      // from Continue Watching. The episode's streams are what is wanted: its address is the end of
+      // the player link, /player/<stream>/<addon>/<addon>/<type>/<id>/<episode>)
+      for (let i = 0; i < 25 && currentRoute() !== "detail"; i++) await new Promise((r) => setTimeout(r, 200));
+      const parts = this.key(failedLink).split("/");
+      const wanted = parts.length >= 8 && parts[1] === "player" ? `#/detail/${parts.slice(-3).join("/")}` : "";
+      if (wanted && quickPlay.videoOf(location.hash)?.videoId !== quickPlay.videoOf(wanted)?.videoId) {
+        navigate(wanted.slice(1));
+        for (let i = 0; i < 25 && location.hash !== wanted; i++) await new Promise((r) => setTimeout(r, 200));
+      }
+      const page = location.hash;
+      const video = quickPlay.videoOf(page);
+      if (!video) return "";
+      const now = Date.now();
+      const tried = this.tries.get(page);
+      const n = tried && now - tried.at < 10 * 60 * 1000 ? tried.n : 0;
+      if (n >= 3) return "";
+      const server = await core().getState("streaming_server").catch(() => null);
+      const torrents = !!(server && server.settings && server.settings.type === "Ready") || (IN_TV && settings.tvTorrents);
+      let items = [];
+      for (let i = 0; i < 40 && location.hash === page; i++) {
+        const state = await core().getState("meta_details").catch(() => null);
+        const path = state && state.selected && state.selected.streamPath;
+        if (path && path.id === video.videoId) {
+          const groups = Array.isArray(state.streams) ? state.streams : [];
+          items = groups.flatMap((g) => (g && g.content && g.content.type === "Ready" && Array.isArray(g.content.content) ? g.content.content : []))
+            .filter((st) => st && st.deepLinks && st.deepLinks.player && !st.externalUrl && !st.ytId && !this.failed(st.deepLinks.player))
+            .map((st) => ({ st, torrent: !!st.infoHash && !st.url, hint: watchParty.streamHints(st), d: describeStream(String(st.name || ""), `${st.name || ""}\n${st.description || st.title || ""}`) }))
+            .filter((x) => x.d.source !== "CAM" && !x.d.pending && (torrents || !x.torrent));
+          const settled = groups.length > 0 && !groups.some((g) => g && g.content && g.content.type === "Loading");
+          if (items.length && (settled || i >= 10)) break;
+        }
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      if (!items.length || location.hash !== page) return "";
+      // (Dolby Vision, the hardest to decode, only when nothing else is left)
+      const plain = items.filter((x) => !x.d.dv);
+      const item = streamChoice.best(plain.length ? plain : items);
+      this.tries.set(page, { n: n + 1, at: now });
+      quickPlay.play(item);
+      navigate(item.st.deepLinks.player);
+      return quickPlay.label(item.d);
+    },
+  };
+
   const quickPlay = {
     intent: null,
     token: null,
@@ -19909,7 +20005,7 @@
         if (!path || path.id !== video.videoId) continue;
         const groups = Array.isArray(state.streams) ? state.streams : [];
         const ready = groups.flatMap((g) => (g && g.content && g.content.type === "Ready" && Array.isArray(g.content.content) ? g.content.content : []))
-          .filter((st) => st && st.deepLinks && st.deepLinks.player && !st.externalUrl && !st.ytId);
+          .filter((st) => st && st.deepLinks && st.deepLinks.player && !st.externalUrl && !st.ytId && !streamFallback.failed(st.deepLinks.player));
         const items = ready.map((st) => ({
           st,
           torrent: !!st.infoHash && !st.url,
@@ -19944,7 +20040,9 @@
     },
 
     // The next stream after one that wouldn't play. Returns its label, or "" when there's none left.
+    // (only on the title it picked for: spares left from another title were played on the wrong one)
     next() {
+      if (this.from && location.hash !== this.from && currentRoute() !== "player") this.spares = [];
       const item = this.spares.shift();
       if (!item) return "";
       this.play(item);
@@ -22629,6 +22727,7 @@
     closeParty: () => watchParty.closePanel(),
     findStream: (media, stillWanted) => watchParty.findStream(media, stillWanted),
     quickPlayNext: () => quickPlay.next(),
+    streamNext: (failedLink) => streamFallback.next(failedLink),
     saveYear: () => { stats.flush(); if (!stats.data) stats.load(); statsPanel.saveYear(); },
     lite,
     streamHints: (stream) => watchParty.streamHints(stream),

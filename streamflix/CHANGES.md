@@ -4,6 +4,14 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.416
+
+The TV app, phones, tablets, the iPad and the desktop apps.
+
+- **Anime plays on the TV and the Android apps.** Anime releases carry subtitle tracks in the ASS format ("Signs & Songs", "Dialogue"), and the player reads every one of them as the file loads, shown or not. A line it couldn't make sense of stopped the whole video a few seconds in, on every release of the episode (Link Click's, 4K and 1080p alike: "Unexpected IllegalStateException"). Such a line is now left out and the video, its sound and the rest of the subtitles play on.
+- **A stream that won't play is replaced by the next best, by itself.** On the TV, whether you picked it or it was the best match, and whether it started from the title's streams or from Continue Watching: the next best stream of that episode plays, from where the failed one stopped, with a note on screen. Before, only a stream Quick Play had picked moved on; any other ended with "This stream couldn't play". A stream that failed is never the best match again for a day. The player also gives up sooner on data it can't read (one more try, not two), so the switch comes within seconds.
+- **Ready to play leads the English dubs again.** 2.38.414 put the best picture first among an anime's English dubs; ready to play (TorBox's and the like) comes first again, then the best picture, then the most seeds. Quick Play's spare streams are only ever played on the title they were picked for.
+
 ## StreamFlix 2.38.415
 
 The TV app, phones, tablets, the iPad and the desktop apps.

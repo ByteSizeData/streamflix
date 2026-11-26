@@ -121,13 +121,17 @@ streamPrefs.set("none", true, true);
 assert.equal(pick([cached4k, animeDub]), animeDub.label, "on an anime's page, dubbed first");
 assert.equal(pick([cached4k, dubbed]), dubbed.label, "there, an unnamed second track is the English dub");
 assert.equal(pick([cached4k, cached1080]), cached4k.label, "no dub around: quality decides");
-// Among an anime's English dubs: the best picture, then ready to play, then the most seeds; a dub
-// nobody shares doesn't lead
+// Among an anime's English dubs: ready to play first (it has to start and keep playing), then the
+// best picture, then the most seeds; a dub nobody shares doesn't lead
 const dub4kMany = item("Torrentio\n4k", "Anime.S01.2160p.Dual.Audio.WEB 🇯🇵 🇬🇧 👤 300 💾 30 GB");
 const dub4kFew = item("Torrentio\n4k", "Anime.S01.2160p.Dual.Audio.BluRay.HDR 🇯🇵 🇬🇧 👤 3 💾 40 GB");
 const dub4kDead = item("Torrentio\n4k", "Anime.S01.2160p.Dual.Audio.BluRay 🇯🇵 🇬🇧 👤 1 💾 40 GB");
 const dub1080cached = item("[TB+] Torrentio\n1080p", "Anime.S01.1080p.Dual.Audio.WEB 🇯🇵 🇬🇧 💾 9 GB");
-assert.equal(pick([cached4k, dub1080cached, dub4kFew, dub4kMany]), dub4kMany.label, "the 4K dub most people share");
+const dub4kCached = item("[TB+] Torrentio\n4k", "Anime.S01.2160p.Dual.Audio.WEB 🇯🇵 🇬🇧 💾 31 GB");
+const dub1080Many = item("Torrentio\n1080p", "Anime.S01.1080p.Dual.Audio.WEB 🇯🇵 🇬🇧 👤 900 💾 9 GB");
+assert.equal(pick([cached4k, dub1080cached, dub4kFew, dub4kMany]), dub1080cached.label, "a dub ready to play before a 4K one that has to download");
+assert.equal(pick([dub1080cached, dub4kCached, dub4kMany]), dub4kCached.label, "a 4K dub ready to play before a 1080p one");
+assert.equal(pick([dub4kFew, dub4kMany, dub1080Many]), dub4kMany.label, "none ready: the 4K dub most people share");
 assert.equal(pick([cached4k, dub1080cached]), dub1080cached.label, "a dub, ready to play, before a 4K that isn't one");
 assert.equal(pick([dub4kDead, dub1080cached]), dub1080cached.label, "a dub nobody shares doesn't lead");
 assert.equal(pick([dub4kDead, cached4k]), cached4k.label, "nor beats what plays");
@@ -517,6 +521,7 @@ console.log("PASS on a film not in English its English dubs lead, then the chose
     currentRoute: () => "detail", scheduleSync() {}, esc: (s) => String(s), ICONS: { sort: "", chevronDown: "", check: "" },
     loop: { pass: null, pressWaiting: () => false, quietly: (fn) => fn() },
     quickPlay: { row: null, btn: null },
+    streamFallback: { out: new Set(), failedRow(el) { return this.out.has(el); } },
     requestAnimationFrame: (fn) => frames.push(fn), cancelAnimationFrame: (id) => { frames[id - 1] = null; },
     setTimeout: () => 0, clearTimeout() {},
   });
@@ -561,6 +566,22 @@ ${lf(cut("  const streamRows = {", "  // -----", source.indexOf("  // Clean stre
   assert.equal(rows().every((el) => el.children.slice(0, 3).every((c) => c.style.display === "none")), true, "TV: Stremio's own parts of a drawn row are out of the page");
   assert.equal(rows().filter((el) => el.attrs.has("data-dx-best")).length, 1);
   console.log("PASS streams arriving: each in its place and the ones in sight drawn before the paint, the rest twenty to a frame");
+
+  // A stream that wouldn't play (streamFallback) is passed over: the next best is the best match, and
+  // once it is forgiven the first one is again
+  const bestOf = () => rows().filter((el) => el.attrs.has("data-dx-best"));
+  const first = bestOf()[0];
+  world.streamFallback.out.add(first);
+  streamRows.key = "";
+  streamRows.ensure();
+  assert.equal(bestOf().length, 1);
+  assert.notEqual(bestOf()[0], first, "a stream that wouldn't play is never the best match");
+  world.streamFallback.out.clear();
+  streamRows.key = "";
+  streamRows.ensure();
+  assert.equal(bestOf()[0], first);
+  frame();
+  console.log("PASS a stream that wouldn't play is passed over for the best match");
 
   // A pass with nothing changed: no search of the page, no row read, nothing written
   deliver();

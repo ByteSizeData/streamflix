@@ -327,7 +327,8 @@ class PlayerActivity : AppCompatActivity() {
 
         val exo = ExoPlayer.Builder(this, renderers)
             // (files on the TV too: the Thai subtitles it keeps. Everything from the network still goes through OkHttp)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, dataSource)))
+            // (a subtitle line the player can't read is skipped, not the end of the video: SafeSubtitles)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, dataSource)).setSubtitleParserFactory(SafeSubtitles()))
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .setSeekBackIncrementMs(SEEK_STEP_MS)
@@ -805,7 +806,12 @@ class PlayerActivity : AppCompatActivity() {
         // and a third one: asked again at once it answers the same)
         val code = (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
         val busy = code == 429 || code == 503
-        if (againCount >= (if (busy) 3 else 2)) return false
+        // Data the player can't make sense of (a file a debrid service hasn't all got yet reads as
+        // gaps: "no valid varint length mask"): once more, then the page moves on to another stream
+        // of the title, rather than three tries over twenty seconds on this one
+        // (the player wraps what went wrong in its loader: the cause's cause)
+        val garbled = generateSequence(error.cause) { it.cause }.take(3).any { it is IllegalStateException || it is androidx.media3.common.ParserException }
+        if (againCount >= (if (busy) 3 else if (garbled) 1 else 2)) return false
         againCount++
         againAt = now
         Log.w("dxbi", "the player stopped at ${exo.currentPosition} ms (${error.errorCodeName}: ${error.cause?.javaClass?.simpleName}): starting again from there, try $againCount")

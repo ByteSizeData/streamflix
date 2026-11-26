@@ -1248,6 +1248,8 @@
 
   async function closeHandoff(timeMs, durationMs, ended, error, next) {
     tv.partyVideo = null;
+    // (the stream that was playing: on an error the next best of its title plays instead)
+    let failedLink = "";
     // Simkl hears where it got to: at once when it played through, otherwise as the page leaves the player
     const scrobble = tv.scrobbleVideo;
     tv.scrobbleVideo = null;
@@ -1268,6 +1270,7 @@
         if (durationMs > 0 && timeMs < durationMs * 0.9) tv.onProgress(Math.ceil(durationMs * 0.95), durationMs, true);
         await markFinished(videoId);
       }
+      if (error) failedLink = handoff.hash;
       handoff = null;
       const link = next && await nextLinkFor(await playerState());
       note(`player closed at ${Math.round(timeMs / 1000)}/${Math.round(durationMs / 1000)} s${ended ? ", ended" : ""}${next ? ", next" : ""}${error ? `, error: ${error}` : ""}`);
@@ -1285,12 +1288,18 @@
       if (error) note(`player closed (page had moved on), error: ${error}`);
       handoff = null;
     }
-    // A stream dx.bi picked by itself: on to the next best before asking the viewer to choose
+    // A stream that didn't play: on to the next best before asking the viewer to choose. Quick
+    // Play's own spares first (a stream it picked), else the best of the title's other streams,
+    // from where this one stopped: whether the viewer picked it or dx.bi did
     const dx = window.__dxbi;
-    if (error && dx && dx.quickPlayNext) {
+    if (error && dx && (dx.quickPlayNext || dx.streamNext)) {
       await new Promise((r) => setTimeout(r, 500));
-      const label = dx.quickPlayNext();
-      if (label) return toast(`That stream didn't play. Trying ${label}.`, 5000);
+      let label = dx.quickPlayNext ? dx.quickPlayNext() : "";
+      if (!label && failedLink && dx.streamNext) {
+        toast("That stream didn't play. Finding another…", 4000);
+        try { label = await dx.streamNext(failedLink); } catch (_) { label = ""; }
+      }
+      if (label) return toast(`That stream didn't play. Playing ${label} instead.`, 5000);
     }
     if (error) toast(`This stream couldn't play: ${error}. Try another one.`, 7000);
   }
