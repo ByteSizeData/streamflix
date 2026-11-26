@@ -3,7 +3,7 @@ import PlaybackState from "../../utils/PlaybackState";
 import DiscordPresence from "../../core/DiscordPresence";
 import { nativePlayback, nativePlayerActive } from "../mpvShell";
 
-// What's playing: mpv's state when dx.bi plays through mpv, otherwise the page's <video>
+// What's playing: mpv's state when StreamFlix plays through mpv, otherwise the page's <video>
 function currentVideo(): HTMLVideoElement | null {
     if (nativePlayerActive) {
         return nativePlayback as unknown as HTMLVideoElement;

@@ -9,7 +9,7 @@ import { isFullScreen, setFullScreen, useCustomFullScreen } from "./Maximize";
 import MpvSubtitleStyle from "./MpvSubtitleStyle";
 import TaskbarPreview from "./TaskbarPreview";
 
-// dx.bi plays video the way the official Stremio desktop app does: in mpv, behind the page.
+// StreamFlix plays video the way the official Stremio desktop app does: in mpv, behind the page.
 //
 // Stremio's web app has a player for its own desktop shell (ShellVideo). When it finds a WebView2-style
 // `chrome.webview` transport it sends that shell mpv commands ("mpv-command", "mpv-set-prop",
@@ -17,7 +17,7 @@ import TaskbarPreview from "./TaskbarPreview";
 // screen, menus and addon subtitles on top. The preload provides that transport (preload/mpvShell.ts);
 // this side runs mpv and answers it.
 //
-// mpv draws into a borderless video window kept exactly behind the dx.bi window. The dx.bi window is
+// mpv draws into a borderless video window kept exactly behind the StreamFlix window. The StreamFlix window is
 // transparent and owned by the video window (an owned window always stays above its owner), and
 // while a video plays Stremio makes the page background transparent, so the picture shows through.
 
@@ -40,21 +40,21 @@ function keepInSwitcher(win: BrowserWindow): void {
         const style = BigInt(getLong(hwnd, GWL_EXSTYLE));
         setLong(hwnd, GWL_EXSTYLE, style | BigInt(WS_EX_APPWINDOW));
     } catch (err) {
-        logger.warn(`Couldn't keep dx.bi in the taskbar and Alt+Tab: ${err}`);
+        logger.warn(`Couldn't keep StreamFlix in the taskbar and Alt+Tab: ${err}`);
     }
 }
 const DEBUG = process.env.DXBI_MPV_DEBUG === "1";
 
 // ---- Merged window (Windows) ----
 //
-// Discord, OBS and the like record one window. With the picture in a separate window behind dx.bi,
-// sharing the dx.bi window showed the HUD over a see-through hole (black). Merged, mpv draws straight
-// into the dx.bi window (--wid = dx.bi), under the transparent page, as ynoTV does with WebView2: one
+// Discord, OBS and the like record one window. With the picture in a separate window behind StreamFlix,
+// sharing the StreamFlix window showed the HUD over a see-through hole (black). Merged, mpv draws straight
+// into the StreamFlix window (--wid = StreamFlix), under the transparent page, as ynoTV does with WebView2: one
 // window holds both picture and interface. mpv handles the rest itself in --wid mode: it disables its
 // own child window (clicks fall through to the page) and resizes it with the parent.
 //
 // Switch back to the old two-window way without rebuilding: create an empty file named
-// "split_video_window" in %APPDATA%\dxbi (or set DXBI_MERGED=0), then restart dx.bi.
+// "split_video_window" in %APPDATA%\dxbi (or set DXBI_MERGED=0), then restart StreamFlix.
 const splitFlag = () => join(app.getPath("userData"), "split_video_window");
 function mergedWanted(): boolean {
     if (process.platform !== "win32") return false;
@@ -106,7 +106,7 @@ const VIDEO_TITLE = "dxbi-video";
 interface HyprClient { address: string; pid: number; title: string; monitor: number; workspace: { id: number }; at: [number, number]; size: [number, number] }
 interface HyprMonitor { id: number; x: number; y: number; width: number; height: number; scale: number }
 // Requests go straight to Hyprland's socket: a hyprctl process per request was too slow to keep the
-// video window under dx.bi while it's dragged around
+// video window under StreamFlix while it's dragged around
 const HYPR_SOCKET = HYPRLAND ? join(process.env.XDG_RUNTIME_DIR || "", "hypr", process.env.HYPRLAND_INSTANCE_SIGNATURE || "", ".socket.sock") : "";
 function hyprRequest(request: string): Promise<string> {
     return new Promise((resolve) => {
@@ -128,7 +128,7 @@ async function hyprDispatch(...lua: string[]): Promise<void> {
 async function hyprJson<T>(what: string): Promise<T | null> {
     try { return JSON.parse(await hyprRequest(`j/${what}`)); } catch { return null; }
 }
-// dx.bi's two windows as Hyprland has them. A window that's only just been shown isn't listed yet,
+// StreamFlix's two windows as Hyprland has them. A window that's only just been shown isn't listed yet,
 // so the video window is looked for a few times.
 async function hyprWindows(tries: number): Promise<{ main?: HyprClient; video?: HyprClient }> {
     for (let i = 1; ; i++) {
@@ -141,7 +141,7 @@ async function hyprWindows(tries: number): Promise<{ main?: HyprClient; video?: 
 
 // Picture-in-picture's handle: a see-through window over the little video (mpv's picture takes the
 // mouse otherwise). Drag it anywhere to move the video; double-click it, or its button, to go back
-// to dx.bi. It tells the app what happened through its page title ("drag-3", "back-4"…), so it needs
+// to StreamFlix. It tells the app what happened through its page title ("drag-3", "back-4"…), so it needs
 // no preload. The 1% black is what makes Windows hand it the mouse: fully clear pixels let
 // clicks through to whatever is under them.
 const PIP_HANDLE = `<!doctype html><meta charset="utf-8"><style>
@@ -151,7 +151,7 @@ body.drag { cursor: grabbing; }
 body:hover .bar { opacity: 1; }
 button { border: 0; border-radius: 6px; padding: 6px 10px; background: rgba(20,20,20,.85); color: #fff; font: inherit; cursor: pointer; }
 button:hover { background: #fff; color: #000; }
-</style><div class="bar"><button data-say="pause" title="Play / pause">⏯</button><button data-say="back" title="Back to dx.bi">⤢ Back to dx.bi</button></div>
+</style><div class="bar"><button data-say="pause" title="Play / pause">⏯</button><button data-say="back" title="Back to StreamFlix">⤢ Back to StreamFlix</button></div>
 <script>
 let n = 0;
 const say = (what) => { document.title = what + "-" + (++n); };
@@ -174,7 +174,7 @@ const SIGNAL = 1;
 const INIT = 3;
 const INVOKE_METHOD = 6;
 
-// Properties Stremio sets that dx.bi decides itself
+// Properties Stremio sets that StreamFlix decides itself
 const IGNORED_PROPS = new Set(["vo", "osc", "input-default-bindings", "input-vo-keyboard"]);
 
 export default class MpvShell {
@@ -196,21 +196,21 @@ export default class MpvShell {
     private static queue: string[] = [];
     private static playing = false;
     private static taskbarPreview: TaskbarPreview | null = null;
-    /** mpv draws into the dx.bi window itself (see "Merged window" above) */
+    /** mpv draws into the StreamFlix window itself (see "Merged window" above) */
     private static merged = false;
     private static mpvChild: bigint | null = null; // mpv's own child window, in merged mode
     private static findTimer: NodeJS.Timeout | null = null;
 
-    // Settings → dx.bi → "Play videos with mpv" switched off: the browser player instead
+    // Settings → StreamFlix → "Play videos with mpv" switched off: the browser player instead
     private static offFlag = () => join(app.getPath("userData"), "use_browser_player");
 
-    /** mpv to use, if dx.bi should play through mpv on this computer */
+    /** mpv to use, if StreamFlix should play through mpv on this computer */
     public static mpvPath(): string | null {
         if (existsSync(this.offFlag())) return null;
         return this.bundledPath();
     }
 
-    /** mpv dx.bi could play with here, whether or not it's switched on */
+    /** mpv StreamFlix could play with here, whether or not it's switched on */
     public static bundledPath(): string | null {
         if (process.env.DXBI_MPV === "0") return null;
         const custom = process.env.DXBI_MPV_PATH;
@@ -280,7 +280,7 @@ export default class MpvShell {
             backgroundColor: "#00000000",
             webPreferences: { backgroundThrottling: false },
         });
-        // A fixed title lets tiling window managers (Hyprland, Sway…) be told to float it behind dx.bi
+        // A fixed title lets tiling window managers (Hyprland, Sway…) be told to float it behind StreamFlix
         this.videoWindow.setTitle(VIDEO_TITLE);
         this.videoWindow.on("page-title-updated", (e) => e.preventDefault());
         this.videoWindow.loadURL("about:blank");
@@ -289,7 +289,7 @@ export default class MpvShell {
         this.merged = mergedWanted() && !!user32();
         if (this.merged) return this.setupMerged(mainWindow);
 
-        // The dx.bi window always stays above the video window, and still gets its own taskbar button
+        // The StreamFlix window always stays above the video window, and still gets its own taskbar button
         mainWindow.setParentWindow(this.videoWindow);
         if (HYPRLAND) useCustomFullScreen(mainWindow, (on) => { void this.hyprFullScreen(on); });
         keepInSwitcher(mainWindow);
@@ -317,11 +317,11 @@ export default class MpvShell {
         this.startMpv();
     }
 
-    // Merged: dx.bi is an ordinary top-level window (its own taskbar button, live Alt+Tab, Task View
+    // Merged: StreamFlix is an ordinary top-level window (its own taskbar button, live Alt+Tab, Task View
     // and Discord pictures), so no owner pairing, no still-frame taskbar preview and nothing to follow.
     // The video window stays, hidden, for picture-in-picture only.
     private static setupMerged(mainWindow: BrowserWindow): void {
-        logger.info("Merged window: mpv draws into the dx.bi window");
+        logger.info("Merged window: mpv draws into the StreamFlix window");
         const resize = () => this.fitMpvChild();
         for (const event of ["resize", "maximize", "unmaximize", "restore", "enter-full-screen", "leave-full-screen"] as const) {
             mainWindow.on(event as any, resize);
@@ -334,7 +334,7 @@ export default class MpvShell {
         this.startMpv();
     }
 
-    // mpv makes its child window once it's started: found by class (it's the only "mpv" window in dx.bi)
+    // mpv makes its child window once it's started: found by class (it's the only "mpv" window in StreamFlix)
     private static findMpvChild(): void {
         const api = user32(), main = this.mainWindow;
         if (!api || !main || main.isDestroyed() || this.findTimer) return;
@@ -373,7 +373,7 @@ export default class MpvShell {
         api.SetWindowPos(child, HWND_BOTTOM, 0, 0, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS);
     }
 
-    // Hidden while nothing plays, as the video window was: a see-through theme shows what's behind dx.bi
+    // Hidden while nothing plays, as the video window was: a see-through theme shows what's behind StreamFlix
     private static showMpvChild(on: boolean): void {
         const api = user32(), child = this.mpvChild;
         if (!api || !child) return;
@@ -381,8 +381,8 @@ export default class MpvShell {
         if (on) api.SetWindowPos(child, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
-    // Moves mpv's picture between dx.bi and the picture-in-picture window (same process and thread
-    // as dx.bi, so mpv's resize hook keeps following it)
+    // Moves mpv's picture between StreamFlix and the picture-in-picture window (same process and thread
+    // as StreamFlix, so mpv's resize hook keeps following it)
     private static moveMpvChild(to: BrowserWindow): void {
         const api = user32(), child = this.mpvChild;
         if (!api || !child || to.isDestroyed()) return;
@@ -391,10 +391,10 @@ export default class MpvShell {
         this.showMpvChild(this.playing);
     }
 
-    // Back from full screen, the picture went missing on some PCs: the dx.bi window showed the desktop
+    // Back from full screen, the picture went missing on some PCs: the StreamFlix window showed the desktop
     // through where the video should be (a blue wallpaper). Windows treats a window that covers the
     // whole screen specially, and the video window didn't come back from that. It's put back behind
-    // dx.bi and shown afresh.
+    // StreamFlix and shown afresh.
     private static reseat(): void {
         if (HYPRLAND || this.merged) return; // hyprFullScreen puts both windows back itself
         setTimeout(() => {
@@ -411,15 +411,15 @@ export default class MpvShell {
     private static followMainWindow(): void {
         if (!this.mainWindow || !this.videoWindow || this.mainWindow.isDestroyed() || this.pip) return;
         if (this.merged) return this.fitMpvChild();
-        if (HYPRLAND) return this.hyprFollow(); // in full screen it only checks dx.bi wasn't dragged off
+        if (HYPRLAND) return this.hyprFollow(); // in full screen it only checks StreamFlix wasn't dragged off
         this.videoWindow.setBounds(this.mainWindow.getContentBounds());
     }
 
     // Hyprland places XWayland windows itself, and on a scaled monitor its coordinates aren't the X11
     // ones Electron sees, so setBounds lands the video window somewhere else. There Hyprland is asked
-    // to put it exactly where it has the dx.bi window.
+    // to put it exactly where it has the StreamFlix window.
     // One placement at a time; moves while it runs are caught by the next one. While a video plays the
-    // dx.bi window is also watched, as an XWayland window being dragged doesn't always say it moved.
+    // StreamFlix window is also watched, as an XWayland window being dragged doesn't always say it moved.
     private static hyprBusy = false;
     private static hyprAgain = false;
     private static hyprWatch: NodeJS.Timeout | null = null;
@@ -447,7 +447,7 @@ export default class MpvShell {
         if (!main || !video) return false;
         if (this.pip) return true;
         if (this.mainWindow && isFullScreen(this.mainWindow)) {
-            // dx.bi dragged off the full screen video (Super + drag): leave full screen where it's dropped
+            // StreamFlix dragged off the full screen video (Super + drag): leave full screen where it's dropped
             const at = this.hyprFullAt;
             if (at && (main.at[0] !== at[0] || main.at[1] !== at[1])) {
                 this.hyprDropped = main.at;
@@ -474,11 +474,11 @@ export default class MpvShell {
     }
 
     // Full screen on Hyprland: it draws nothing behind a full screen window, so the video window is the
-    // one that goes full screen, and the see-through dx.bi window is pinned over it (pinned floating
+    // one that goes full screen, and the see-through StreamFlix window is pinned over it (pinned floating
     // windows are drawn above full screen ones), covering the same monitor. Resize before move: a
     // resize keeps the window's centre.
     private static hyprSaved: { at: [number, number]; size: [number, number] } | null = null;
-    private static hyprFullAt: [number, number] | null = null; // where dx.bi was put to cover the monitor
+    private static hyprFullAt: [number, number] | null = null; // where StreamFlix was put to cover the monitor
     private static hyprDropped: [number, number] | null = null; // where it was dragged to
     private static async hyprFullScreen(on: boolean): Promise<void> {
         const videoWindow = this.videoWindow;
@@ -496,7 +496,7 @@ export default class MpvShell {
             await hyprDispatch(`hl.dsp.window.resize({ x = ${Math.round(monitor.width / monitor.scale)}, y = ${Math.round(monitor.height / monitor.scale)}, ${M} })`);
             await hyprDispatch(`hl.dsp.window.move({ x = ${monitor.x}, y = ${monitor.y}, ${M} })`);
             this.hyprFullAt = [monitor.x, monitor.y];
-            // Hyprland hands focus to the window that went full screen: the keys (space, F…) belong to dx.bi
+            // Hyprland hands focus to the window that went full screen: the keys (space, F…) belong to StreamFlix
             await hyprDispatch(`hl.dsp.focus({ ${M} })`);
         } else {
             this.hyprFullAt = null;
@@ -521,7 +521,7 @@ export default class MpvShell {
     private static startMpv(): void {
         const path = this.mpvPath();
         if (!path || !this.videoWindow) return;
-        // Merged: mpv draws into the dx.bi window itself
+        // Merged: mpv draws into the StreamFlix window itself
         const target = this.merged && this.mainWindow ? this.mainWindow : this.videoWindow;
         const handle = target.getNativeWindowHandle();
         const wid = process.platform === "win32" && handle.length >= 8 ? handle.readBigUInt64LE(0).toString() : handle.readUInt32LE(0).toString();
@@ -553,7 +553,7 @@ export default class MpvShell {
             "--config=no",
             "--demuxer-max-bytes=300MiB",
             "--demuxer-readahead-secs=60",
-            `--user-agent=dx.bi/${app.getVersion()}`,
+            `--user-agent=StreamFlix/${app.getVersion()}`,
             // Kept for problem reports (replaced on every start)
             `--log-file=${join(app.getPath("userData"), "mpv.log")}`,
         ];
@@ -674,7 +674,7 @@ export default class MpvShell {
     private static onPageMessage(msg: { type: number; args?: unknown[] }): void {
         if (msg.type === INIT) {
             const properties = [
-                [0, "shellVersion", 0, `${this.appVersion()} (dx.bi)`],
+                [0, "shellVersion", 0, `${this.appVersion()} (StreamFlix)`],
                 [0, "gpuVideoProcessing", 0, "false"],
                 [0, "nativeAssSubtitles", 0, "false"],
                 [0, "cacheDirectoryPicker", 0, "false"],
@@ -719,7 +719,7 @@ export default class MpvShell {
                 break;
             }
             case "dxbi-shaders": {
-                // dx.bi's picture enhancement: mpv user shaders (GLSL hooks) sent as text, loaded from files
+                // StreamFlix's picture enhancement: mpv user shaders (GLSL hooks) sent as text, loaded from files
                 const shaders = Array.isArray(data) ? data as { name: string; source: string }[] : [];
                 const dir = join(app.getPath("userData"), "shaders");
                 mkdirSync(dir, { recursive: true });
@@ -744,13 +744,13 @@ export default class MpvShell {
                 app.quit();
                 break;
             default:
-                // Discord, cache folder, interface scale and update notices are handled by dx.bi itself
+                // Discord, cache folder, interface scale and update notices are handled by StreamFlix itself
                 break;
         }
     }
 
-    // Picture-in-picture: the video window shrinks into a corner, on top of everything, while dx.bi
-    // minimizes. Bringing dx.bi back (taskbar, Alt+Tab) puts the video back behind it.
+    // Picture-in-picture: the video window shrinks into a corner, on top of everything, while StreamFlix
+    // minimizes. Bringing StreamFlix back (taskbar, Alt+Tab) puts the video back behind it.
     private static pip = false;
     private static setPip(on: boolean): void {
         const main = this.mainWindow, video = this.videoWindow;
@@ -760,7 +760,7 @@ export default class MpvShell {
             const area = screen.getDisplayMatching(main.getBounds()).workArea;
             const width = Math.round(area.width * 0.28);
             const height = Math.round(width * 9 / 16);
-            if (!this.merged) main.setParentWindow(null); // the video window no longer drags dx.bi along
+            if (!this.merged) main.setParentWindow(null); // the video window no longer drags StreamFlix along
             video.setAlwaysOnTop(true, "floating");
             video.setBounds({ x: area.x + area.width - width - 24, y: area.y + area.height - height - 24, width, height });
             video.showInactive();
@@ -773,7 +773,7 @@ export default class MpvShell {
             if (main.isMinimized()) main.restore();
             if (this.merged) {
                 video.hide();
-                this.moveMpvChild(main); // the picture comes back into dx.bi
+                this.moveMpvChild(main); // the picture comes back into StreamFlix
             } else {
                 main.setParentWindow(video);
                 this.followMainWindow();
