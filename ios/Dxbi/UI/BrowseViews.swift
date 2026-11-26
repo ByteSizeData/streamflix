@@ -146,6 +146,7 @@ struct DiscoverView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                animeUltra
                 if let d = stremio.discover {
                     pickers(d)
                     PosterGrid(items: d.items) { if d.nextPage { stremio.discoverMore() } }
@@ -161,6 +162,26 @@ struct DiscoverView: View {
         .navigationTitle("Discover")
         .onAppear { stremio.discoverStart() }
         .onChange(of: stremio.allRows.count) { stremio.discoverStart() }
+    }
+
+    /// The way into Anime Ultra: the best anime from the big anime sites, with their ratings
+    private var animeUltra: some View {
+        NavigationLink(value: Route.anime(source: "anilist", list: "trending")) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Anime Ultra").font(.title3.weight(.heavy))
+                    Text("New, popular right now and the best of all time, with their ratings").font(.footnote).opacity(0.85)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.headline)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .background(LinearGradient(colors: [Dx.accent, Color(red: 0.42, green: 0.05, blue: 0.68)], startPoint: .leading, endPoint: .trailing), in: .rect(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
     }
 
     private func pickers(_ d: Discover) -> some View {

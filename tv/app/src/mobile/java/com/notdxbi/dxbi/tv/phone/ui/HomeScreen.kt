@@ -144,11 +144,11 @@ fun HomeScreen(
             if (filter == HomeFilter.Anime) {
                 item(key = "anime:all") {
                     Column(Modifier.padding(start = Gutter, end = Gutter, bottom = 14.dp)) {
-                        Text("Discover anime", color = Dx.Text, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                        Text("Anime Ultra", color = Dx.Text, fontWeight = FontWeight.Black, fontSize = 22.sp)
                         Text("From AniList, MyAnimeList and Kitsu, with their scores", color = Dx.Muted, style = MaterialTheme.typography.bodySmall)
                         Spacer(Modifier.height(10.dp))
                         Pill(selected = true, onClick = { onAnime("anilist", "trending") }) {
-                            Text("Browse every list", color = Dx.Text, style = MaterialTheme.typography.labelMedium)
+                            Text("Every list and filter", color = Dx.Text, style = MaterialTheme.typography.labelMedium)
                             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = Dx.Text, modifier = Modifier.size(18.dp))
                         }
                     }

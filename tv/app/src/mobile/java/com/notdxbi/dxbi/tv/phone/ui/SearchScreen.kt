@@ -42,6 +42,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -175,11 +176,12 @@ fun PosterGrid(items: List<Title>, loading: Boolean, header: String? = null, onE
  * and Categories open (then with Back, and [title] for the row).
  */
 @Composable
-fun DiscoverScreen(stremio: Stremio, title: String, onBack: (() -> Unit)?, onOpen: (Title) -> Unit) {
+fun DiscoverScreen(stremio: Stremio, title: String, onBack: (() -> Unit)?, onAnimeUltra: (() -> Unit)? = null, onOpen: (Title) -> Unit) {
     val discover by stremio.discover.collectAsState()
     val d = discover
     Column(Modifier.fillMaxSize().background(Dx.Background).windowInsetsPadding(WindowInsets.safeDrawing)) {
         ScreenTitle(title, onBack)
+        onAnimeUltra?.let { AnimeUltraCard(it) }
         if (d != null) LazyRow(contentPadding = PaddingValues(horizontal = Gutter, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val types = d.types.filter { it.link != null }
             if (types.size > 1) item {
@@ -203,6 +205,25 @@ fun DiscoverScreen(stremio: Stremio, title: String, onBack: (() -> Unit)?, onOpe
     }
 }
 
+/** Discover's way into Anime Ultra: the best anime from the big anime sites, with their ratings */
+@Composable
+private fun AnimeUltraCard(onOpen: () -> Unit) {
+    Row(
+        Modifier.padding(horizontal = Gutter, vertical = 6.dp).fillMaxWidth()
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Dx.Accent, Color(0xFF6A0DAD))))
+            .clickable(onClick = onOpen)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("Anime Ultra", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Black, style = MaterialTheme.typography.titleMedium)
+            Text("New, popular right now and the best of all time, with their ratings", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+        }
+        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+    }
+}
+
 private fun typeLabel(type: String) = when (type) {
     "movie" -> "Films"
     "series" -> "Series"
@@ -213,7 +234,7 @@ private fun typeLabel(type: String) = when (type) {
 
 /** A pill that opens a list to pick from */
 @Composable
-private fun PickMenu(label: String, options: List<Pair<String, String>>, onPick: (String) -> Unit) {
+fun PickMenu(label: String, options: List<Pair<String, String>>, onPick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         Pill(selected = true, onClick = { open = true }) {

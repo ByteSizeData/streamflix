@@ -1073,10 +1073,13 @@
 
   const animeDiscover = {
     SOURCES: [
-      { id: "anilist", name: "AniList", lists: [["trending", "Trending now"], ["season", "Popular this season"], ["next", "Coming next season"], ["top", "Top rated"], ["popular", "All-time popular"], ["movies", "Top films"]] },
+      { id: "anilist", name: "AniList", filters: true, lists: [["trending", "Popular right now"], ["season", "New this season"], ["top", "Best of all time"], ["popular", "Most popular ever"], ["next", "Coming next season"], ["movies", "Best films"]] },
       { id: "mal", name: "MyAnimeList", lists: [["airing", "Top airing"], ["top", "Top anime"], ["popular", "Most popular"], ["movies", "Top films"], ["upcoming", "Most anticipated"]] },
       { id: "kitsu", name: "Kitsu", lists: [["trending", "Trending"], ["airing", "Top airing"], ["popular", "Most popular"], ["top", "Highest rated"]] },
     ],
+    // Anime Ultra's filters (AniList's lists take them): its genres, and the kinds of release
+    GENRES: ["Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"],
+    KINDS: [["tv", "Series", ["TV", "TV_SHORT"]], ["movie", "Films", ["MOVIE"]], ["ova", "OVA, ONA & specials", ["OVA", "ONA", "SPECIAL"]]],
     pages: new Map(),
     AGE: 6 * 60 * 60 * 1000,
     // A site that didn't answer, and when: asked again after ten minutes, not at every list (each
@@ -1084,8 +1087,10 @@
     down: new Map(),
 
     // { items, more } or { items: [], error }
-    async page(source, list, page = 1) {
-      const key = `${source}:${list}:${page}`;
+    async page(source, list, page = 1, filters = {}) {
+      const genre = source === "anilist" && this.GENRES.includes(filters && filters.genre) ? filters.genre : null;
+      const kind = source === "anilist" && this.KINDS.some(([id]) => id === (filters && filters.kind)) ? filters.kind : null;
+      const key = `${source}:${list}:${page}${genre ? `:g=${genre}` : ""}${kind ? `:k=${kind}` : ""}`;
       const kept = this.pages.get(key) || readCached(`animeDiscover:${key}`);
       if (kept && kept.at && Date.now() - kept.at < this.AGE && kept.items.length) return { items: kept.items, more: kept.more };
       const name = (this.SOURCES.find((s) => s.id === source) || {}).name || "That site";
@@ -1095,7 +1100,7 @@
         : { items: [], more: false, error: `${name} isn't answering right now. Try another site, or again in a while.` });
       if (Date.now() - (this.down.get(source) || 0) < 10 * 60 * 1000) return fail();
       try {
-        const got = source === "anilist" ? await this.anilist(list, page)
+        const got = source === "anilist" ? await this.anilist(list, page, genre, kind)
           : source === "mal" ? await this.mal(list, page)
             : source === "kitsu" ? await this.kitsu(list, page) : null;
         if (!got) return { items: [], more: false, error: "There's no such list." };
@@ -1192,7 +1197,7 @@
       };
     },
 
-    async anilist(list, page) {
+    async anilist(list, page, genre, kind) {
       const now = this.season(new Date(), false);
       const next = this.season(new Date(), true);
       const vars = {
@@ -1201,13 +1206,23 @@
         next: { sort: ["POPULARITY_DESC"], season: next.season, year: next.year },
         top: { sort: ["SCORE_DESC"] },
         popular: { sort: ["POPULARITY_DESC"] },
-        movies: { sort: ["SCORE_DESC"], format: "MOVIE" },
+        movies: { sort: ["SCORE_DESC"], formats: ["MOVIE"] },
       }[list];
       if (!vars) return null;
-      const data = await this.anilistQuery(`query($page:Int,$sort:[MediaSort],$season:MediaSeason,$year:Int,$format:MediaFormat){
+      // (Anime Ultra's filters: a genre, and a kind of release; a list of films stays films)
+      const formats = vars.formats || (kind ? (this.KINDS.find(([id]) => id === kind) || [])[2] : null);
+      // (only what's in use goes in the query: AniList reads an empty filter as "has none" — a null
+      // year listed titles with no year — or fails on it outright)
+      const args = { page, sort: vars.sort };
+      if (vars.season) { args.season = vars.season; args.year = vars.year; }
+      if (formats) args.formats = formats;
+      if (genre) args.genre = genre;
+      const declared = ["$page:Int", "$sort:[MediaSort]", args.season && "$season:MediaSeason,$year:Int", args.formats && "$formats:[MediaFormat]", args.genre && "$genre:String"].filter(Boolean).join(",");
+      const filtered = ["type:ANIME", "isAdult:false", "sort:$sort", args.season && "season:$season,seasonYear:$year", args.formats && "format_in:$formats", args.genre && "genre:$genre"].filter(Boolean).join(",");
+      const data = await this.anilistQuery(`query(${declared}){
         Page(page:$page,perPage:30){pageInfo{hasNextPage}
-          media(type:ANIME,isAdult:false,sort:$sort,season:$season,seasonYear:$year,format:$format){
-            idMal title{english romaji} coverImage{extraLarge large} averageScore format seasonYear startDate{year} genres}}}`, { page, ...vars });
+          media(${filtered}){
+            idMal title{english romaji} coverImage{extraLarge large} averageScore format seasonYear startDate{year} genres}}}`, args);
       const media = ((data.Page && data.Page.media) || []).filter((m) => m.idMal);
       const kitsu = await this.kitsuIds(media.map((m) => m.idMal));
       return {
@@ -9655,6 +9670,221 @@
     },
   };
 
+  // ---------------------------------------------------------------------------
+  // Anime Ultra (computer): a banner on Discover opens the big anime sites' lists (animeDiscover) over
+  // the page, with each site's scores on the posters, AniList's by genre and kind of release. A poster
+  // opens its title by its Kitsu id (the Anime Kitsu addon gives its episodes; the screen offers to
+  // add it). The phone and iPad apps have their own Anime Ultra screens; the TV has none.
+  // ---------------------------------------------------------------------------
+
+  const animeUltra = {
+    banner: null,
+    panel: null,
+    state: { source: "anilist", list: "trending", genre: "", kind: "", items: [], page: 0, more: false, loading: false, error: null, round: 0 },
+
+    ensure() {
+      if (currentRoute() !== "discover") {
+        if (this.banner) this.banner.remove();
+        this.banner = null;
+        // (left by Back or a link: the screen goes with the page it was opened over)
+        if (this.panel) this.close();
+        return;
+      }
+      if (this.banner && this.banner.isConnected) return;
+      const bar = document.querySelector('[class*="discover-container"] [class*="selectable-inputs-container"]');
+      const content = bar || document.querySelector('[class*="discover-container"] [class*="discover-content"]');
+      if (!content) return;
+      this.style();
+      const b = document.createElement("div");
+      b.className = "dxu-banner";
+      b.setAttribute("role", "button");
+      b.tabIndex = 0;
+      b.innerHTML = '<div><b>Anime Ultra</b><span>New, popular right now and the best of all time, with their ratings</span></div><i>›</i>';
+      b.addEventListener("click", () => this.open());
+      b.addEventListener("keydown", (e) => { if (e.key === "Enter") this.open(); });
+      if (bar) bar.insertAdjacentElement("beforebegin", b);
+      else content.prepend(b);
+      this.banner = b;
+    },
+
+    style() {
+      if (document.getElementById("dxu-style")) return;
+      const css = document.createElement("style");
+      css.id = "dxu-style";
+      css.textContent = `
+        .dxu-banner { display: flex; align-items: center; gap: 1rem; margin: 0.6rem var(--dx-gutter, 2rem) 0.9rem; padding: 0.9rem 1.2rem; border-radius: 14px; cursor: pointer; color: #fff;
+          background: linear-gradient(90deg, var(--dx-accent, #e50914), #6a0dad); box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+        .dxu-banner div { flex: 1; display: flex; flex-direction: column; gap: 0.15rem; }
+        .dxu-banner b { font-size: 1.25rem; font-weight: 900; letter-spacing: .01em; }
+        .dxu-banner span { font-size: 0.9rem; opacity: .88; }
+        .dxu-banner i { font-style: normal; font-size: 2rem; line-height: 1; opacity: .9; }
+        .dxu-banner:hover { filter: brightness(1.08); }
+        .dxu-panel { position: fixed; inset: 0; z-index: 9000; background: #0b0b0d; color: #fff; overflow-y: auto; padding: 1.4rem 2.2rem 3rem; font-family: inherit; }
+        .dxu-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .dxu-head h1 { font-size: 2rem; font-weight: 900; margin: 0; flex: 1; }
+        .dxu-head small { display: block; font-size: 0.9rem; font-weight: 400; color: #a4a4ad; margin-top: 0.2rem; }
+        .dxu-close { font-size: 1.6rem; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: #fff; cursor: pointer; }
+        .dxu-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; align-items: center; }
+        .dxu-pill { padding: 0.45rem 1rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .dxu-pill.is-on { background: #fff; color: #000; border-color: #fff; }
+        .dxu-select { padding: 0.45rem 0.9rem; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.4); font-size: 0.9rem; font-weight: 600; }
+        .dxu-select option { background: #1a1a1a; }
+        .dxu-note { color: #a4a4ad; font-size: 0.9rem; margin: 0.6rem 0; }
+        .dxu-note a { color: #fff; font-weight: 700; margin-left: 0.4rem; }
+        .dxu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(10.5rem / var(--dx-size, 1)), 1fr)); gap: 1rem; margin-top: 1rem; }
+        .dxu-card { position: relative; cursor: pointer; border-radius: 10px; overflow: hidden; background: #1b1b20; aspect-ratio: 2 / 3; transition: transform .15s; }
+        .dxu-card:hover { transform: scale(1.03); }
+        .dxu-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .dxu-card .dxu-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.6rem 0.6rem 0.5rem; font-size: 0.85rem; font-weight: 700; background: linear-gradient(transparent, rgba(0,0,0,.9)); }
+        .dxu-card .dxu-name small { display: block; font-weight: 400; color: #c9c9d1; font-size: 0.75rem; }
+        .dxu-chips { position: absolute; top: 0.45rem; left: 0.45rem; display: flex; gap: 0.3rem; flex-wrap: wrap; }
+        .dxu-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.12rem 0.4rem 0.12rem 0.2rem; border-radius: 4px; background: rgba(0,0,0,.75); font-size: 0.75rem; font-weight: 700; }
+        .dxu-chip i { font-style: normal; font-size: 0.62rem; font-weight: 900; padding: 0.1rem 0.25rem; border-radius: 2px; background: #3db4f2; color: #fff; }
+        .dxu-chip[data-l="MAL"] i { background: #2e51a2; }
+        .dxu-chip[data-l="AniList"] i { background: #02a9ff; }
+        .dxu-chip[data-l="Kitsu"] i { background: #f75239; }
+        .dxu-more { display: block; margin: 1.6rem auto 0; }
+      `;
+      document.head.append(css);
+    },
+
+    open() {
+      if (this.panel && this.panel.isConnected) return;
+      this.style();
+      const p = document.createElement("div");
+      p.className = "dxu-panel";
+      p.setAttribute("role", "dialog");
+      p.setAttribute("aria-label", "Anime Ultra");
+      p.addEventListener("click", (e) => this.onClick(e));
+      p.addEventListener("change", (e) => {
+        if (e.target && e.target.dataset.act === "genre") this.pick({ genre: e.target.value });
+      });
+      p.addEventListener("scroll", () => {
+        const s = this.state;
+        if (s.more && !s.loading && p.scrollTop + p.clientHeight > p.scrollHeight - 900) this.load(s.page + 1);
+      });
+      this.onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); this.close(); } };
+      document.addEventListener("keydown", this.onKey, true);
+      document.body.append(p);
+      this.panel = p;
+      this.draw();
+      this.addonCheck();
+      if (!this.state.items.length && !this.state.loading) this.load(1);
+    },
+
+    close() {
+      if (this.panel) this.panel.remove();
+      this.panel = null;
+      if (this.onKey) document.removeEventListener("keydown", this.onKey, true);
+    },
+
+    source() { return animeDiscover.SOURCES.find((s) => s.id === this.state.source) || animeDiscover.SOURCES[0]; },
+
+    pick(change) {
+      const s = this.state;
+      Object.assign(s, change);
+      // (another site: its own first list, unless it has one of the same name)
+      if (change.source) {
+        const src = this.source();
+        if (!src.lists.some(([id]) => id === s.list)) s.list = src.lists[0][0];
+      }
+      s.items = [];
+      s.page = 0;
+      s.more = false;
+      s.error = null;
+      s.loading = false;
+      s.round++;
+      this.draw();
+      this.load(1);
+    },
+
+    filters() {
+      const s = this.state;
+      return this.source().filters ? { genre: s.genre || null, kind: s.list === "movies" ? null : s.kind || null } : {};
+    },
+
+    async load(next) {
+      const s = this.state;
+      if (s.loading) return;
+      s.loading = true;
+      const mine = s.round;
+      this.drawGrid();
+      const got = await animeDiscover.page(s.source, s.list, next, this.filters());
+      if (mine !== s.round) return;
+      const seen = new Set(next === 1 ? [] : s.items.map((x) => x.id));
+      s.items = next === 1 ? got.items : s.items.concat(got.items.filter((x) => !seen.has(x.id)));
+      s.page = next;
+      s.more = !!got.more && got.items.length > 0;
+      s.error = s.items.length ? null : got.error || "Nothing here right now.";
+      s.loading = false;
+      this.drawGrid();
+    },
+
+    // Anime Kitsu opens these titles: without it, the screen says so and offers to add it
+    async addonCheck() {
+      try {
+        const ctx = await core().getState("ctx");
+        const names = ((ctx && ctx.profile && ctx.profile.addons) || []).map((a) => (a.manifest && a.manifest.name) || "");
+        const note = this.panel && this.panel.querySelector(".dxu-addon");
+        if (note) note.hidden = names.some((n) => /kitsu/i.test(n));
+      } catch (_) { /* no word: the note stays hidden */ }
+    },
+
+    draw() {
+      const p = this.panel;
+      if (!p) return;
+      const s = this.state;
+      const src = this.source();
+      const pill = (act, value, label, on) => `<button class="dxu-pill${on ? " is-on" : ""}" data-act="${act}" data-value="${esc(value)}">${esc(label)}</button>`;
+      const filters = src.filters ? `<div class="dxu-row">
+          <select class="dxu-select" data-act="genre"><option value="">All genres</option>${animeDiscover.GENRES.map((g) => `<option value="${esc(g)}"${s.genre === g ? " selected" : ""}>${esc(g)}</option>`).join("")}</select>
+          ${s.list === "movies" ? "" : pill("kind", "", "Everything", !s.kind) + animeDiscover.KINDS.map(([id, name]) => pill("kind", id, name, s.kind === id)).join("")}
+        </div>` : "";
+      p.innerHTML = `
+        <div class="dxu-head"><h1>Anime Ultra<small>The best anime from AniList, MyAnimeList and Kitsu, with their scores</small></h1><button class="dxu-close" data-act="close" aria-label="Close">×</button></div>
+        <div class="dxu-row">${animeDiscover.SOURCES.map((x) => pill("source", x.id, x.name, x.id === s.source)).join("")}</div>
+        <div class="dxu-row">${src.lists.map(([id, name]) => pill("list", id, name, id === s.list)).join("")}</div>
+        ${filters}
+        <p class="dxu-note dxu-addon" hidden>Anime open through the Anime Kitsu addon (their episodes and details), and it isn't added yet. It's free and needs no account.<a href="#/addons?addon=${encodeURIComponent("https://anime-kitsu.strem.fun/manifest.json")}" data-act="addon">Add Anime Kitsu</a></p>
+        <div class="dxu-body"></div>`;
+      this.drawGrid();
+    },
+
+    drawGrid() {
+      const body = this.panel && this.panel.querySelector(".dxu-body");
+      if (!body) return;
+      const s = this.state;
+      if (!s.items.length) {
+        body.innerHTML = `<p class="dxu-note">${s.loading ? "Loading…" : esc(s.error || "")}</p>`;
+        return;
+      }
+      body.innerHTML = `<div class="dxu-grid">${s.items.map((t, i) => `
+        <div class="dxu-card" data-act="open" data-i="${i}" title="${esc(t.name)}">
+          ${t.poster ? `<img src="${esc(t.poster)}" alt="" loading="lazy">` : ""}
+          ${settings.ratings && t.scores.length ? `<div class="dxu-chips">${t.scores.slice(0, 2).map((x) => `<span class="dxu-chip" data-l="${esc(x.label)}"><i>${esc(x.label)}</i>${esc(x.value)}</span>`).join("")}</div>` : ""}
+          <div class="dxu-name">${esc(t.name)}<small>${esc([t.year, t.type === "movie" ? "Film" : "Series", ...(t.genres || []).slice(0, 2)].filter(Boolean).join(" · "))}</small></div>
+        </div>`).join("")}</div>${s.loading ? '<p class="dxu-note">Loading more…</p>' : ""}`;
+    },
+
+    onClick(e) {
+      const el = e.target.closest("[data-act]");
+      if (!el) return;
+      const act = el.dataset.act;
+      const s = this.state;
+      if (act === "close") this.close();
+      else if (act === "source" && el.dataset.value !== s.source) this.pick({ source: el.dataset.value });
+      else if (act === "list" && el.dataset.value !== s.list) this.pick({ list: el.dataset.value });
+      else if (act === "kind" && el.dataset.value !== s.kind) this.pick({ kind: el.dataset.value });
+      else if (act === "addon") this.close();
+      else if (act === "open") {
+        const t = s.items[Number(el.dataset.i)];
+        if (!t) return;
+        this.close();
+        location.hash = `#/detail/${encodeURIComponent(t.type)}/${encodeURIComponent(t.id)}`;
+      }
+    },
+  };
+
   const STEPS = [
     step("updateRoute", () => updateRoute()),
     step("brandTitle", () => brandTitle()),
@@ -9677,6 +9907,7 @@
       step("tune", () => tune.ensure()),
       step("streamInfo", () => streamInfo.ensure()),
       step("addonTools", () => addonTools.ensure()),
+      step("animeUltra", () => animeUltra.ensure()),
     ]),
     step("communitySync", () => communitySync()),
     step("titleColour", () => { titleColour.ensure().catch(() => { /* next sync */ }); }),
@@ -21775,10 +22006,14 @@
       },
       // Discover anime (animeDiscover): the sites and their lists, then one page of a list
       animeSources() {
-        return animeDiscover.SOURCES.map((s) => ({ id: s.id, name: s.name, lists: s.lists.map(([id, name]) => ({ id, name })) }));
+        return animeDiscover.SOURCES.map((s) => ({ id: s.id, name: s.name, filters: !!s.filters, lists: s.lists.map(([id, name]) => ({ id, name })) }));
       },
-      anime(source, list, page) {
-        return animeDiscover.page(String(source || "anilist"), String(list || "trending"), Math.max(1, Number(page) || 1));
+      // Anime Ultra's filters: genres, and kinds of release ({ id, name })
+      animeFilters() {
+        return { genres: animeDiscover.GENRES.slice(), kinds: animeDiscover.KINDS.map(([id, name]) => ({ id, name })) };
+      },
+      anime(source, list, page, filters) {
+        return animeDiscover.page(String(source || "anilist"), String(list || "trending"), Math.max(1, Number(page) || 1), filters && typeof filters === "object" ? filters : {});
       },
       // A title's scores (MDBList with a key, else Wikidata), what critics said (Wikipedia) and audience
       // reviews (TMDB, with a key): what the Reviews sheet shows

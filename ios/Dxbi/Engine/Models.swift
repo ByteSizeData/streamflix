@@ -65,27 +65,35 @@ struct AnimeSource: Hashable, Identifiable {
     var id: String
     var name: String
     var lists: [AnimeList]
+    /** Its lists take Anime Ultra's filters (genre, kind of release): AniList's */
+    var filters = false
 
     struct AnimeList: Hashable, Identifiable {
         var id: String
         var name: String
     }
 
-    init(id: String, name: String, lists: [(String, String)]) {
+    init(id: String, name: String, lists: [(String, String)], filters: Bool = false) {
         self.id = id
         self.name = name
         self.lists = lists.map { AnimeList(id: $0.0, name: $0.1) }
+        self.filters = filters
     }
 
     init(_ o: JSON) {
         id = o.string("id")
         name = o.string("name")
         lists = o.objects("lists").map { AnimeList(id: $0.string("id"), name: $0.string("name")) }
+        filters = o.bool("filters")
     }
+
+    /** Anime Ultra's filters until the page says otherwise: AniList's genres, and kinds of release */
+    static let genres = ["Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"]
+    static let kinds = [AnimeList(id: "tv", name: "Series"), AnimeList(id: "movie", name: "Films"), AnimeList(id: "ova", name: "OVA, ONA & specials")]
 
     /** As dx.bi has them (used until the page says otherwise) */
     static let all = [
-        AnimeSource(id: "anilist", name: "AniList", lists: [("trending", "Trending now"), ("season", "Popular this season"), ("next", "Coming next season"), ("top", "Top rated"), ("popular", "All-time popular"), ("movies", "Top films")]),
+        AnimeSource(id: "anilist", name: "AniList", lists: [("trending", "Popular right now"), ("season", "New this season"), ("top", "Best of all time"), ("popular", "Most popular ever"), ("next", "Coming next season"), ("movies", "Best films")], filters: true),
         AnimeSource(id: "mal", name: "MyAnimeList", lists: [("airing", "Top airing"), ("top", "Top anime"), ("popular", "Most popular"), ("movies", "Top films"), ("upcoming", "Most anticipated")]),
         AnimeSource(id: "kitsu", name: "Kitsu", lists: [("trending", "Trending"), ("airing", "Top airing"), ("popular", "Most popular"), ("top", "Highest rated")]),
     ]

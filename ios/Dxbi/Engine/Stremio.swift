@@ -285,8 +285,15 @@ final class Stremio {
         ((await dx("phone.animeSources")) as? [Any] ?? []).compactMap { $0 as? JSON }.map(AnimeSource.init)
     }
 
-    func anime(_ source: String, _ list: String, page: Int) async -> AnimePage {
-        AnimePage(await ask("dx", ["method": "phone.anime", "args": [source, list, page]], timeout: 60) as? JSON)
+    func anime(_ source: String, _ list: String, page: Int, genre: String? = nil, kind: String? = nil) async -> AnimePage {
+        let filters: JSON = ["genre": genre ?? NSNull(), "kind": kind ?? NSNull()]
+        return AnimePage(await ask("dx", ["method": "phone.anime", "args": [source, list, page, filters]], timeout: 60) as? JSON)
+    }
+
+    /** Anime Ultra's filters: genres, and kinds of release */
+    func animeFilters() async -> (genres: [String], kinds: [AnimeSource.AnimeList])? {
+        guard let o = await dx("phone.animeFilters") as? JSON else { return nil }
+        return (o.strings("genres"), o.objects("kinds").map { AnimeSource.AnimeList(id: $0.string("id"), name: $0.string("name")) })
     }
 
     func loadAnimeHome() {

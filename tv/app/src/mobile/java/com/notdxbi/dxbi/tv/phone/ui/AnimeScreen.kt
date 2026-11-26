@@ -37,12 +37,18 @@ import kotlinx.coroutines.launch
 
 /** The anime sites and their lists, as dx.bi has them (used until the page says otherwise) */
 val ANIME_SOURCES = listOf(
-    AnimeSource("anilist", "AniList", listOf("trending" to "Trending now", "season" to "Popular this season", "next" to "Coming next season", "top" to "Top rated", "popular" to "All-time popular", "movies" to "Top films")),
+    AnimeSource("anilist", "AniList", listOf("trending" to "Popular right now", "season" to "New this season", "top" to "Best of all time", "popular" to "Most popular ever", "next" to "Coming next season", "movies" to "Best films"), filters = true),
     AnimeSource("mal", "MyAnimeList", listOf("airing" to "Top airing", "top" to "Top anime", "popular" to "Most popular", "movies" to "Top films", "upcoming" to "Most anticipated")),
     AnimeSource("kitsu", "Kitsu", listOf("trending" to "Trending", "airing" to "Top airing", "popular" to "Most popular", "top" to "Highest rated")),
 )
 
-/** Home's Anime tab: these lists first, each a row (See All opens it in Discover anime) */
+/** Anime Ultra's filters until the page says otherwise: AniList's genres, and kinds of release */
+val ANIME_FILTERS = com.notdxbi.dxbi.tv.phone.AnimeFilters(
+    listOf("Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"),
+    listOf("tv" to "Series", "movie" to "Films", "ova" to "OVA, ONA & specials"),
+)
+
+/** Home's Anime tab: these lists first, each a row (See All opens it in Anime Ultra) */
 val ANIME_HOME = listOf("anilist" to "trending", "anilist" to "season", "mal" to "airing", "kitsu" to "top", "anilist" to "movies", "anilist" to "next")
 
 fun animeListName(source: String, list: String): String {
@@ -59,8 +65,9 @@ fun hasAnimeAddon(names: List<String>) = names.any { it.contains("kitsu", true) 
 const val ANIME_KITSU_ADDON = "https://anime-kitsu.strem.fun/manifest.json"
 
 /**
- * Discover anime: the lists of the big anime sites (AniList, MyAnimeList, Kitsu), with each site's
- * scores on the posters. Titles open through the anime addons, by their Kitsu id.
+ * Anime Ultra (Discover, and Home's Anime tab): the lists of the big anime sites (AniList, MyAnimeList,
+ * Kitsu), with each site's scores on the posters; AniList's by genre and kind too. Titles open through
+ * the anime addons, by their Kitsu id.
  */
 @Composable
 fun AnimeScreen(stremio: Stremio, startSource: String, startList: String, onBack: () -> Unit, onOpen: (Title) -> Unit) {
@@ -72,10 +79,20 @@ fun AnimeScreen(stremio: Stremio, startSource: String, startList: String, onBack
     var more by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var filters by remember { mutableStateOf(ANIME_FILTERS) }
+    var genre by rememberSaveable { mutableStateOf<String?>(null) }
+    var kind by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val account by stremio.account.collectAsState()
 
-    LaunchedEffect(Unit) { stremio.animeSources().takeIf { it.isNotEmpty() }?.let { sources = it } }
+    LaunchedEffect(Unit) {
+        stremio.animeSources().takeIf { it.isNotEmpty() }?.let { sources = it }
+        stremio.animeFilters()?.takeIf { it.genres.isNotEmpty() }?.let { filters = it }
+    }
+    // (the filters are AniList's: another site's lists are as the site has them)
+    val filtered = sources.firstOrNull { it.id == source }?.filters == true
+    val g = genre.takeIf { filtered }
+    val k = kind.takeIf { filtered && list != "movies" }
 
     // (each list picked is a new round: an answer for one left behind is dropped, even when it was
     // picked again since)
@@ -85,9 +102,9 @@ fun AnimeScreen(stremio: Stremio, startSource: String, startList: String, onBack
         if (loading) return
         loading = true
         val mine = round
-        val key = "$source/$list"
+        val key = "$source/$list/$g/$k"
         scope.launch {
-            val got = stremio.anime(source, list, next)
+            val got = stremio.anime(source, list, next, g, k)
             if (mine != round) return@launch
             items = if (next == 1) got.items else (items + got.items).distinctBy { it.id }
             page = next
@@ -98,12 +115,12 @@ fun AnimeScreen(stremio: Stremio, startSource: String, startList: String, onBack
         }
     }
 
-    LaunchedEffect(source, list) {
+    LaunchedEffect(source, list, g, k) {
         round++
         loading = false
         error = null
         // Back from a title: the list as it was, not page one again
-        val kept = stremio.animeBrowse["$source/$list"]
+        val kept = stremio.animeBrowse["$source/$list/$g/$k"]
         if (kept != null) {
             items = kept.items
             page = kept.page
@@ -116,7 +133,7 @@ fun AnimeScreen(stremio: Stremio, startSource: String, startList: String, onBack
     }
 
     Column(Modifier.fillMaxSize().background(Dx.Background).windowInsetsPadding(WindowInsets.safeDrawing)) {
-        ScreenTitle("Discover anime", onBack)
+        ScreenTitle("Anime Ultra", onBack)
         LazyRow(contentPadding = PaddingValues(horizontal = Gutter, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(sources) { s ->
                 Pill(selected = s.id == source, onClick = {
@@ -131,6 +148,18 @@ fun AnimeScreen(stremio: Stremio, startSource: String, startList: String, onBack
         LazyRow(contentPadding = PaddingValues(horizontal = Gutter, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(lists) { (id, name) ->
                 Pill(selected = id == list, onClick = { list = id }) { Text(name, color = Dx.Text, style = MaterialTheme.typography.labelMedium) }
+            }
+        }
+        // AniList's lists: by genre, and by kind of release (a list of films is films)
+        if (filtered) LazyRow(contentPadding = PaddingValues(horizontal = Gutter, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                PickMenu(genre ?: "All genres", listOf("All genres" to "") + filters.genres.map { it to it }) { genre = it.ifEmpty { null } }
+            }
+            if (list != "movies") {
+                item { Pill(selected = kind == null, onClick = { kind = null }) { Text("Everything", color = Dx.Text, style = MaterialTheme.typography.labelMedium) } }
+                items(filters.kinds) { (id, name) ->
+                    Pill(selected = kind == id, onClick = { kind = if (kind == id) null else id }) { Text(name, color = Dx.Text, style = MaterialTheme.typography.labelMedium) }
+                }
             }
         }
         val names = account?.addons.orEmpty()

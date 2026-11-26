@@ -271,7 +271,7 @@ private fun Screens(stremio: Stremio) {
                 composable(Tab.Discover.route) {
                     // Popular films to start with (the model is there, empty, before anything is chosen)
                     LaunchedEffect(Unit) { if (stremio.discover.value?.request == null) stremio.discover(CINEMETA, "movie", "top") }
-                    DiscoverScreen(stremio, "Discover", onBack = null, onOpen = { nav.openTitle(it) })
+                    DiscoverScreen(stremio, "Discover", onBack = null, onAnimeUltra = { nav.navigate("anime?source=anilist&list=trending") }, onOpen = { nav.openTitle(it) })
                 }
                 composable(
                     "search?q={q}&focus={focus}",

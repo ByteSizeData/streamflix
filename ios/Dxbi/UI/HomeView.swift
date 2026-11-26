@@ -138,10 +138,10 @@ struct HomeView: View {
     @ViewBuilder
     private var animeLists: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Discover Anime").font(.title2.bold())
+            Text("Anime Ultra").font(.title2.bold())
             Text("From AniList, MyAnimeList and Kitsu, with their scores").font(.subheadline).foregroundStyle(Dx.muted)
             NavigationLink(value: Route.anime(source: "anilist", list: "trending")) {
-                Label("Browse every list", systemImage: "square.grid.2x2").font(.subheadline.weight(.semibold)).padding(.horizontal, 6)
+                Label("Every list and filter", systemImage: "square.grid.2x2").font(.subheadline.weight(.semibold)).padding(.horizontal, 6)
             }
             .dxGlassButton()
             if !stremio.installedAddons.isEmpty, !hasAnimeAddon(stremio.installedAddons.map(\.name)) { AddAnimeAddon() }

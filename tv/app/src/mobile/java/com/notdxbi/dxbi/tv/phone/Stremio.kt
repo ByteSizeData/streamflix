@@ -232,11 +232,16 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
 
     suspend fun animeSources(): List<AnimeSource> = AnimeSource.list(dx("phone.animeSources") as? JSONArray)
 
-    suspend fun anime(source: String, list: String, page: Int): AnimePage = AnimePage.from(
+    suspend fun anime(source: String, list: String, page: Int, genre: String? = null, kind: String? = null): AnimePage = AnimePage.from(
         runCatching {
-            engine.call("dx", JSONObject().put("method", "phone.anime").put("args", JSONArray().put(source).put(list).put(page)), 60_000)
+            val filters = JSONObject().put("genre", genre ?: JSONObject.NULL).put("kind", kind ?: JSONObject.NULL)
+            engine.call("dx", JSONObject().put("method", "phone.anime").put("args", JSONArray().put(source).put(list).put(page).put(filters)), 60_000)
         }.getOrNull() as? JSONObject,
     )
+
+    suspend fun animeFilters(): AnimeFilters? = (dx("phone.animeFilters") as? JSONObject)?.let { o ->
+        AnimeFilters(o.optJSONArray("genres").strings(), o.optJSONArray("kinds").objects().map { it.optString("id") to it.optString("name") })
+    }
 
     /** Home's Anime tab: the first page of each of these lists, by "source/list" */
     val animeHome = MutableStateFlow<Map<String, AnimePage>>(emptyMap())

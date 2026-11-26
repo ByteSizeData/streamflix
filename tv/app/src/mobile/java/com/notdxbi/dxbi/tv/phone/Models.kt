@@ -63,13 +63,16 @@ data class Title(
 data class Badge(val label: String, val value: String)
 
 /** One anime site's lists, for Discover anime (window.__dxbi.phone.animeSources) */
-data class AnimeSource(val id: String, val name: String, val lists: List<Pair<String, String>>) {
+data class AnimeSource(val id: String, val name: String, val lists: List<Pair<String, String>>, val filters: Boolean = false) {
     companion object {
         fun list(a: JSONArray?) = a.objects().map { s ->
-            AnimeSource(s.optString("id"), s.optString("name"), s.optJSONArray("lists").objects().map { it.optString("id") to it.optString("name") })
+            AnimeSource(s.optString("id"), s.optString("name"), s.optJSONArray("lists").objects().map { it.optString("id") to it.optString("name") }, s.optBoolean("filters"))
         }
     }
 }
+
+/** Anime Ultra's filters: genres, and kinds of release (id to name) */
+data class AnimeFilters(val genres: List<String>, val kinds: List<Pair<String, String>>)
 
 /** A page of one of those lists, or why there's none */
 data class AnimePage(val items: List<Title>, val more: Boolean, val error: String?) {

@@ -22,8 +22,9 @@ func isAnimeRow(_ r: Row) -> Bool {
 }
 
 /**
- * Discover anime: the lists of the big anime sites (AniList, MyAnimeList, Kitsu), with each site's
- * scores on the posters. Titles open through the anime addons, by their Kitsu id.
+ * Anime Ultra (Discover, and Home's Anime): the lists of the big anime sites (AniList, MyAnimeList,
+ * Kitsu), with each site's scores on the posters; AniList's by genre and kind too. Titles open through
+ * the anime addons, by their Kitsu id.
  */
 struct AnimeView: View {
     @Environment(Stremio.self) private var stremio
@@ -39,6 +40,16 @@ struct AnimeView: View {
     @State private var round = 0
     /** The list on screen ("source/list"): coming back from a title doesn't load it again */
     @State private var shown: String?
+    @State private var genres = AnimeSource.genres
+    @State private var kinds = AnimeSource.kinds
+    @State private var genre: String?
+    @State private var kind: String?
+
+    /** The filters are AniList's: another site's lists are as the site has them (and films stay films) */
+    private var filtered: Bool { sources.first { $0.id == source }?.filters ?? false }
+    private var g: String? { filtered ? genre : nil }
+    private var k: String? { filtered && list != "movies" ? kind : nil }
+    private var key: String { "\(source)/\(list)/\(g ?? "")/\(k ?? "")" }
 
     var body: some View {
         ScrollView {
@@ -49,6 +60,7 @@ struct AnimeView: View {
                     if let s = sources.first(where: { $0.id == id }), !s.lists.contains(where: { $0.id == list }) { list = s.lists.first?.id ?? "trending" }
                 }
                 pills((sources.first { $0.id == source }?.lists ?? []).map { ($0.id, $0.name) }, selected: list) { list = $0 }
+                if filtered { filters }
                 if !stremio.installedAddons.isEmpty, !hasAnimeAddon(stremio.installedAddons.map(\.name)) { AddAnimeAddon().padding(.horizontal, 16) }
                 if let error, items.isEmpty, !loading {
                     Text(error).font(.subheadline).foregroundStyle(Dx.muted).padding(16)
@@ -60,10 +72,14 @@ struct AnimeView: View {
             .padding(.bottom, 40)
         }
         .screenBackground()
-        .navigationTitle("Discover Anime")
-        .task { let got = await stremio.animeSources(); if !got.isEmpty { sources = got } }
-        .task(id: "\(source)/\(list)") {
-            let key = "\(source)/\(list)"
+        .navigationTitle("Anime Ultra")
+        .task {
+            let got = await stremio.animeSources()
+            if !got.isEmpty { sources = got }
+            if let f = await stremio.animeFilters(), !f.genres.isEmpty { genres = f.genres; kinds = f.kinds }
+        }
+        .task(id: key) {
+            let key = self.key
             if shown == key { return }
             shown = key
             round += 1
@@ -80,6 +96,36 @@ struct AnimeView: View {
                 load(1)
             }
         }
+    }
+
+    /// AniList's lists by genre, and by kind of release
+    private var filters: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                Menu {
+                    Button { genre = nil } label: { if genre == nil { Label("All genres", systemImage: "checkmark") } else { Text("All genres") } }
+                    ForEach(genres, id: \.self) { name in
+                        Button { genre = name } label: { if genre == name { Label(name, systemImage: "checkmark") } else { Text(name) } }
+                    }
+                } label: {
+                    Label(genre ?? "All genres", systemImage: "line.3.horizontal.decrease").font(.subheadline.weight(.semibold)).padding(.horizontal, 6)
+                }
+                .dxGlassButton()
+                if list != "movies" {
+                    ForEach([AnimeSource.AnimeList(id: "", name: "Everything")] + kinds) { option in
+                        let on = (kind ?? "") == option.id
+                        Button { kind = option.id.isEmpty ? nil : option.id } label: {
+                            Text(option.name).font(.subheadline.weight(.semibold)).padding(.horizontal, 6)
+                        }
+                        .dxGlassButton()
+                        .tint(on ? .white : nil)
+                        .opacity(on ? 1 : 0.75)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .scrollIndicators(.hidden)
     }
 
     private func pills(_ options: [(String, String)], selected: String, pick: @escaping (String) -> Void) -> some View {
@@ -103,10 +149,10 @@ struct AnimeView: View {
         guard !loading else { return }
         loading = true
         let mine = round
-        let key = "\(source)/\(list)"
-        let want = (source, list)
+        let key = self.key
+        let want = (source, list, g, k)
         Task {
-            let got = await stremio.anime(want.0, want.1, page: next)
+            let got = await stremio.anime(want.0, want.1, page: next, genre: want.2, kind: want.3)
             guard mine == round else { return }
             var seen = Set<String>()
             items = (next == 1 ? got.items : items + got.items).filter { seen.insert($0.id).inserted }
