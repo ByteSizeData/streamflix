@@ -3274,6 +3274,13 @@
         }
         this.lastRepeat = now;
       }
+      // Anime Ultra steers its own screen: where its buttons and posters are is known from their
+      // order, so nothing on the page (nor the Discover page under it) is measured for a press
+      if (IN_TV && this.DIRS[e.key] && animeUltra.panel && animeUltra.nav(e)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
       // Stremio picks the next title by checking what's on screen at each spot: the shield steps
       // aside until it has looked (its handler may run after any of ours, so wait for the next
       // task), and is back before the pointer's hover is next updated
@@ -9759,15 +9766,15 @@
         .dxu-head small { display: block; font-size: 0.9rem; font-weight: 400; color: #a4a4ad; margin-top: 0.2rem; }
         .dxu-close { font-size: 1.6rem; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: #fff; cursor: pointer; }
         .dxu-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; align-items: center; }
-        .dxu-pill { padding: 0.45rem 1rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .dxu-pill { padding: 0.45rem 1rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: transform .12s ease-out; }
         .dxu-pill.is-on { background: #fff; color: #000; border-color: #fff; }
         .dxu-select { padding: 0.45rem 0.9rem; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.4); font-size: 0.9rem; font-weight: 600; }
         .dxu-select option { background: #1a1a1a; }
         .dxu-note { color: #a4a4ad; font-size: 0.9rem; margin: 0.6rem 0; }
         .dxu-note a { color: #fff; font-weight: 700; margin-left: 0.4rem; }
         .dxu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(10.5rem / var(--dx-size, 1)), 1fr)); gap: 1rem; margin-top: 1rem; }
-        .dxu-card { position: relative; cursor: pointer; border-radius: 10px; overflow: hidden; background: #1b1b20; aspect-ratio: 2 / 3; transition: transform .15s; }
-        .dxu-card:hover { transform: scale(1.03); }
+        .dxu-card { position: relative; cursor: pointer; border-radius: 10px; overflow: hidden; background: #1b1b20; aspect-ratio: 2 / 3; transition: transform .12s ease-out, box-shadow .12s ease-out; scroll-margin: 7.5rem 0 2rem; }
+        html:not(.dx-tv) .dxu-card:hover { transform: scale(1.03); }
         .dxu-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .dxu-card .dxu-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.6rem 0.6rem 0.5rem; font-size: 0.85rem; font-weight: 700; background: linear-gradient(transparent, rgba(0,0,0,.9)); }
         .dxu-card .dxu-name small { display: block; font-weight: 400; color: #c9c9d1; font-size: 0.75rem; }
@@ -9780,8 +9787,20 @@
         .dxu-more { display: block; margin: 1.6rem auto 0; }
         .dxu-genres { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 4px 2px; }
         .dxu-genres .dxu-pill { flex: 0 0 auto; }
-        .dxu-card:focus, .dxu-pill:focus, .dxu-select:focus, .dxu-back:focus { outline: 3px solid var(--dx-focus, #fff); outline-offset: 3px; }
-        .dx-tv .dxu-card:focus { transform: scale(1.05); }
+        /* The selection (the theme takes every outline away, so it is a ring and a lift): a poster grows
+           and gets a thick ring; a button turns the accent colour with a white ring. A button that is
+           only picked (white) stays plainly different from the one the remote is on. */
+        .dxu-panel .dxu-card:focus { outline: none; z-index: 3; transform: scale(1.09); box-shadow: 0 0 0 4px var(--dx-focus, #fff), 0 14px 34px rgba(0,0,0,.8); }
+        .dxu-panel .dxu-card:focus .dxu-name { padding-bottom: 0.7rem; }
+        /* (a TV draws the ring alone, without the soft shadow, and the lift without easing the ring in:
+           each step of the remote then repaints far less) */
+        .dx-tv .dxu-card { transition: transform .1s ease-out; }
+        .dx-tv .dxu-panel .dxu-card:focus { box-shadow: 0 0 0 4px var(--dx-focus, #fff); }
+        .dx-tv .dxu-panel :is(.dxu-pill, .dxu-back):focus { box-shadow: 0 0 0 3px var(--dx-focus, #fff); }
+        .dxu-panel :is(.dxu-pill, .dxu-back, .dxu-select):focus { outline: none; transform: scale(1.1); background: var(--dx-accent, #e50914); color: #fff; border-color: transparent; box-shadow: 0 0 0 3px var(--dx-focus, #fff), 0 6px 18px rgba(0,0,0,.6); }
+        /* (Stremio hides overflow on everything, "* { overflow: hidden }": these let the ring and lift show) */
+        .dxu-panel :is(.dxu-head, .dxu-row, .dxu-body, .dxu-grid) { overflow: visible; }
+        .dxu-panel .dxu-genres { overflow-x: auto; overflow-y: hidden; padding: 0.55rem 0.9rem; margin: 0 -0.9rem; }
       `;
       document.head.append(css);
     },
@@ -9801,7 +9820,7 @@
           this.onClick(e);
         }
       });
-      p.addEventListener("focusin", (e) => { if (e.target && e.target.scrollIntoView) e.target.scrollIntoView({ block: "nearest" }); });
+      if (!IN_TV) p.addEventListener("focusin", (e) => { if (e.target && e.target.scrollIntoView) e.target.scrollIntoView({ block: "nearest" }); });
       p.addEventListener("change", (e) => {
         if (e.target && e.target.dataset.act === "genre") this.pick({ genre: e.target.value });
       });
@@ -9907,6 +9926,8 @@
       this.drawGrid();
     },
 
+    // Posters already drawn stay as they are (and the remote's selection with them): only the ones that
+    // came in are added. Drawing the whole grid again at each page stalled a TV for longer each time.
     drawGrid() {
       const body = this.panel && this.panel.querySelector(".dxu-body");
       if (!body) return;
@@ -9915,15 +9936,93 @@
         body.innerHTML = `<p class="dxu-note">${s.loading ? "Loading…" : esc(s.error || "")}</p>`;
         return;
       }
-      // (what had the selection is found again in the new grid: more posters came in below it)
-      const had = document.activeElement && this.panel.contains(document.activeElement) && document.activeElement.classList.contains("dxu-card") ? document.activeElement.dataset.i : null;
-      body.innerHTML = `<div class="dxu-grid">${s.items.map((t, i) => `
-        <div class="dxu-card" data-act="open" data-i="${i}" tabindex="0" role="button" title="${esc(t.name)}">
-          ${t.poster ? `<img src="${esc(t.poster)}" alt="" loading="lazy">` : ""}
+      let grid = body.querySelector(".dxu-grid");
+      if (!grid || grid.dataset.round !== String(s.round) || grid.children.length > s.items.length) {
+        body.innerHTML = `<div class="dxu-grid" data-round="${s.round}"></div><p class="dxu-note dxu-loading-more" hidden>Loading more…</p>`;
+        grid = body.querySelector(".dxu-grid");
+      }
+      const shown = grid.children.length;
+      if (s.items.length > shown) grid.insertAdjacentHTML("beforeend", s.items.slice(shown).map((t, k) => this.card(t, shown + k)).join(""));
+      const more = body.querySelector(".dxu-loading-more");
+      if (more) more.hidden = !s.loading;
+    },
+
+    card(t, i) {
+      return `<div class="dxu-card" data-act="open" data-i="${i}" tabindex="0" role="button" title="${esc(t.name)}">
+          ${t.poster ? `<img src="${esc(t.poster)}" alt="" loading="lazy" decoding="async">` : ""}
           ${settings.ratings && t.scores.length ? `<div class="dxu-chips">${t.scores.slice(0, 2).map((x) => `<span class="dxu-chip" data-l="${esc(x.label)}"><i>${esc(x.label)}</i>${esc(x.value)}</span>`).join("")}</div>` : ""}
           <div class="dxu-name">${esc(t.name)}<small>${esc([t.year, t.type === "movie" ? "Film" : "Series", ...(t.genres || []).slice(0, 2)].filter(Boolean).join(" · "))}</small></div>
-        </div>`).join("")}</div>${s.loading ? '<p class="dxu-note">Loading more…</p>' : ""}`;
-      if (had != null) { const again = body.querySelector(`.dxu-card[data-i="${had}"]`); if (again) again.focus({ preventScroll: true }); }
+        </div>`;
+    },
+
+    // TV: the remote's arrows, in the screen's own order. The rows of buttons (Back; the sites; the
+    // lists; the genres; the kinds) one above the other, Down from the last of them into the posters,
+    // and the posters a row at a time, worked out from their place in the list: nothing is measured
+    // but the one poster row's width. Up or Down into a row of buttons lands on the one that's picked.
+    // true: the press was taken (or there was nowhere to go: the selection stays put)
+    nav(e) {
+      const p = this.panel;
+      const [dx, dy] = keyNav.DIRS[e.key] || [0, 0];
+      if (!p || !p.isConnected || (!dx && !dy)) return false;
+      const at = document.activeElement;
+      if (!at || !p.contains(at)) {
+        // (nothing of the screen selected yet: its picked list)
+        this.focus(p.querySelector('.dxu-pill.is-on[data-act="list"]') || p.querySelector(".dxu-back"));
+        return true;
+      }
+      const rows = [[p.querySelector(".dxu-back")]]
+        .concat([...p.querySelectorAll(".dxu-row")].map((r) => [...r.querySelectorAll(".dxu-pill, .dxu-select")]))
+        .concat([...p.querySelectorAll(".dxu-note:not([hidden]) a")].map((a) => [a]))
+        .filter((r) => r.length && r[0]);
+      const cards = [...p.querySelectorAll(".dxu-grid > .dxu-card")];
+      const into = (row) => row.find((n) => n.classList.contains("is-on")) || row[0];
+      const ci = cards.indexOf(at);
+      if (ci < 0) {
+        const ri = rows.findIndex((r) => r.includes(at));
+        if (ri < 0) return false;
+        const row = rows[ri];
+        if (dx) this.focus(row[row.indexOf(at) + dx]);
+        else if (dy < 0) this.focus(ri > 0 && into(rows[ri - 1]));
+        else this.focus(ri < rows.length - 1 ? into(rows[ri + 1]) : cards[0]);
+        return true;
+      }
+      // (how many posters a row holds: the first row's, by where each one starts)
+      let cols = 1;
+      const top = cards[0].offsetTop;
+      while (cols < cards.length && cards[cols].offsetTop === top) cols++;
+      const n = cards.length;
+      let next = null;
+      if (dx) next = (ci % cols) + dx >= 0 && (ci % cols) + dx < cols ? cards[ci + dx] : null;
+      else if (dy < 0) next = ci - cols >= 0 ? cards[ci - cols] : into(rows[rows.length - 1]);
+      else if (ci + cols < n) next = cards[ci + cols];
+      else if (Math.floor(ci / cols) < Math.floor((n - 1) / cols)) next = cards[n - 1];
+      this.focus(next);
+      // (two rows from the end: the next page is fetched before it's reached)
+      const s = this.state;
+      if (s.more && !s.loading && cards.indexOf(document.activeElement) + cols * 2 >= n) this.load(s.page + 1);
+      return true;
+    },
+
+    // Select one thing and bring it into sight: a poster just clear of the bar at the top (or the bottom
+    // edge), a button row by scrolling back to the top, a genre in its row by sliding the row
+    focus(el) {
+      const p = this.panel;
+      if (!el || !p) return;
+      el.focus({ preventScroll: true });
+      if (el.classList.contains("dxu-card")) {
+        const r = el.getBoundingClientRect();
+        const head = p.querySelector(".dxu-head");
+        const over = (head ? head.getBoundingClientRect().bottom : 0) + 18;
+        if (r.top < over) p.scrollTop -= over - r.top;
+        else if (r.bottom > window.innerHeight - 24) p.scrollTop += r.bottom - (window.innerHeight - 24);
+        return;
+      }
+      if (p.scrollTop) p.scrollTop = 0;
+      const row = el.closest(".dxu-genres");
+      if (row) {
+        const r = el.getBoundingClientRect(), rr = row.getBoundingClientRect();
+        if (r.left < rr.left + 24 || r.right > rr.right - 24) row.scrollLeft += r.left + r.width / 2 - (rr.left + rr.width / 2);
+      }
     },
 
     onClick(e) {
@@ -20702,6 +20801,10 @@
   }
 
   function start() {
+    // An empty <base> tag: Stremio's router looks for one at every link it writes, a search of the
+    // whole page when there is none (see dxbi-tv.js, which puts it there first on a TV). Without an
+    // address it changes nothing else.
+    if (!document.querySelector("base")) document.head.prepend(document.createElement("base"));
     // Windows needs a few rendering workarounds in the theme (see "WINDOWS" there)
     if (/Windows/i.test(navigator.userAgent)) document.documentElement.classList.add("dx-win");
     // …and dx.bi TV's lighter version of the look (see "WINDOWS AND TV" in the theme)

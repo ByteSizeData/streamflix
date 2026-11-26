@@ -39,6 +39,15 @@
   // this app's Back closes Anime Ultra (tv.back): the plugin shows it on a TV only then
   tv.animeUltra = true;
 
+  // Stremio's router asks the page for its <base> tag each time it writes a link (history's hash
+  // router: document.querySelector("base")). With none there, each asking was a search of the whole
+  // page, ten thousand elements on Home, for every title's link: going back to Home spent a twentieth
+  // of a second on a TV doing nothing else. A <base> tag with no address is found at once and changes
+  // nothing (only one with an href changes where links lead). Put first, before the page has a head.
+  try {
+    if (!document.querySelector("base")) (document.head || document.documentElement).prepend(document.createElement("base"));
+  } catch (_) { /* no page yet: the plugin adds it (see start) */ }
+
   // ---------------------------------------------------------------------------
   // Fit the page to the TV: lay it out 1280 CSS pixels wide (a 10-foot size on any screen). A phone
   // held upright gets a 600-pixel-wide page instead, which Stremio and dx.bi lay out as a column.

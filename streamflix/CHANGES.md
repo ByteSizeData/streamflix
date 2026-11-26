@@ -4,6 +4,14 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.415
+
+The TV app, phones, tablets, the iPad and the desktop apps.
+
+- **Anime Ultra on the TV shows what the remote is on.** The poster it is on grows and gets a thick white ring; a button turns red with a white ring (a button that is only picked stays white). Before, nothing showed: the theme takes every outline away, and Stremio hides whatever spills over a box, so the old outline never appeared.
+- **Anime Ultra on the TV moves at once.** The remote goes row by row in the screen's own order: Back, the sites, the lists, the genres, the kinds, then the posters a row at a time, and Up or Down into a row of buttons lands on the one that is picked. Each press used to measure every poster on the page, the Discover page under it too. More posters are fetched two rows before the end, and the ones already there are no longer drawn again each time. On the Shield, the same presses drew 29 frames instead of 11, the slowest taking 57 ms instead of 200.
+- **Faster going back and opening titles, everywhere.** Stremio searches the whole page for a `<base>` tag each time it writes a link, ten thousand elements on Home, for every title. StreamFlix now puts an empty one at the top of the page (it changes nothing else), so the search ends at once: in the TV lab the longest freeze on going back to Home halved (568 to 268 ms), and the page was blocked 21 to 50% less opening a title, going back and on Discover.
+
 ## StreamFlix 2.38.414
 
 Phones, tablets, the iPad and the desktop apps. The TV app of this release is built but not attached here yet: a TV keeps 2.38.409 until it is.
