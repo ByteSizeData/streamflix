@@ -100,6 +100,8 @@ object TvRemote {
     val sheet = MutableStateFlow(false)
     /** When Play was sent and the TV's player isn't up yet (0: nothing on its way): the remote says it's starting */
     val starting = MutableStateFlow(0L)
+    /** What the TV was playing when Play was sent ("title|subtitle"), so that isn't taken for the new one */
+    @Volatile private var playingBefore: String? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var poll: Job? = null
@@ -280,6 +282,7 @@ object TvRemote {
         options.value = null
         lost.value = false
         problem.value = null
+        starting.value = 0L
     }
 
     /** Keeps [status] current while a TV is chosen: every second while it plays or the remote is open */
@@ -294,13 +297,17 @@ object TvRemote {
                     failures = 0
                     lost.value = false
                     status.value = Status.from(reply.json)
-                    // (the player is up: its own buttons take over; a torrent can take a minute to start)
-                    if (status.value?.open == true || (starting.value > 0 && System.currentTimeMillis() - starting.value > 120_000)) starting.value = 0L
+                    // (the player is up with the new film: its own buttons take over. A torrent can take a
+                    // minute to start; the film already playing when Play was sent isn't it, unless it
+                    // was the same one again)
+                    val now = status.value
+                    val since = System.currentTimeMillis() - starting.value
+                    if (starting.value > 0 && ((now?.open == true && ("${now.title}|${now.subtitle}" != playingBefore || since > 25_000)) || since > 120_000)) starting.value = 0L
                 } else if (++failures >= 4) {
                     lost.value = true
                     status.value = null
                 }
-                delay(if (sheet.value || status.value?.open == true) 1000 else 4000)
+                delay(if (sheet.value || status.value?.open == true || starting.value > 0) 1000 else 4000)
             }
         }
     }
@@ -320,6 +327,7 @@ object TvRemote {
         problem.value = null
         // The remote comes up at once, saying the film is starting, then with the player's buttons
         // (pause, subtitles…) as soon as the TV's player is up; or with why it didn't play
+        playingBefore = status.value?.takeIf { it.open }?.let { "${it.title}|${it.subtitle}" }
         starting.value = System.currentTimeMillis()
         sheet.value = true
         val reply = asked(app, on, "play", JSONObject().put("link", link), readMs = 8000)

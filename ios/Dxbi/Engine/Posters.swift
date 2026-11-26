@@ -104,14 +104,16 @@ struct PosterBadges: View {
                 .padding(6)
             }
         }
-        .task(id: title.id) { if title.badges.isEmpty, posters.ratings { posters.want(title) } }
+        // (asked again when ratings are switched back on)
+        .task(id: "\(title.id)|\(posters.ratings)") { if title.badges.isEmpty, posters.ratings { posters.want(title) } }
     }
 
     private var badges: [ScoreBadge] {
         if !title.badges.isEmpty { return Array(title.badges.prefix(2)) }
         let s = posters.scores["\(title.type):\(title.id)"]
         var out: [ScoreBadge] = []
-        if let imdb = s?.imdb ?? title.imdb { out.append(ScoreBadge(label: "IMDb", value: imdb)) }
+        // (an anime catalog's "IMDb" rating is its own site's score: Kitsu puts it there)
+        if let imdb = s?.imdb ?? (isAnime(title) ? nil : title.imdb) { out.append(ScoreBadge(label: "IMDb", value: imdb)) }
         if let rt = s?.rt { out.append(ScoreBadge(label: "RT", value: "\(rt)%")) }
         if out.isEmpty, let anime = s?.anime { out.append(anime) }
         return out

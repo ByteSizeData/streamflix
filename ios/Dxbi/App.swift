@@ -92,9 +92,7 @@ struct RootView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .overlay(alignment: .bottom) {
-            if stremio.account?.signedIn == true || stremio.guest { TvNowBar() }
-        }
+
         // A new release: offered once when the app opens or comes back (every few hours at most)
         .onChange(of: scenePhase, initial: true) { _, phase in
             guard phase == .active else { return }
@@ -167,6 +165,8 @@ struct Stack<Content: View>: View {
                     }
                 }
         }
+        // what the chosen TV is playing, above the tab bar on every page of the tab; the pages make room for it
+        .safeAreaInset(edge: .bottom, spacing: 0) { TvNowBar() }
         .environment(\.zoom, zoom)
     }
 }

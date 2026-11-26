@@ -71,9 +71,22 @@ fun posterWidth(): Dp {
     return (if (tablet) base * 1.3f else base).dp
 }
 
-/** The narrowest a poster gets in a grid (as many to a line as fit) */
+/**
+ * The narrowest a poster gets in a grid (as many to a line as fit): on a phone three across for Small
+ * and Large (a grid's posters already fill the width), two for Larger and Largest
+ */
 @Composable
-fun gridPosterWidth(): Dp = posterWidth() * 0.93f
+fun gridPosterWidth(): Dp {
+    val look by Posters.look.collectAsState()
+    val tablet = androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600
+    val base = when (look.size) {
+        "standard" -> 96f
+        "larger" -> 150f
+        "huge" -> 180f
+        else -> 112f
+    }
+    return (if (tablet) base * 1.3f else base).dp
+}
 
 /** Each site's colours: its name's tag, and the text on it */
 private fun badgeColours(b: Badge): Pair<Color, Color> = when (b.label) {
@@ -115,12 +128,15 @@ fun PosterBadges(title: Title, width: Dp, modifier: Modifier = Modifier) {
     val look by Posters.look.collectAsState()
     if (!look.ratings) return
     val all by Posters.scores.collectAsState()
-    LaunchedEffect(title.type, title.id) { if (title.badges.isEmpty()) Posters.want(title) }
+    // (asked again when ratings are switched back on)
+    LaunchedEffect(title.type, title.id, look.ratings) { if (title.badges.isEmpty()) Posters.want(title) }
     val s = all["${title.type}:${title.id}"]
+    // (an anime catalog's "IMDb" rating is its own site's score: Kitsu puts it there)
+    val anime = isAnime(title)
     val chips = buildList {
         if (title.badges.isNotEmpty()) addAll(title.badges.take(2))
         else {
-            (s?.imdb ?: title.imdb)?.let { add(Badge("IMDb", it)) }
+            (s?.imdb ?: title.imdb?.takeUnless { anime })?.let { add(Badge("IMDb", it)) }
             s?.rt?.let { add(Badge("RT", "$it%")) }
             if (isEmpty()) s?.anime?.let { add(it) }
         }

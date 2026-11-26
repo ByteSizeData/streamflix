@@ -77,28 +77,42 @@ fun AnimeScreen(stremio: Stremio, startSource: String, startList: String, onBack
 
     LaunchedEffect(Unit) { stremio.animeSources().takeIf { it.isNotEmpty() }?.let { sources = it } }
 
+    // (each list picked is a new round: an answer for one left behind is dropped, even when it was
+    // picked again since)
+    var round by remember { mutableIntStateOf(0) }
+
     fun load(next: Int) {
         if (loading) return
         loading = true
-        val want = source to list
+        val mine = round
+        val key = "$source/$list"
         scope.launch {
-            val got = stremio.anime(want.first, want.second, next)
-            // (another list was picked meanwhile)
-            if (want != (source to list)) return@launch
+            val got = stremio.anime(source, list, next)
+            if (mine != round) return@launch
             items = if (next == 1) got.items else (items + got.items).distinctBy { it.id }
             page = next
             more = got.more && got.items.isNotEmpty()
             error = if (items.isEmpty()) got.error ?: "Nothing here right now." else null
             loading = false
+            if (items.isNotEmpty()) stremio.animeBrowse[key] = Stremio.AnimeBrowse(items, page, more)
         }
     }
 
     LaunchedEffect(source, list) {
-        items = emptyList()
-        page = 0
-        error = null
+        round++
         loading = false
-        load(1)
+        error = null
+        // Back from a title: the list as it was, not page one again
+        val kept = stremio.animeBrowse["$source/$list"]
+        if (kept != null) {
+            items = kept.items
+            page = kept.page
+            more = kept.more
+        } else {
+            items = emptyList()
+            page = 0
+            load(1)
+        }
     }
 
     Column(Modifier.fillMaxSize().background(Dx.Background).windowInsetsPadding(WindowInsets.safeDrawing)) {

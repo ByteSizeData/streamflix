@@ -101,6 +101,8 @@ final class TvRemote {
     var showRemote = false
     /// When Play was sent and the TV's player isn't up yet (nil: nothing on its way): the remote says it's starting
     var starting: Date?
+    /// What the TV was playing when Play was sent ("title|subtitle"), so that isn't taken for the new one
+    @ObservationIgnored private var playingBefore: String?
     /// "Play on This Device": the next Play stays here although a TV is chosen
     @ObservationIgnored var hereOnce = false
 
@@ -339,6 +341,7 @@ final class TvRemote {
         options = nil
         lost = false
         problem = nil
+        starting = nil
     }
 
     /// Keeps `status` current while a TV is chosen: every second while it plays or the remote is open
@@ -353,8 +356,14 @@ final class TvRemote {
                     failures = 0
                     lost = false
                     status = Status(reply.json)
-                    // (the player is up: its own buttons take over; a torrent can take a minute to start)
-                    if let since = starting, status?.open == true || Date().timeIntervalSince(since) > 120 { starting = nil }
+                    // (the player is up with the new film: its own buttons take over. A torrent can take
+                    // a minute to start; the film already playing when Play was sent isn't it, unless
+                    // it was the same one again)
+                    if let since = starting {
+                        let waited = Date().timeIntervalSince(since)
+                        let now = status.map { "\($0.title)|\($0.subtitle)" }
+                        if (status?.open == true && (now != playingBefore || waited > 25)) || waited > 120 { starting = nil }
+                    }
                 } else {
                     failures += 1
                     if failures >= 4 {
@@ -362,7 +371,7 @@ final class TvRemote {
                         status = nil
                     }
                 }
-                let busy = sheet || (status?.open ?? false)
+                let busy = sheet || (status?.open ?? false) || starting != nil
                 try? await Task.sleep(for: .seconds(busy ? 1 : 4))
             }
         }
@@ -378,17 +387,34 @@ final class TvRemote {
         // The remote comes up at once, wherever the viewer is, saying the film is starting, then with
         // the player's buttons (pause, subtitles…) as soon as the TV's player is up; or with why it
         // didn't play. (After a moment: the stream list's own sheet is still going away.)
+        playingBefore = status.flatMap { $0.open ? "\($0.title)|\($0.subtitle)" : nil }
         starting = Date()
-        Task {
-            try? await Task.sleep(for: .milliseconds(650))
-            showRemote = true
-        }
+        requestRemote()
         let reply = await asked(on, "play", ["link": link], wait: 8)
         if let reply, reply.ok { return "Playing on \(on.name)" }
         starting = nil
         let why = explain(reply, on)
         problem = why
         return why
+    }
+
+    /// Shows the remote once nothing else is on screen or on its way (the stream list's sheet closing,
+    /// or still opening when Just press Play closes it at once): a sheet asked for over another one
+    /// doesn't come up. Gives up after about six seconds (the TV bar still opens it), and an ask that
+    /// never came up is forgotten, so the bar and the TV button work again.
+    func requestRemote() {
+        Task {
+            for _ in 0..<20 {
+                let root = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.rootViewController
+                if root?.presentedViewController == nil, root?.transitionCoordinator == nil {
+                    showRemote = true
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(300))
+            }
+            try? await Task.sleep(for: .seconds(1.5))
+            if showRemote, !sheet { showRemote = false }
+        }
     }
 
     func control(_ cmd: String, ms: Double = 0) {

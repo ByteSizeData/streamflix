@@ -4,6 +4,14 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.410
+
+Phones, tablets and the iPad only: this release has no new TV app (the TV's stays on 2.38.409).
+
+- **Discover anime: Kitsu's Top airing is this year's shows.** It listed whatever was still airing by its number of followers (One Piece, Detective Conan, Crayon Shin-chan…), and every page of it was the first. It's now this year's shows still airing, the most popular first, on one page.
+- **A site that isn't answering is said so at once.** MyAnimeList's lists come through Jikan, which was down for days; each list then took twelve seconds to say so. A site that didn't answer is now left alone for ten minutes (a busy one, "too many requests", is asked again at once).
+- **Grids on a phone keep three posters across at Large**, the default (two was a big jump from the old three): two across from Larger. Rows are as in 2.38.409.
+
 ## StreamFlix 2.38.409
 
 - **IMDb and Rotten Tomatoes on the posters, in every app.** Phones, tablets and the iPad now show the scores on the posters as the TV does: IMDb's rating, and beside it the Rotten Tomatoes Tomatometer, red when fresh (60% and up) and green when rotten. The Tomatometer comes from Wikidata, so most films have one and few series do (Wikidata keeps a show's scores on its seasons); a new film can have it before IMDb has a rating. Anime shows its AniList or Kitsu score. Settings → Look → Ratings on posters turns them off.

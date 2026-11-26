@@ -217,6 +217,8 @@ final class Stremio {
     @ObservationIgnored private var scoreOrder: [String] = []
     @ObservationIgnored private var scoresAsked = Set<String>()
     @ObservationIgnored private var scoreTask: Task<Void, Never>?
+    /** (two batches at a time: each is up to forty lookups in the page) */
+    @ObservationIgnored private var scoreBatches = 0
 
     private func applyLook(_ look: JSON) {
         let posters = Posters.shared
@@ -234,22 +236,34 @@ final class Stremio {
         scoreOrder.append(key)
         guard scoreTask == nil else { return }
         scoreTask = Task {
-            // (a row's posters come in together: one request for them)
+            // (a row's posters come in together: one request for them. Home shows the rows it had last
+            // time at once, before the page has started: their posters wait for it)
             try? await Task.sleep(for: .milliseconds(250))
+            while !ready { try? await Task.sleep(for: .milliseconds(300)) }
             while !scoreOrder.isEmpty {
+                while scoreBatches >= 2 { try? await Task.sleep(for: .milliseconds(200)) }
                 let keys = Array(scoreOrder.prefix(40))
                 scoreOrder.removeFirst(keys.count)
                 let batch = keys.compactMap { scoreQueue.removeValue(forKey: $0) }
-                Task { await askScores(batch) }
+                scoreBatches += 1
+                Task {
+                    await askScores(batch)
+                    scoreBatches -= 1
+                }
             }
             scoreTask = nil
         }
     }
 
-    private func askScores(_ batch: [Title]) async {
+    private func askScores(_ batch: [Title], again: Bool = true) async {
         let list: [Any] = batch.map { ["type": $0.type, "id": $0.id, "imdb": $0.imdb ?? NSNull()] as JSON }
         guard let answer = await ask("dx", ["method": "phone.scores", "args": [list]], timeout: 90) as? JSON else {
-            // (asked again when they next come into view)
+            // (the page restarting, or offline: once more in a while, then when they next come into view)
+            if again {
+                try? await Task.sleep(for: .seconds(8))
+                while !ready { try? await Task.sleep(for: .milliseconds(500)) }
+                return await askScores(batch, again: false)
+            }
             for t in batch { scoresAsked.remove("\(t.type):\(t.id)") }
             return
         }
@@ -263,6 +277,9 @@ final class Stremio {
     /** Home's Anime: the first page of each of AnimeSource.home, by "source/list" */
     var animeHome: [String: AnimePage] = [:]
     @ObservationIgnored private var animeHomeAt = Date.distantPast
+    @ObservationIgnored private var animeHomeLoading = 0
+    /** Discover Anime as it was left: a list's pages so far, by "source/list" (Back from a title comes back to them) */
+    @ObservationIgnored var animeBrowse: [String: (items: [Title], page: Int, more: Bool)] = [:]
 
     func animeSources() async -> [AnimeSource] {
         ((await dx("phone.animeSources")) as? [Any] ?? []).compactMap { $0 as? JSON }.map(AnimeSource.init)
@@ -273,13 +290,18 @@ final class Stremio {
     }
 
     func loadAnimeHome() {
-        // (half an hour between asks: the sites' lists change by the day)
+        // (half an hour between asks: the sites' lists change by the day. Not again while they're coming)
+        if animeHomeLoading > 0 { return }
         if Date().timeIntervalSince(animeHomeAt) < 30 * 60, animeHome.values.contains(where: { !$0.items.isEmpty }) { return }
         animeHomeAt = Date()
+        animeHomeLoading = AnimeSource.home.count
         for (source, list) in AnimeSource.home {
             Task {
                 let page = await anime(source, list, page: 1)
-                animeHome["\(source)/\(list)"] = page
+                let key = "\(source)/\(list)"
+                // (a site not answering this time keeps the row it had)
+                if page.items.isEmpty, let kept = animeHome[key], !kept.items.isEmpty {} else { animeHome[key] = page }
+                animeHomeLoading -= 1
             }
         }
     }

@@ -35,6 +35,10 @@ struct AnimeView: View {
     @State private var more = false
     @State private var loading = false
     @State private var error: String?
+    /** Each list picked is a new round: an answer for one left behind is dropped, even when it was picked again since */
+    @State private var round = 0
+    /** The list on screen ("source/list"): coming back from a title doesn't load it again */
+    @State private var shown: String?
 
     var body: some View {
         ScrollView {
@@ -59,11 +63,22 @@ struct AnimeView: View {
         .navigationTitle("Discover Anime")
         .task { let got = await stremio.animeSources(); if !got.isEmpty { sources = got } }
         .task(id: "\(source)/\(list)") {
-            items = []
-            page = 0
-            error = nil
+            let key = "\(source)/\(list)"
+            if shown == key { return }
+            shown = key
+            round += 1
             loading = false
-            load(1)
+            error = nil
+            // (this list as it was left, when it was open before)
+            if let kept = stremio.animeBrowse[key] {
+                items = kept.items
+                page = kept.page
+                more = kept.more
+            } else {
+                items = []
+                page = 0
+                load(1)
+            }
         }
     }
 
@@ -87,17 +102,19 @@ struct AnimeView: View {
     private func load(_ next: Int) {
         guard !loading else { return }
         loading = true
+        let mine = round
+        let key = "\(source)/\(list)"
         let want = (source, list)
         Task {
             let got = await stremio.anime(want.0, want.1, page: next)
-            // (another list was picked meanwhile)
-            guard want == (source, list) else { return }
+            guard mine == round else { return }
             var seen = Set<String>()
             items = (next == 1 ? got.items : items + got.items).filter { seen.insert($0.id).inserted }
             page = next
             more = got.more && !got.items.isEmpty
             error = items.isEmpty ? (got.error ?? "Nothing here right now.") : nil
             loading = false
+            if !items.isEmpty { stremio.animeBrowse[key] = (items, page, more) }
         }
     }
 }

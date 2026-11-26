@@ -331,11 +331,23 @@ struct TvSheet: View {
 
 /// What the chosen TV is playing, over the bottom of every screen: a tap opens the remote
 struct TvNowBar: View {
-    @Environment(\.horizontalSizeClass) private var sizeClass
+    /// (out of the way while typing: it would float over the keyboard)
+    @State private var typing = false
 
     var body: some View {
         let remote = TvRemote.shared
-        if let tv = remote.tv, !remote.showRemote, let now = remote.status, now.open || remote.starting != nil {
+        Group {
+            if let tv = remote.tv, !remote.showRemote, !typing, let now = remote.status, now.open || remote.starting != nil {
+                bar(remote, tv, now)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in typing = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in typing = false }
+    }
+
+    @ViewBuilder
+    private func bar(_ remote: TvRemote, _ tv: TvRemote.Tv, _ now: TvRemote.Status) -> some View {
+        Group {
             HStack(spacing: 12) {
                 Image(systemName: "tv.fill").foregroundStyle(Dx.accent)
                 VStack(alignment: .leading, spacing: 1) {
@@ -361,8 +373,7 @@ struct TvNowBar: View {
             .contentShape(.capsule)
             .onTapGesture { remote.showRemote = true }
             .padding(.horizontal, 16)
-            // (above the tab bar on an iPhone; an iPad's tabs are at the top)
-            .padding(.bottom, sizeClass == .regular ? 18 : 64)
+            .padding(.bottom, 8)
         }
     }
 }

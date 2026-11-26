@@ -182,6 +182,8 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
     private val scoreQueue = LinkedHashMap<String, Title>()
     private val scoresAsked = HashSet<String>()
     private var scoreJob: Job? = null
+    /** (two batches at a time: each is up to forty lookups in the page) */
+    private val scoreSlots = kotlinx.coroutines.sync.Semaphore(2)
 
     private fun wantScores(t: Title) {
         if (!Posters.look.value.ratings || t.id.isBlank() || t.type.isBlank()) return
@@ -192,25 +194,32 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
         }
         if (scoreJob?.isActive == true) return
         scoreJob = scope.launch {
-            // (a row's posters come in together: one request for them)
+            // (a row's posters come in together: one request for them. Home shows the rows it had last
+            // time at once, before the page has started: their posters wait for it)
             delay(250)
+            engine.ready.first { it }
             while (true) {
                 val batch = synchronized(scoreQueue) {
                     scoreQueue.values.take(40).also { b -> b.forEach { scoreQueue.remove("${it.type}:${it.id}") } }
                 }
                 if (batch.isEmpty()) break
-                scope.launch { askScores(batch) }
+                scope.launch { scoreSlots.acquire(); try { askScores(batch) } finally { scoreSlots.release() } }
             }
         }
     }
 
-    private suspend fun askScores(batch: List<Title>) {
+    private suspend fun askScores(batch: List<Title>, again: Boolean = true) {
         val list = JSONArray(batch.map { JSONObject().put("type", it.type).put("id", it.id).put("imdb", it.imdb ?: JSONObject.NULL) })
         val answer = runCatching {
             engine.call("dx", JSONObject().put("method", "phone.scores").put("args", JSONArray().put(list)), 90_000)
         }.getOrNull() as? JSONObject
         if (answer == null) {
-            // (asked again when they next come into view)
+            // (the page restarting, or offline: once more in a while, then when they next come into view)
+            if (again) {
+                delay(8000)
+                engine.ready.first { it }
+                return askScores(batch, again = false)
+            }
             synchronized(scoreQueue) { batch.forEach { scoresAsked.remove("${it.type}:${it.id}") } }
             return
         }
@@ -232,19 +241,33 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
     /** Home's Anime tab: the first page of each of these lists, by "source/list" */
     val animeHome = MutableStateFlow<Map<String, AnimePage>>(emptyMap())
     private var animeHomeAt = 0L
+    private val animeHomeLoading = java.util.concurrent.atomic.AtomicInteger(0)
 
     fun loadAnimeHome(lists: List<Pair<String, String>>) {
         val now = System.currentTimeMillis()
-        // (half an hour between asks: the sites' lists change by the day)
+        // (half an hour between asks: the sites' lists change by the day. Not again while they're coming)
+        if (animeHomeLoading.get() > 0) return
         if (now - animeHomeAt < 30 * 60_000 && animeHome.value.values.any { it.items.isNotEmpty() }) return
         animeHomeAt = now
+        animeHomeLoading.set(lists.size)
         lists.forEach { (source, list) ->
             scope.launch {
-                val page = anime(source, list, 1)
-                animeHome.value = animeHome.value + ("$source/$list" to page)
+                try {
+                    val page = anime(source, list, 1)
+                    val key = "$source/$list"
+                    // (a site not answering this time keeps the row it had)
+                    val kept = animeHome.value[key]
+                    animeHome.value = animeHome.value + (key to if (page.items.isEmpty() && kept != null && kept.items.isNotEmpty()) kept else page)
+                } finally {
+                    animeHomeLoading.decrementAndGet()
+                }
             }
         }
     }
+
+    /** Discover anime's screen, as it was left: a list's pages so far, by "source/list" (Back from a title comes back to them) */
+    data class AnimeBrowse(val items: List<Title>, val page: Int, val more: Boolean)
+    val animeBrowse = HashMap<String, AnimeBrowse>()
 
     // ---------------------------------------------------------------------------------------------
     // Details

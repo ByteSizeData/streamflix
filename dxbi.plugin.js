@@ -1079,27 +1079,39 @@
     ],
     pages: new Map(),
     AGE: 6 * 60 * 60 * 1000,
+    // A site that didn't answer, and when: asked again after ten minutes, not at every list (each
+    // try is a twelve-second wait; MyAnimeList's Jikan was down for days in November 2026)
+    down: new Map(),
 
     // { items, more } or { items: [], error }
     async page(source, list, page = 1) {
       const key = `${source}:${list}:${page}`;
       const kept = this.pages.get(key) || readCached(`animeDiscover:${key}`);
       if (kept && kept.at && Date.now() - kept.at < this.AGE && kept.items.length) return { items: kept.items, more: kept.more };
+      const name = (this.SOURCES.find((s) => s.id === source) || {}).name || "That site";
+      const fail = () => (kept && kept.items && kept.items.length
+        // (an older copy beats nothing)
+        ? { items: kept.items, more: kept.more }
+        : { items: [], more: false, error: `${name} isn't answering right now. Try another site, or again in a while.` });
+      if (Date.now() - (this.down.get(source) || 0) < 10 * 60 * 1000) return fail();
       try {
         const got = source === "anilist" ? await this.anilist(list, page)
           : source === "mal" ? await this.mal(list, page)
             : source === "kitsu" ? await this.kitsu(list, page) : null;
         if (!got) return { items: [], more: false, error: "There's no such list." };
+        // (two of a site's entries can be one Kitsu title, a season and its show: listed once)
+        const seen = new Set();
+        got.items = got.items.filter((x) => !seen.has(x.id) && seen.add(x.id));
         const result = { at: Date.now(), items: got.items, more: got.more };
         this.pages.set(key, result);
         if (this.pages.size > 60) this.pages.delete(this.pages.keys().next().value);
         if (got.items.length) writeCached(`animeDiscover:${key}`, result);
+        this.down.delete(source);
         return { items: got.items, more: got.more };
       } catch (err) {
-        // (an older copy beats nothing)
-        if (kept && kept.items && kept.items.length) return { items: kept.items, more: kept.more };
-        const name = (this.SOURCES.find((s) => s.id === source) || {}).name || "That site";
-        return { items: [], more: false, error: `${name} isn't answering right now. Try another site, or again in a while.` };
+        // (unreachable, not merely busy: a "too many requests" is over in a minute)
+        if (!/^HTTP /.test(String(err && err.message))) this.down.set(source, Date.now());
+        return fail();
       }
     },
 
@@ -1243,7 +1255,13 @@
         // (back in trending order)
         if (j && Array.isArray(j.data)) j.data.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
       } else {
-        const how = { airing: "filter[status]=current&sort=-userCount", popular: "sort=popularityRank", top: "sort=ratingRank" }[list];
+        // Top airing: this year's shows still airing, the most popular first (all of them by their
+        // user count was One Piece, Detective Conan and the like). Kitsu doesn't page a list filtered
+        // by status (every page is the first): one page of it.
+        const year = new Date().getFullYear();
+        const years = new Date().getMonth() < 3 ? `${year - 1},${year}` : String(year);
+        if (list === "airing" && page > 1) return { items: [], more: false };
+        const how = { airing: `filter[status]=current&filter[season_year]=${years}&sort=popularityRank`, popular: "sort=popularityRank", top: "sort=ratingRank" }[list];
         if (!how) return null;
         j = await this.getJson(`https://kitsu.app/api/edge/anime?${how}&page[limit]=20&page[offset]=${(page - 1) * 20}&${fields}`);
       }
@@ -1259,7 +1277,7 @@
       };
       const anilist = await this.anilistScores(data.map(mal));
       return {
-        more: list !== "trending" && !!(j && j.links && j.links.next),
+        more: list !== "trending" && list !== "airing" && !!(j && j.links && j.links.next),
         items: data.map((a) => {
           const x = a.attributes || {};
           return this.item(a.id, {
