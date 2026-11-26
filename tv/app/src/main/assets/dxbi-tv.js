@@ -401,6 +401,9 @@
 
   // Support dx.bi: many TVs have no browser, so a TV shows a code for the phone instead of a link
   const DONATE_URL = "https://buymeacoffee.com/notdxbi";
+  // Report a problem and Support are offered only where they lead somewhere: a build without a
+  // report relay or a support page (StreamFlix) has neither
+  const canReport = () => !!(window.__dxbi && window.__dxbi.canReport && window.__dxbi.canReport());
   const DONATE_QR = "M0 0h7v1h-7zM8 0h1v1h-1zM10 0h2v1h-2zM13 0h1v1h-1zM17 0h4v1h-4zM22 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM12 1h2v1h-2zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM8 2h1v1h-1zM12 2h4v1h-4zM20 2h1v1h-1zM22 2h1v1h-1zM24 2h3v1h-3zM28 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM8 3h1v1h-1zM11 3h2v1h-2zM15 3h1v1h-1zM18 3h1v1h-1zM20 3h1v1h-1zM22 3h1v1h-1zM24 3h3v1h-3zM28 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h1v1h-1zM11 4h1v1h-1zM15 4h2v1h-2zM19 4h2v1h-2zM22 4h1v1h-1zM24 4h3v1h-3zM28 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h2v1h-2zM12 5h2v1h-2zM17 5h3v1h-3zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h7v1h-7zM9 7h5v1h-5zM16 7h3v1h-3zM20 7h1v1h-1zM2 8h6v1h-6zM10 8h1v1h-1zM13 8h1v1h-1zM18 8h1v1h-1zM21 8h1v1h-1zM23 8h4v1h-4zM28 8h1v1h-1zM0 9h6v1h-6zM7 9h2v1h-2zM14 9h1v1h-1zM17 9h2v1h-2zM21 9h1v1h-1zM25 9h4v1h-4zM0 10h2v1h-2zM3 10h2v1h-2zM6 10h2v1h-2zM13 10h3v1h-3zM18 10h2v1h-2zM24 10h1v1h-1zM0 11h1v1h-1zM3 11h1v1h-1zM10 11h2v1h-2zM17 11h1v1h-1zM20 11h1v1h-1zM25 11h2v1h-2zM28 11h1v1h-1zM0 12h4v1h-4zM5 12h2v1h-2zM8 12h3v1h-3zM16 12h1v1h-1zM18 12h1v1h-1zM20 12h4v1h-4zM27 12h2v1h-2zM0 13h3v1h-3zM9 13h3v1h-3zM17 13h3v1h-3zM25 13h2v1h-2zM0 14h2v1h-2zM3 14h1v1h-1zM6 14h2v1h-2zM9 14h2v1h-2zM12 14h1v1h-1zM15 14h1v1h-1zM17 14h2v1h-2zM20 14h1v1h-1zM23 14h1v1h-1zM25 14h3v1h-3zM0 15h5v1h-5zM9 15h5v1h-5zM17 15h3v1h-3zM22 15h1v1h-1zM24 15h1v1h-1zM26 15h2v1h-2zM1 16h1v1h-1zM4 16h1v1h-1zM6 16h3v1h-3zM10 16h1v1h-1zM13 16h1v1h-1zM15 16h1v1h-1zM18 16h1v1h-1zM21 16h1v1h-1zM25 16h1v1h-1zM28 16h1v1h-1zM0 17h2v1h-2zM3 17h2v1h-2zM8 17h3v1h-3zM12 17h3v1h-3zM16 17h3v1h-3zM20 17h1v1h-1zM24 17h1v1h-1zM28 17h1v1h-1zM0 18h1v1h-1zM4 18h1v1h-1zM6 18h1v1h-1zM8 18h2v1h-2zM13 18h1v1h-1zM15 18h1v1h-1zM17 18h1v1h-1zM23 18h1v1h-1zM25 18h1v1h-1zM27 18h1v1h-1zM0 19h1v1h-1zM2 19h1v1h-1zM4 19h1v1h-1zM7 19h3v1h-3zM13 19h1v1h-1zM17 19h1v1h-1zM19 19h1v1h-1zM22 19h2v1h-2zM26 19h1v1h-1zM28 19h1v1h-1zM0 20h2v1h-2zM4 20h1v1h-1zM6 20h2v1h-2zM10 20h2v1h-2zM13 20h3v1h-3zM17 20h1v1h-1zM19 20h7v1h-7zM27 20h1v1h-1zM9 21h1v1h-1zM13 21h2v1h-2zM17 21h2v1h-2zM20 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM0 22h7v1h-7zM8 22h2v1h-2zM13 22h1v1h-1zM17 22h1v1h-1zM19 22h2v1h-2zM22 22h1v1h-1zM24 22h1v1h-1zM26 22h3v1h-3zM0 23h1v1h-1zM6 23h1v1h-1zM8 23h4v1h-4zM13 23h2v1h-2zM16 23h5v1h-5zM24 23h3v1h-3zM0 24h1v1h-1zM2 24h3v1h-3zM6 24h1v1h-1zM8 24h3v1h-3zM13 24h2v1h-2zM17 24h8v1h-8zM26 24h1v1h-1zM28 24h1v1h-1zM0 25h1v1h-1zM2 25h3v1h-3zM6 25h1v1h-1zM8 25h1v1h-1zM11 25h2v1h-2zM14 25h1v1h-1zM16 25h1v1h-1zM21 25h2v1h-2zM25 25h3v1h-3zM0 26h1v1h-1zM2 26h3v1h-3zM6 26h1v1h-1zM8 26h1v1h-1zM12 26h1v1h-1zM14 26h1v1h-1zM16 26h3v1h-3zM20 26h3v1h-3zM24 26h3v1h-3zM28 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM11 27h1v1h-1zM15 27h1v1h-1zM19 27h3v1h-3zM23 27h5v1h-5zM0 28h7v1h-7zM9 28h1v1h-1zM13 28h1v1h-1zM17 28h1v1h-1zM20 28h2v1h-2zM25 28h1v1h-1z";
   const donate = () => {
     if (PHONE) { native.openExternal(DONATE_URL); return; }
@@ -546,8 +549,8 @@
     add("Simkl", "list", loaded((dx) => dx.simkl && dx.simkl.open()));
     add("Customise Home", "home", loaded((dx) => dx.homeLayout && dx.homeLayout.open()));
     add("Streaming server", "server", () => findServer());
-    add("Report a problem", "flag", reportProblem);
-    add("Support dx.bi", "heart", donate);
+    if (canReport()) add("Report a problem", "flag", reportProblem);
+    if (DONATE_URL) add("Support dx.bi", "heart", donate);
     menu.insertBefore(group, first);
   }
 
@@ -601,7 +604,7 @@
     support.className = "dxtv-row dxtv-settings-entry";
     support.innerHTML = `<span>Support dx.bi<small>dx.bi is free. If you enjoy it, you can buy its developer a coffee</small></span><b>Open</b>`;
     support.addEventListener("click", donate);
-    content.prepend(entry, who, simkl, layout, server, problem, support);
+    content.prepend(...[entry, who, simkl, layout, server, canReport() && problem, DONATE_URL && support].filter(Boolean));
   }
 
   // ---------------------------------------------------------------------------

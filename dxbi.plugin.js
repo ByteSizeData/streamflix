@@ -14539,7 +14539,8 @@
       items.push(make("Simkl", ICONS.simkl, () => simkl.open()));
       if (downloads.api) items.push(make("Downloads", DL_ICONS.down, () => downloads.open()));
       items.push(make("Customise Home", ICONS.sliders, () => homeLayout.open()));
-      items.push(make("Report a problem", ICONS.bug, () => report.open()));
+      // (only where reports have somewhere to go: a build with no relay, like StreamFlix, has no entry)
+      if (REPORT_ENDPOINT) items.push(make("Report a problem", ICONS.bug, () => report.open()));
       template.before(...items);
     },
   };
@@ -22728,6 +22729,8 @@
     findStream: (media, stillWanted) => watchParty.findStream(media, stillWanted),
     quickPlayNext: () => quickPlay.next(),
     streamNext: (failedLink) => streamFallback.next(failedLink),
+    // Whether Report a problem can send anything (the TV, phone and iPad apps show it only then)
+    canReport: () => !!REPORT_ENDPOINT,
     saveYear: () => { stats.flush(); if (!stats.data) stats.load(); statsPanel.saveYear(); },
     lite,
     streamHints: (stream) => watchParty.streamHints(stream),

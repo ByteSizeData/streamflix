@@ -90,8 +90,11 @@ struct AccountView: View {
                     NavigationLink { DxbiSettingsView() } label: { Label("dx.bi Settings", systemImage: "slider.horizontal.3") }
                     NavigationLink { PlaybackSettingsView() } label: { Label("Playback", systemImage: "play.rectangle.fill") }
                 }
-                Section {
-                    NavigationLink { ReportView() } label: { Label("Report a Problem", systemImage: "exclamationmark.bubble.fill") }
+                // (only where reports have somewhere to go)
+                if stremio.canReport {
+                    Section {
+                        NavigationLink { ReportView() } label: { Label("Report a Problem", systemImage: "exclamationmark.bubble.fill") }
+                    }
                 }
                 Section {
                     if stremio.account?.signedIn == true {

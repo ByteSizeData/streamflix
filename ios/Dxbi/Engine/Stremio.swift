@@ -611,6 +611,10 @@ final class Stremio {
      * settings, addon names and recent errors (no passwords, keys or stream links). The report's code
      * to post in dx.bi's Discord, or what went wrong
      */
+    /// Whether a report can be sent at all (a build without a report relay has no Report a Problem)
+    var canReport = false
+    func checkReports() async { canReport = (await dx("canReport") as? Bool) == true }
+
     func report(_ description: String) async -> Result<String, Page.Failure> {
         do {
             let code = try await page.call("dx", ["method": "report.send", "args": [description]], timeout: 30)

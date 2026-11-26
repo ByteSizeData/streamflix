@@ -104,6 +104,14 @@ function ownReports(text) {
   return text.replace(relay, "$1$2");
 }
 
+// Support (on the TV): a code for dx.bi's developer's Buy Me a Coffee page. StreamFlix has no page of its
+// own: with no address the TV leaves Support out (dxbi-tv.js offers it only when there is one).
+function noSupportPage(text) {
+  const page = /(const DONATE_URL = ")https:\/\/[^"]+(";)/;
+  if (!page.test(text)) throw new Error("the support page's address wasn't found in dxbi-tv.js");
+  return text.replace(page, "$1$2");
+}
+
 // "English dub first" is on in StreamFlix until someone turns it off: on an anime, or a title that
 // isn't in English, the English dubs lead the stream list and are marked in blue. (dx.bi has it off.)
 function dubsFirst(text) {
@@ -163,6 +171,7 @@ for (const file of files) {
   // (the desktop's own changes first: the About page's credit to dx.bi keeps dx.bi's name, see KEEP)
   let after = rename(desktop.includes(file) ? desktopSource(file, before) : before);
   if (file === PLUGIN) after = noIntroFilm(dubsFirst(ownReports(restyle(after))));
+  if (file === scripts[1]) after = noSupportPage(after);
   if (file === PLUGIN && version) after = stamp(after);
   if (after !== before) { writeFileSync(file, after); renamed++; }
 }
@@ -175,7 +184,7 @@ for (const file of files) {
   const b = pkg.build;
   if (!b || !b.nsis || !b.portable || !b.linux) throw new Error("the desktop app's build settings weren't found");
   pkg.name = "streamflix";
-  pkg.description = `${NAME}: a Netflix-style streaming app for your Stremio addons, built on dx.bi.`;
+  pkg.description = `${NAME}: a Netflix-style streaming app for your Stremio addons.`;
   pkg.repository = `https://github.com/${REPO}.git`;
   pkg.author = NAME;
   if (version) pkg.version = version;

@@ -307,6 +307,9 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
      * settings, addon names and recent errors (no passwords, keys or stream links). The report's code
      * to post in dx.bi's Discord, or what went wrong
      */
+    /** Whether a report can be sent at all (a build without a report relay has no Report a problem) */
+    suspend fun canReport(): Boolean = (dx("canReport") as? Boolean) == true
+
     suspend fun report(description: String): Result<String> = runCatching {
         engine.call("dx", JSONObject().put("method", "report.send").put("args", JSONArray().put(description)), 30_000) as? String ?: ""
     }

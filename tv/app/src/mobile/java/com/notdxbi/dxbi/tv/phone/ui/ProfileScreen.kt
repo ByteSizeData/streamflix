@@ -122,6 +122,8 @@ fun ProfileScreen(
         val listed = myList.flatMap { it.items }
         if (listed.isNotEmpty()) item { PosterRow(myList.firstOrNull()?.name ?: "My List", listed, onMore = onLibrary, onOpen = onOpen) }
         item {
+            // (Report a problem only where reports have somewhere to go)
+            val canReport by androidx.compose.runtime.produceState(false) { value = stremio.canReport() }
             Column(Modifier.padding(top = 6.dp)) {
                 Line(Icons.Filled.VideoLibrary, "Library", "Everything you've added or watched", onClick = onLibrary)
                 Line(Icons.Filled.Download, "Downloads", "Films and episodes saved to watch offline", onClick = onDownloads)
@@ -129,7 +131,7 @@ fun ProfileScreen(
                 Line(Icons.Filled.Tune, "Customise Home", "Order and hide Home's rows", onClick = onCustomiseHome)
                 Line(Icons.Filled.Settings, "dx.bi settings", "Rows, reviews, skipping, watch party and more", onClick = onSettings)
                 Line(Icons.Filled.Subtitles, "Playback & subtitles", "Languages, subtitles, next episode, streaming server", onClick = onStremioSettings)
-                Line(Icons.Filled.BugReport, "Report a problem", "Tell dx.bi's developer what went wrong") { reporting = true }
+                if (canReport) Line(Icons.Filled.BugReport, "Report a problem", "Tell dx.bi's developer what went wrong") { reporting = true }
                 // (signing out of a guest session goes back to the sign-in screen)
                 if (account?.signedIn == true) Line(Icons.AutoMirrored.Filled.ExitToApp, "Sign out", account?.email) { stremio.signOut() }
                 else Line(Icons.AutoMirrored.Filled.ExitToApp, "Sign in", "Your library, progress and addons on every device") { stremio.signOut() }
