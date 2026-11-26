@@ -35,7 +35,7 @@ import com.notdxbi.dxbi.tv.phone.Stremio
 import com.notdxbi.dxbi.tv.phone.Title
 import kotlinx.coroutines.launch
 
-/** The anime sites and their lists, as dx.bi has them (used until the page says otherwise) */
+/** The anime sites and their lists, as StreamFlix has them (used until the page says otherwise) */
 val ANIME_SOURCES = listOf(
     AnimeSource("anilist", "AniList", listOf("trending" to "Trending now", "season" to "Popular this season", "next" to "Coming next season", "top" to "Top rated", "popular" to "All-time popular", "movies" to "Top films")),
     AnimeSource("mal", "MyAnimeList", listOf("airing" to "Top airing", "top" to "Top anime", "popular" to "Most popular", "movies" to "Top films", "upcoming" to "Most anticipated")),

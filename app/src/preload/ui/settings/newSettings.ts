@@ -1,16 +1,16 @@
 /**
- * dx.bi in Stremio's redesigned Settings (Nov 2026).
+ * StreamFlix in Stremio's redesigned Settings (Nov 2026).
  *
  * Stremio's new Settings page is one category at a time, picked from a left menu grouped as
- * Preferences / This browser / Help, with each page made of rounded cards of rows. The old dx.bi
+ * Preferences / This browser / Help, with each page made of rounded cards of rows. The old StreamFlix
  * section (a long scrolling block appended under Stremio's categories) has nowhere to go any more,
- * so dx.bi gets its own menu group instead:
+ * so StreamFlix gets its own menu group instead:
  *
- *   DX.BI   Customise · Themes · Plugins · App
+ *   STREAMFLIX   Customise · Themes · Plugins · App
  *
  * Each item opens #/settings/dxbi-<page>. Stremio doesn't know those pages (it quietly draws
  * Interface underneath, which we hide), so the address, the Back button and the menu all behave like
- * Stremio's own pages. Class names are read from Stremio's live page at runtime, so dx.bi's pages
+ * Stremio's own pages. Class names are read from Stremio's live page at runtime, so StreamFlix's pages
  * look native and keep matching when Stremio rebuilds its CSS.
  *
  * The Themes / Plugins / App pages are the same #enhanced > category elements the old layout used
@@ -24,7 +24,7 @@ import { getLogger } from "../../../utils/logger";
 const logger = getLogger("NewSettings");
 
 export const PAGES = [
-    { id: "customise", label: "Customise", scope: "dx.bi on this computer" },
+    { id: "customise", label: "Customise", scope: "StreamFlix on this computer" },
     { id: "themes", label: "Themes", scope: "Looks you can apply" },
     { id: "plugins", label: "Plugins", scope: "Add-on features" },
     { id: "about", label: "App", scope: "Updates, window and playback" },
@@ -46,7 +46,7 @@ export function currentPage(): PageId | null {
     return m && PAGES.some(p => p.id === m[1]) ? (m[1] as PageId) : null;
 }
 
-// ---- Stremio's class names, read from its live page (with dx.bi fallbacks for anything missing)
+// ---- Stremio's class names, read from its live page (with StreamFlix fallbacks for anything missing)
 type Classes = Record<string, string>;
 function readClasses(): Classes {
     const root = document.querySelector(SETTINGS);
@@ -76,14 +76,14 @@ function readClasses(): Classes {
 
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
-// ---- the dx.bi menu group
+// ---- the StreamFlix menu group
 function ensureNav(c: Classes): void {
     const nav = document.querySelector(`${SETTINGS} nav[class*="menu-"]`);
     if (!nav || nav.querySelector(".dxn-group")) return;
     const groups = nav.querySelectorAll(':scope > [class*="group-"]');
     const group = document.createElement("div");
     group.className = `${c.group} dxn-group`;
-    group.innerHTML = `<div class="${c.groupLabel} dxn-group-label">dx.bi</div>` + PAGES.map(p => {
+    group.innerHTML = `<div class="${c.groupLabel} dxn-group-label">StreamFlix</div>` + PAGES.map(p => {
         const icon = ICONS[p.id]().replace('class="icon"', `class="${c.itemIcon} dxn-icon"`);
         return `<a class="${c.item} dxn-item" data-dxn="${p.id}" href="#/settings/dxbi-${p.id}" tabindex="0">${icon}<div class="${c.itemLabel}">${p.label}</div></a>`;
     }).join("");
@@ -92,7 +92,7 @@ function ensureNav(c: Classes): void {
     if (groups.length >= 2 && help) nav.insertBefore(group, help); else nav.appendChild(group);
 }
 
-// ---- the page container that holds the four dx.bi pages
+// ---- the page container that holds the four StreamFlix pages
 let enhanced: HTMLElement | null = null;
 
 /**
@@ -107,7 +107,7 @@ function createEnhanced(c: Classes): HTMLElement {
         const p = PAGES.find(x => x.id === id)!;
         return `<div class="${c.page} dxn-page" data-page="${id}"><div class="${c.head} dxn-head heading"><h1 class="${c.title} dxn-title">${p.label}</h1><p class="${c.scope} dxn-scope">${p.scope}</p></div></div>`;
     };
-    el.innerHTML = `<div class="dxn-label" hidden>dx.bi</div>${pageHtml("themes")}${pageHtml("plugins")}${pageHtml("about")}${pageHtml("customise")}`;
+    el.innerHTML = `<div class="dxn-label" hidden>StreamFlix</div>${pageHtml("themes")}${pageHtml("plugins")}${pageHtml("about")}${pageHtml("customise")}`;
     return el;
 }
 
@@ -115,7 +115,7 @@ let classes: Classes | null = null;
 let built = false;
 
 /**
- * Make sure the dx.bi menu group and pages are in place and the right one is showing.
+ * Make sure the StreamFlix menu group and pages are in place and the right one is showing.
  * `fill` populates Themes / Plugins / App the first time (the existing builders).
  */
 export function ensure(fill: () => void): void {
@@ -133,7 +133,7 @@ export function ensure(fill: () => void): void {
     if (enhanced.parentElement !== pane) pane.appendChild(enhanced);
     if (!built) {
         built = true;
-        try { fill(); } catch (err) { logger.error("Failed to fill dx.bi settings: " + err); }
+        try { fill(); } catch (err) { logger.error("Failed to fill StreamFlix settings: " + err); }
         buildCustomise(enhanced.querySelector('[data-page="customise"]') as HTMLElement, classes).catch(err => logger.error("Customise page: " + err));
     }
     show(content);
@@ -151,7 +151,7 @@ function show(content: HTMLElement): void {
     if (page) content.dataset.dxnPage = page; else delete content.dataset.dxnPage;
     enhanced?.querySelectorAll<HTMLElement>(".dxn-page").forEach(p => p.classList.toggle("is-on", p.dataset.page === page));
     const sel = classes?.selected || "";
-    // Stremio still marks Interface (its fallback page) as selected: on dx.bi's pages, only ours is
+    // Stremio still marks Interface (its fallback page) as selected: on StreamFlix's pages, only ours is
     if (page && sel) content.querySelectorAll<HTMLElement>(`nav a.${sel}:not(.dxn-item)`).forEach(a => a.classList.remove(sel));
     content.querySelectorAll<HTMLElement>(".dxn-item").forEach(a => {
         const on = a.dataset.dxn === page;
@@ -166,12 +166,12 @@ function show(content: HTMLElement): void {
     }
 }
 
-// ---- Customise: the dx.bi plugin's own options, grouped, with a search, saved as you change them
+// ---- Customise: the StreamFlix plugin's own options, grouped, with a search, saved as you change them
 async function buildCustomise(page: HTMLElement, c: Classes): Promise<void> {
     const base = "dxbi";
     const schema: PluginOption[] | null = await settingsAPI.getRegisteredSettings(base);
     if (!schema || !schema.length) {
-        page.insertAdjacentHTML("beforeend", `<p class="dxn-empty">Turn the dx.bi plugin on under <a href="#/settings/dxbi-plugins">Plugins</a> to customise it here.</p>`);
+        page.insertAdjacentHTML("beforeend", `<p class="dxn-empty">Turn the StreamFlix plugin on under <a href="#/settings/dxbi-plugins">Plugins</a> to customise it here.</p>`);
         return;
     }
     const values: Record<string, any> = {};
@@ -199,7 +199,7 @@ async function buildCustomise(page: HTMLElement, c: Classes): Promise<void> {
         const secret = /key$/i.test(s.key);
         return `<div class="${c.control} dxn-control is-wide"><input class="dxn-input" data-key="${esc(s.key)}" type="${secret ? "password" : "text"}" value="${esc(v ?? "")}" placeholder="${esc(s.label)}" autocomplete="off" spellcheck="false" aria-label="${esc(s.label)}"></div>`;
     };
-    let html = `<label class="dxn-search"><svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 0 1 6.32 12.9l5.39 5.39-1.42 1.42-5.39-5.39A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" style="fill: currentcolor"/></svg><input type="search" placeholder="Search dx.bi settings" aria-label="Search dx.bi settings" autocomplete="off" spellcheck="false"></label>`;
+    let html = `<label class="dxn-search"><svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 0 1 6.32 12.9l5.39 5.39-1.42 1.42-5.39-5.39A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z" style="fill: currentcolor"/></svg><input type="search" placeholder="Search StreamFlix settings" aria-label="Search StreamFlix settings" autocomplete="off" spellcheck="false"></label>`;
     for (const [group, opts] of groups) {
         html += `<section class="${c.section} dxn-section"><div class="${c.heading}"><h2 class="${c.h2}">${esc(group)}</h2></div><div class="${c.card} dxn-card">`;
         for (const s of opts) {
@@ -208,7 +208,7 @@ async function buildCustomise(page: HTMLElement, c: Classes): Promise<void> {
         }
         html += `</div></section>`;
     }
-    html += `<p class="dxn-none">No dx.bi settings match your search.</p>`;
+    html += `<p class="dxn-none">No StreamFlix settings match your search.</p>`;
     page.insertAdjacentHTML("beforeend", html);
 
     const save = (key: string, value: any) => {
@@ -247,7 +247,7 @@ async function buildCustomise(page: HTMLElement, c: Classes): Promise<void> {
     });
 }
 
-// ---- styles: dx.bi's pages in Stremio's new look. The old controls (option rows, buttons, plugin and
+// ---- styles: StreamFlix's pages in Stremio's new look. The old controls (option rows, buttons, plugin and
 // theme cards, notes) keep their ids and handlers and are restyled here.
 function ensureStyle(): void {
     if (document.getElementById("dxn-style")) return;

@@ -98,7 +98,7 @@ window.addEventListener("load", () => {
     reloadServer();
     applyUserTheme();
     loadEnabledPlugins();
-    // The window shows once dx.bi has had a frame to dress the page (main.ts)
+    // The window shows once StreamFlix has had a frame to dress the page (main.ts)
     requestAnimationFrame(() => requestAnimationFrame(() => ipcRenderer.send(IPC_CHANNELS.UI_READY)));
 
     let isTransparencyEnabled = false;

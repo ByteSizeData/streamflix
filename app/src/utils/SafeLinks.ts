@@ -32,7 +32,7 @@ function adEmbedShowing(win: BrowserWindow): boolean {
 }
 
 /**
- * The window stays on Stremio's web app: dx.bi's APIs are only for that page, so a link that would
+ * The window stays on Stremio's web app: StreamFlix's APIs are only for that page, so a link that would
  * take the whole window somewhere else opens in the browser instead. New windows always do.
  */
 export function keepOnStremio(win: BrowserWindow): void {
