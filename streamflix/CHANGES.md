@@ -4,6 +4,14 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.414
+
+Phones, tablets, the iPad and the desktop apps. The TV app of this release is built but not attached here yet: a TV keeps 2.38.409 until it is.
+
+- **On an anime, the best match is the English dub with the best picture and the most people sharing it.** With English dub first on, an English dub that will play leads the list: 4K before 1080p, then ready to play, then the most seeds (a 4K dub with 300 seeds before one with 3). A torrent nobody or one person shares never leads, as it would not start: then the next best dub does. The same holds for a film or show not in English.
+- **English dub first is on.** It is StreamFlix's own setting, but settings brought over from dx.bi had it off. It is turned on once; turned off in Settings afterwards, it stays off.
+- **A US flag on an English dub's quality tile** (4K, 1080p…), beside the 🇺🇸 ENGLISH DUB tag, on the computer, the TV, the phone apps and the iPad.
+
 ## StreamFlix 2.38.413
 
 Phones, tablets, the iPad and the desktop apps. The TV app of this release is built but not attached here yet: a TV keeps 2.38.409 until it is.

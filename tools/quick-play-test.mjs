@@ -121,6 +121,16 @@ streamPrefs.set("none", true, true);
 assert.equal(pick([cached4k, animeDub]), animeDub.label, "on an anime's page, dubbed first");
 assert.equal(pick([cached4k, dubbed]), dubbed.label, "there, an unnamed second track is the English dub");
 assert.equal(pick([cached4k, cached1080]), cached4k.label, "no dub around: quality decides");
+// Among an anime's English dubs: the best picture, then ready to play, then the most seeds; a dub
+// nobody shares doesn't lead
+const dub4kMany = item("Torrentio\n4k", "Anime.S01.2160p.Dual.Audio.WEB 🇯🇵 🇬🇧 👤 300 💾 30 GB");
+const dub4kFew = item("Torrentio\n4k", "Anime.S01.2160p.Dual.Audio.BluRay.HDR 🇯🇵 🇬🇧 👤 3 💾 40 GB");
+const dub4kDead = item("Torrentio\n4k", "Anime.S01.2160p.Dual.Audio.BluRay 🇯🇵 🇬🇧 👤 1 💾 40 GB");
+const dub1080cached = item("[TB+] Torrentio\n1080p", "Anime.S01.1080p.Dual.Audio.WEB 🇯🇵 🇬🇧 💾 9 GB");
+assert.equal(pick([cached4k, dub1080cached, dub4kFew, dub4kMany]), dub4kMany.label, "the 4K dub most people share");
+assert.equal(pick([cached4k, dub1080cached]), dub1080cached.label, "a dub, ready to play, before a 4K that isn't one");
+assert.equal(pick([dub4kDead, dub1080cached]), dub1080cached.label, "a dub nobody shares doesn't lead");
+assert.equal(pick([dub4kDead, cached4k]), cached4k.label, "nor beats what plays");
 streamPrefs.set("none", true);
 streamPrefs.set("none", false);
 assert.equal(pick([cached4k, yts, dubbed]), cached4k.label, "preferences off again");

@@ -4195,6 +4195,21 @@ html[data-dx-rows] [class*="streams-list-container"] [class*="stream-placeholder
     pointer-events: none;
 }
 
+/* An English dub's quality tile carries the US flag in its corner too */
+#app [data-dxv]:has(.dxv-dub) .dxv-q {
+    position: relative;
+}
+
+#app [data-dxv]:has(.dxv-dub) .dxv-q::after {
+    content: "\1F1FA\1F1F8";
+    position: absolute;
+    top: 0.3rem;
+    right: 0.35rem;
+    font-size: 0.95rem;
+    line-height: 1;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
 .dxv-q {
     flex: none;
     display: flex;

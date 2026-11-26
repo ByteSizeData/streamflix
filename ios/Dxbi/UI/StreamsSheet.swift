@@ -149,7 +149,7 @@ struct StreamsSheet: View {
                     }
                 }
                 HStack(spacing: 6) {
-                    Badge(text: s.quality, filled: true)
+                    Badge(text: s.englishDub ? "\u{1F1FA}\u{1F1F8} \(s.quality)" : s.quality, filled: true)
                     if s.dv { Badge(text: "DOLBY VISION") } else if s.hdr { Badge(text: "HDR") }
                     if !s.source.isEmpty && s.source != "Other" { Badge(text: s.source.uppercased(), colour: s.source == "CAM" ? .red : .white) }
                     if !s.codec.isEmpty { Badge(text: s.codec) }

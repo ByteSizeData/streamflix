@@ -193,7 +193,7 @@ private fun StreamRow(s: StreamOption, picked: Boolean, onPlayIn: (Phone.Target)
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Tag(s.quality, strong = true)
+            Tag(if (s.englishDub) "\uD83C\uDDFA\uD83C\uDDF8 ${s.quality}" else s.quality, strong = true)
             if (s.dv) Tag("DOLBY VISION") else if (s.hdr) Tag("HDR")
             if (s.source.isNotEmpty() && s.source != "Other") Tag(s.source.uppercase(), colour = if (s.source == "CAM") Color(0xFF8B0000) else null)
             if (s.codec.isNotEmpty()) Tag(s.codec)
