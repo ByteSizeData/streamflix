@@ -6,8 +6,8 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
-// Where dx.bi for phones (the `mobile` flavor) joins dx.bi TV's code. Each flavor has its own `Phone`
-// object: dx.bi TV's (src/tv) does nothing, so dx.bi TV runs as it always has; the phone app's
+// Where StreamFlix for phones (the `mobile` flavor) joins StreamFlix TV's code. Each flavor has its own `Phone`
+// object: StreamFlix TV's (src/tv) does nothing, so StreamFlix TV runs as it always has; the phone app's
 // (src/mobile) adds its native screens and its player's extras through these.
 
 /** What the phone app's part of the player can ask of [PlayerActivity] */

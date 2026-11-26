@@ -7,7 +7,7 @@ struct PosterGrid: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
-        // (dx.bi settings → Poster size: bigger posters, fewer to a line)
+        // (StreamFlix settings → Poster size: bigger posters, fewer to a line)
         let least = Posters.shared.gridWidth(regular: sizeClass == .regular)
         LazyVGrid(columns: [GridItem(.adaptive(minimum: least, maximum: least * 1.55), spacing: 12)], spacing: 14) {
             ForEach(items) { title in

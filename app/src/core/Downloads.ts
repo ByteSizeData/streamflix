@@ -14,7 +14,7 @@ import { getLogger } from "../utils/logger";
 const logger = getLogger("Downloads");
 
 /**
- * Films and episodes saved to watch offline, like Netflix's downloads. The page (dx.bi's plugin)
+ * Films and episodes saved to watch offline, like Netflix's downloads. The page (StreamFlix's plugin)
  * picks the stream; this downloads it into the chosen folder (resuming after a dropped connection
  * or a restart), saves its subtitles and artwork beside it, and serves the files back to Stremio's
  * player from 127.0.0.1 so they play with no internet at all.
@@ -80,7 +80,7 @@ const VIDEO_TYPES: Record<string, string> = {
 function defaultFolder(): string {
     let videos = "";
     try { videos = app.getPath("videos"); } catch { /* not on every Linux desktop */ }
-    return join(videos || join(homedir(), "Videos"), "dx.bi");
+    return join(videos || join(homedir(), "Videos"), "StreamFlix");
 }
 
 /** A name that's safe as a file or folder name on Windows, macOS and Linux */
@@ -118,7 +118,7 @@ class DownloadsImpl {
             const saved = JSON.parse(readFileSync(this.indexPath, "utf8"));
             if (Array.isArray(saved)) this.entries = saved.filter((e) => e && typeof e.id === "string");
         } catch { /* nothing yet */ }
-        // whatever was running when dx.bi closed carries on where its file got to
+        // whatever was running when StreamFlix closed carries on where its file got to
         for (const e of this.entries) {
             if (e.state === "downloading") e.state = "queued";
             if (e.state !== "done" && e.file && existsSync(e.file)) e.received = statSync(e.file).size;
@@ -471,7 +471,7 @@ class DownloadsImpl {
             info = res.ok ? await res.json().catch(() => null) : null;
         } catch (err: any) {
             if (signal.aborted) throw err;
-            throw Object.assign(new Error("dx.bi's streaming server isn't running, so torrents can't download. Restart dx.bi, or pick a debrid stream."), { fatal: false });
+            throw Object.assign(new Error("StreamFlix's streaming server isn't running, so torrents can't download. Restart StreamFlix, or pick a debrid stream."), { fatal: false });
         }
         if (t.fileIdx === null && info && Array.isArray(info.files) && info.files.length) {
             // (no file named: the largest video in it)

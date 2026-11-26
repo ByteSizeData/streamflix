@@ -12,7 +12,7 @@ const logger = getLogger("DeviceClock");
 // Chromium works out local time from the time zone rules built into it, and those go out of date
 // when a place changes its rules: British Columbia stopped turning its clocks back in November
 // 2026, so Electron 41 still put Vancouver an hour behind the Mac's own clock. The operating
-// system gets updated rules, so dx.bi asks it instead and the page shows times with that offset.
+// system gets updated rules, so StreamFlix asks it instead and the page shows times with that offset.
 export default class DeviceClock {
     public static initIPC(): void {
         ipcMain.handle(IPC_CHANNELS.DEVICE_UTC_OFFSET, () => this.offset());

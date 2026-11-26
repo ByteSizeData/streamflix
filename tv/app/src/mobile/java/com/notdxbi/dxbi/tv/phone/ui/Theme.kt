@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.notdxbi.dxbi.tv.R
 
-// dx.bi on a phone: black, white text, the dx.bi red for what matters
+// StreamFlix on a phone: black, white text, the StreamFlix red for what matters
 object Dx {
     val Accent = Color(0xFFE50914)
     val Background = Color(0xFF000000)
@@ -48,11 +48,11 @@ private val Type = Typography(
 
 private val Bebas = FontFamily(Font(R.font.bebas_neue))
 
-/** The DX.BI wordmark, as dx.bi's theme draws it everywhere else: Bebas Neue, slightly spaced, in the accent */
+/** The STREAMFLIX wordmark, as StreamFlix's theme draws it everywhere else: Bebas Neue, slightly spaced, in the accent */
 @Composable
 fun Logo(size: TextUnit = 38.sp, modifier: Modifier = Modifier) {
     Text(
-        "DX.BI",
+        "STREAMFLIX",
         modifier = modifier,
         style = TextStyle(
             fontFamily = Bebas,
