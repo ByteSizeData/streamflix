@@ -11,13 +11,13 @@ import { VALID_EXTERNAL_PLAYERS, type ExternalPlayer, type ExternalPlayerOptions
 
 const logger = getLogger("ExternalPlayerController");
 
-// A fresh pipe (Windows) or socket (Linux, Mac) for each mpv launch, so dx.bi never talks to another mpv window
+// A fresh pipe (Windows) or socket (Linux, Mac) for each mpv launch, so StreamFlix never talks to another mpv window
 function newMpvSocket(): string {
     const name = `dxbi-mpv-${randomBytes(6).toString('hex')}`;
     return process.platform === 'win32' ? `\\\\.\\pipe\\${name}` : join(tmpdir(), `${name}.sock`);
 }
 // A free port picked for each launch (9090 is often another program's), and VLC is kept from handing
-// the link to a VLC already open, which has no web remote: dx.bi then never heard where you were
+// the link to a VLC already open, which has no web remote: StreamFlix then never heard where you were
 let vlcHttpPort = 9090;
 
 function freePort(): Promise<number> {
@@ -36,7 +36,7 @@ const VLC_HTTP_HOST = '127.0.0.1';
 const VLC_HTTP_PASSWORD = randomBytes(18).toString('base64url');
 // Where the player is gets asked this often: closing the player loses at most this much
 const POLL_EVERY_MS = 1000;
-// When dx.bi closes while a player is open, the page gets this long to save the place first
+// When StreamFlix closes while a player is open, the page gets this long to save the place first
 const SAVE_ON_CLOSE_MS = 1500;
 
 // Common install paths per platform
@@ -164,7 +164,7 @@ function startPolling(player: ExternalPlayer, child: ChildProcess, win: BrowserW
     pollTimer = setTimeout(poll, POLL_EVERY_MS);
 }
 
-// Closing dx.bi while a tracked player is open: the page saves the place before the window goes
+// Closing StreamFlix while a tracked player is open: the page saves the place before the window goes
 function saveBeforeClose(win: BrowserWindow) {
     if (closeWatched.has(win)) return;
     closeWatched.add(win);

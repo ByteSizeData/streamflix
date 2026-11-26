@@ -19,9 +19,9 @@ class Updater {
      */
     public static async checkForUpdates(showNoUpdatePrompt: boolean): Promise<boolean> {
         try {
-            // A custom build (Simkl) is never offered the plain dx.bi in its place
+            // A custom build (Simkl) is never offered the plain StreamFlix in its place
             if (/simkl/i.test(this.getCurrentVersion())) {
-                if (showNoUpdatePrompt) await this.alert("info", "Custom build", `This dx.bi with Simkl (v${this.getCurrentVersion()}) doesn't update itself: an update would put the plain dx.bi back.`, ["OK"]);
+                if (showNoUpdatePrompt) await this.alert("info", "Custom build", `This StreamFlix with Simkl (v${this.getCurrentVersion()}) doesn't update itself: an update would put the plain StreamFlix back.`, ["OK"]);
                 return false;
             }
             const release = await this.getLatestRelease();

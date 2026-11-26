@@ -16,10 +16,10 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
- * Keeps dx.bi current on the TV:
- *  - the dx.bi plugin updates itself between app releases, like it does on a computer: a newer copy
+ * Keeps StreamFlix current on the TV:
+ *  - the StreamFlix plugin updates itself between app releases, like it does on a computer: a newer copy
  *    is fetched in the background and used from the next launch
- *  - a new dx.bi TV release is offered once, and downloaded and installed when wanted
+ *  - a new StreamFlix TV release is offered once, and downloaded and installed when wanted
  */
 object Updates {
     // The plugin from the latest release, not the main branch: unreleased work never reaches TVs
@@ -62,7 +62,7 @@ object Updates {
 
     /**
      * The plugin as the TV runs it: without the intro film and the picture enhancer's shaders, which
-     * dx.bi TV never uses: about 40% smaller, so a 2 GB TV has that much less to hold while starting.
+     * StreamFlix TV never uses: about 40% smaller, so a 2 GB TV has that much less to hold while starting.
      */
     // (\r?\n: a build made on Windows carries the plugin with CRLF line ends, and went untrimmed)
     fun forTv(source: String): String = source
@@ -73,7 +73,7 @@ object Updates {
         if (custom(context) || !ENABLED) return@thread
         try {
             val text = get(PLUGIN_URL) ?: return@thread
-            if (!text.contains("@name dx.bi")) return@thread
+            if (!text.contains("@name StreamFlix")) return@thread
             if (isNewer(version(text), version(pluginSource(context)))) {
                 // Written next to it and swapped in whole: a half-written copy (power cut, app closed)
                 // would otherwise keep its new version number and be loaded, and never fetched again
@@ -137,7 +137,7 @@ object Updates {
                 if (activity.isFinishing || offering) return@runOnUiThread
                 offering = true
                 val dialog = AlertDialog.Builder(activity)
-                    .setTitle("dx.bi $latest is out")
+                    .setTitle("StreamFlix $latest is out")
                     .setMessage(
                         if (BuildConfig.PHONE_UI) "You have $current. Update now? It downloads in the background and installs (Android may ask you to confirm)."
                         else "You have $current. Update now? It downloads in the background, then Android asks you to install it.",
@@ -156,16 +156,16 @@ object Updates {
     private val downloading = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private fun download(activity: MainActivity, url: String, size: Long, version: String) {
-        // Android only installs apps from dx.bi once it's allowed to ("Install unknown apps")
+        // Android only installs apps from StreamFlix once it's allowed to ("Install unknown apps")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !activity.packageManager.canRequestPackageInstalls()) {
             // It carries on by itself when they come back from that screen having allowed it
             pendingInstall = { download(it, url, size, version) }
             try {
                 activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}")))
-                Toast.makeText(activity, "Allow dx.bi to install apps, then come back", Toast.LENGTH_LONG).show()
+                Toast.makeText(activity, "Allow StreamFlix to install apps, then come back", Toast.LENGTH_LONG).show()
             } catch (_: Exception) {
                 // Some TVs (Fire OS among them) have no such screen to open directly
-                Toast.makeText(activity, "Allow dx.bi to install apps in the TV's settings (on Fire TV: My Fire TV → Developer options → Install unknown apps), then come back", Toast.LENGTH_LONG).show()
+                Toast.makeText(activity, "Allow StreamFlix to install apps in the TV's settings (on Fire TV: My Fire TV → Developer options → Install unknown apps), then come back", Toast.LENGTH_LONG).show()
             }
             return
         }
@@ -216,7 +216,7 @@ object Updates {
 
     /**
      * Downloads the APK and makes sure Android will be able to install it: every byte there, and a
-     * readable dx.bi package of the version expected. Returns null when it's good, else what's wrong.
+     * readable StreamFlix package of the version expected. Returns null when it's good, else what's wrong.
      */
     private fun fetchApk(url: String, apk: File, size: Long, version: String, activity: MainActivity): String? {
         val partial = File(apk.parentFile, apk.name + ".part")
@@ -238,7 +238,7 @@ object Updates {
         val info = activity.packageManager.getPackageArchiveInfo(partial.path, 0)
         if (info == null || info.packageName != activity.packageName || info.versionName != version) {
             partial.delete()
-            return "the downloaded file isn't a dx.bi $version app"
+            return "the downloaded file isn't a StreamFlix $version app"
         }
         apk.delete()
         if (!partial.renameTo(apk)) return "the update couldn't be saved"

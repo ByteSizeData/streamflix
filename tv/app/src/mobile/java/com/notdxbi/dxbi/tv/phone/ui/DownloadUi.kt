@@ -92,7 +92,7 @@ fun sizeText(bytes: Long): String = when {
 
 /**
  * Downloading from a title's page: asks which quality (unless Downloads → Settings says to always
- * use one), finds each stream through dx.bi and starts saving it. "Choose the source myself" hands
+ * use one), finds each stream through StreamFlix and starts saving it. "Choose the source myself" hands
  * back to the page, which opens the stream list for [onChoose].
  */
 class Downloader(private val stremio: Stremio, private val context: Context, private val launch: (suspend () -> Unit) -> Unit) {
@@ -368,7 +368,7 @@ private fun DownloadSettings() {
         item {
             Column(Modifier.padding(horizontal = Gutter, vertical = 12.dp)) {
                 Text("Where downloads go", color = Dx.Text, style = MaterialTheme.typography.titleSmall)
-                Text(if (places.size > 1) "The phone, or a memory card. Moving them takes a moment and restarts dx.bi." else "On this phone (no memory card found).", color = Dx.Faint, style = MaterialTheme.typography.bodySmall)
+                Text(if (places.size > 1) "The phone, or a memory card. Moving them takes a moment and restarts StreamFlix." else "On this phone (no memory card found).", color = Dx.Faint, style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
                 places.forEach { p ->
                     val on = p.index == s.storage
@@ -396,7 +396,7 @@ private fun DownloadSettings() {
             title = { Text("Save downloads to ${p.label.lowercase()}?") },
             text = {
                 Column {
-                    Text(if (count > 0) "Your $count download${if (count == 1) "" else "s"} move there too, then dx.bi restarts." else "New downloads go there. dx.bi restarts to switch.", color = Dx.Muted)
+                    Text(if (count > 0) "Your $count download${if (count == 1) "" else "s"} move there too, then StreamFlix restarts." else "New downloads go there. StreamFlix restarts to switch.", color = Dx.Muted)
                     progress?.let { Spacer(Modifier.height(12.dp)); LinearProgressIndicator(progress = { it }, color = Dx.Accent, modifier = Modifier.fillMaxWidth()) }
                 }
             },

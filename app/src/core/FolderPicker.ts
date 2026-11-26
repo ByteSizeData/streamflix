@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from "electron";
 import { IPC_CHANNELS } from "../constants";
 
-// A "choose a folder" dialog for the page (Settings → dx.bi → Streaming cache folder)
+// A "choose a folder" dialog for the page (Settings → StreamFlix → Streaming cache folder)
 export default class FolderPicker {
     public static initIPC(): void {
         ipcMain.handle(IPC_CHANNELS.PICK_FOLDER, async (event, title: unknown, defaultPath: unknown) => {

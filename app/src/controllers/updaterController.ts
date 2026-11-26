@@ -4,7 +4,7 @@ import logger from "../utils/logger";
 import Updater from '../core/Updater';
 
 export function setupUpdater() {
-    // a custom build (Simkl) is never offered the plain dx.bi in its place
+    // a custom build (Simkl) is never offered the plain StreamFlix in its place
     if (/simkl/i.test(app.getVersion())) return;
     ipcMain.on(IPC_CHANNELS.UPDATE_CHECK_STARTUP, async (_, checkForUpdatesOnStartup: string) => {
         logger.info(`Checking for updates on startup: ${checkForUpdatesOnStartup === "true" ? "enabled" : "disabled"}.`);
