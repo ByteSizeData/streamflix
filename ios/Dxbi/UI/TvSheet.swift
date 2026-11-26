@@ -23,6 +23,8 @@ struct TvSheet: View {
     @State private var address = ""
     /// While the knob is held it stays under the finger, not where the TV last said it was
     @State private var held: Double?
+    /// The TV's own arrows, shown while something plays only when asked for
+    @State private var arrows = false
 
     var body: some View {
         let remote = TvRemote.shared
@@ -161,7 +163,14 @@ struct TvSheet: View {
         } else {
             ProgressView().frame(maxWidth: .infinity).padding(20)
         }
-        pad(remote)
+        if (remote.status?.open ?? false) || remote.starting != nil {
+            DisclosureGroup(isExpanded: $arrows) { pad(remote) } label: {
+                Text("TV arrow buttons, OK and volume").font(.subheadline.weight(.semibold)).foregroundStyle(Dx.muted)
+            }
+            .tint(Dx.muted)
+        } else {
+            pad(remote)
+        }
     }
 
     /// Play was just sent: the TV is opening it (a torrent can take a while), and the buttons are ready
@@ -174,18 +183,21 @@ struct TvSheet: View {
         Text("Pause, subtitles and the rest come up here as soon as it plays. A torrent can take a minute to start.")
             .font(.subheadline)
             .foregroundStyle(Dx.muted)
+        transport(remote, paused: false)
+        settings(remote)
+    }
+
+    /// Back 10 seconds, play or pause (big), forward 10 seconds
+    private func transport(_ remote: TvRemote, paused: Bool) -> some View {
         HStack {
             Spacer()
             round("gobackward.10", "Back 10 seconds") { remote.control("seekBy", ms: -10_000) }
             Spacer()
-            round("pause.fill", "Pause", big: true) { remote.control("toggle") }
+            round(paused ? "play.fill" : "pause.fill", paused ? "Play" : "Pause", big: true) { remote.control("toggle") }
             Spacer()
             round("goforward.10", "Forward 10 seconds") { remote.control("seekBy", ms: 10_000) }
             Spacer()
-            round("stop.fill", "Stop") { remote.control("close") }
-            Spacer()
         }
-        settings(remote)
     }
 
     @ViewBuilder
@@ -213,40 +225,67 @@ struct TvSheet: View {
             Spacer()
             Text(now.buffering ? "Loading\u{2026}" : Self.clock(length)).font(.caption).foregroundStyle(Dx.muted)
         }
-        HStack {
-            Spacer()
-            round("gobackward.10", "Back 10 seconds") { remote.control("seekBy", ms: -10_000) }
-            Spacer()
-            round(now.paused ? "play.fill" : "pause.fill", now.paused ? "Play" : "Pause", big: true) { remote.control("toggle") }
-            Spacer()
-            round("goforward.10", "Forward 10 seconds") { remote.control("seekBy", ms: 10_000) }
-            Spacer()
-            round("stop.fill", "Stop") { remote.control("close") }
-            Spacer()
-        }
+        transport(remote, paused: now.paused)
         settings(remote)
     }
 
-    /// The TV player's own settings, the ones its remote's menus have. Chosen here, they change on the TV.
+    /// The TV player's own settings, as big tiles that say what's on now: Subtitles, Audio, Volume boost
+    /// and Picture, then Speed, Sound and Zoom. A tap opens a short menu; what's picked changes on the
+    /// TV at once. Below them, Stop.
     @ViewBuilder
     private func settings(_ remote: TvRemote) -> some View {
         if let o = remote.options {
-            Text("Video settings").font(.headline).padding(.top, 6)
-            chips("Audio", o.audio) { remote.setOption("audio", $0) }
-            chips("Subtitles", o.subtitles) { remote.setOption("subtitles", $0) }
-            if o.subtitles.contains(where: { $0.on && $0.id != "off" }) {
-                let moved = o.subtitleDelayMs == 0 ? "on time" : String(format: "%+.2f s", o.subtitleDelayMs / 1000)
-                chips("Subtitle timing · \(moved)", [
-                    TvRemote.Choice(id: "-250", name: "Earlier", on: false),
-                    TvRemote.Choice(id: "250", name: "Later", on: false),
-                    TvRemote.Choice(id: "0", name: "Reset", on: o.subtitleDelayMs == 0),
-                ]) { remote.setOption("subtitleDelay", $0) }
+            let moved = o.subtitleDelayMs == 0 ? nil : String(format: "%+.2f s", o.subtitleDelayMs / 1000)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                tile("Subtitles", o.subtitles) { remote.setOption("subtitles", $0) } more: {
+                    if o.subtitles.contains(where: { $0.on && $0.id != "off" }) {
+                        Section("Timing\(moved.map { " · now \($0)" } ?? "")") {
+                            Button("Subtitles earlier") { remote.setOption("subtitleDelay", "-250") }
+                            Button("Subtitles later") { remote.setOption("subtitleDelay", "250") }
+                            Button("On time") { remote.setOption("subtitleDelay", "0") }
+                        }
+                    }
+                }
+                tile("Audio", o.audio) { remote.setOption("audio", $0) }
+                tile("Volume boost", o.boost) { remote.setOption("boost", $0) }
+                tile("Picture", o.picture) { remote.setOption("picture", $0) }
             }
-            chips("Volume boost", o.boost) { remote.setOption("boost", $0) }
-            chips("Sound", o.sound) { remote.setOption("sound", $0) }
-            chips("Speed", o.speed) { remote.setOption("speed", $0) }
-            chips("Picture", o.picture) { remote.setOption("picture", $0) }
-            chips("Zoom", o.zoom) { remote.setOption("zoom", $0) }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                tile("Speed", o.speed) { remote.setOption("speed", $0) }
+                tile("Sound", o.sound) { remote.setOption("sound", $0) }
+                tile("Zoom", o.zoom) { remote.setOption("zoom", $0) }
+            }
+        } else {
+            Text("The TV's settings come up here as soon as it plays.").font(.footnote).foregroundStyle(Dx.muted)
+        }
+        Button { remote.control("close") } label: {
+            Text("Stop playing").font(.subheadline.weight(.bold)).frame(maxWidth: .infinity).padding(.vertical, 12)
+                .background(Dx.raised, in: .rect(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// One setting on a tile: its name and what's on now; a tap lists the choices
+    @ViewBuilder
+    private func tile(_ label: String, _ choices: [TvRemote.Choice], pick: @escaping (String) -> Void, @ViewBuilder more: () -> some View = { EmptyView() }) -> some View {
+        if !choices.isEmpty {
+            Menu {
+                ForEach(choices) { c in
+                    Button { pick(c.id) } label: { if c.on { Label(c.name, systemImage: "checkmark") } else { Text(c.name) } }
+                }
+                more()
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label).font(.caption).foregroundStyle(Dx.muted).lineLimit(1)
+                    Text(choices.first(where: \.on)?.name ?? "Choose").font(.subheadline.weight(.bold)).foregroundStyle(.white).lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Dx.raised, in: .rect(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.white.opacity(0.08)))
+            }
+            .buttonStyle(.plain)
         }
     }
 

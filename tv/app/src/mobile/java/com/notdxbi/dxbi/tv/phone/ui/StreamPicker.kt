@@ -189,7 +189,7 @@ private fun StreamRow(s: StreamOption, picked: Boolean, onPlayIn: (Phone.Target)
         if (picked || s.englishDub) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 6.dp)) {
                 if (picked) Text("★ BEST MATCH", color = BestGold, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Black)
-                if (s.englishDub) Tag("ENGLISH DUB", colour = DubBlue)
+                if (s.englishDub) DubTag()
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -243,6 +243,20 @@ private fun StreamRow(s: StreamOption, picked: Boolean, onPlayIn: (Phone.Target)
 
 private val BestGold = Color(0xFFFFC53D)
 private val DubBlue = Color(0xFF2F80ED)
+
+/** An English dub, plain to see: the US flag and bright white letters on electric blue */
+@Composable
+private fun DubTag() {
+    Text(
+        "\uD83C\uDDFA\uD83C\uDDF8  ENGLISH DUB",
+        color = Color.White,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Black,
+        modifier = Modifier.clip(RoundedCornerShape(50))
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF00B4FF), Color(0xFF2F6BFF), Color(0xFF7B3CFF))))
+            .padding(horizontal = 10.dp, vertical = 3.dp),
+    )
+}
 
 @Composable
 private fun Tag(text: String, strong: Boolean = false, colour: Color? = null) {

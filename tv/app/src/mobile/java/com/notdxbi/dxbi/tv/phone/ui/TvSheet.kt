@@ -246,7 +246,16 @@ private fun Remote(context: Context, tv: TvRemote.Tv) {
         )
     }
     Spacer(Modifier.height(18.dp))
-    Pad(context)
+    // The TV's own arrows, for its menus and questions: out of the way while something plays
+    var arrows by remember { mutableStateOf(false) }
+    if (now?.open == true || starting > 0) {
+        Text(
+            if (arrows) "Hide the TV's arrow buttons" else "TV arrow buttons, OK and volume",
+            color = Dx.Muted, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable { arrows = !arrows }.padding(horizontal = 4.dp, vertical = 8.dp),
+        )
+        if (arrows) { Spacer(Modifier.height(8.dp)); Pad(context) }
+    } else Pad(context)
 }
 
 /** Play was just sent: the TV is opening it (a torrent can take a while), and the buttons are ready */
@@ -260,12 +269,7 @@ private fun Starting(context: Context, tv: TvRemote.Tv) {
     Spacer(Modifier.height(4.dp))
     Text("Pause, subtitles and the rest come up here as soon as it plays. A torrent can take a minute to start.", color = Dx.Muted, style = MaterialTheme.typography.bodyMedium)
     Spacer(Modifier.height(12.dp))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-        Round(Icons.Filled.Replay10, "Back 10 seconds") { TvRemote.control(context, "seekBy", -10_000) }
-        Round(Icons.Filled.Pause, "Pause", big = true) { TvRemote.control(context, "toggle") }
-        Round(Icons.Filled.Forward10, "Forward 10 seconds") { TvRemote.control(context, "seekBy", 10_000) }
-        Round(Icons.Filled.Stop, "Stop") { TvRemote.control(context, "close") }
-    }
+    Transport(context, paused = false)
     Settings(context)
 }
 
@@ -294,18 +298,24 @@ private fun Playing(context: Context, now: TvRemote.Status) {
         Text(if (now.buffering) "Loading…" else clock(length), color = Dx.Muted, style = MaterialTheme.typography.labelMedium)
     }
     Spacer(Modifier.height(6.dp))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-        Round(Icons.Filled.Replay10, "Back 10 seconds") { TvRemote.control(context, "seekBy", -10_000) }
-        Round(if (now.paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, if (now.paused) "Play" else "Pause", big = true) { TvRemote.control(context, "toggle") }
-        Round(Icons.Filled.Forward10, "Forward 10 seconds") { TvRemote.control(context, "seekBy", 10_000) }
-        Round(Icons.Filled.Stop, "Stop") { TvRemote.control(context, "close") }
-    }
+    Transport(context, now.paused)
     Settings(context)
 }
 
+/** Back 10 seconds, play or pause (big), forward 10 seconds */
+@Composable
+private fun Transport(context: Context, paused: Boolean) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+        Round(Icons.Filled.Replay10, "Back 10 seconds") { TvRemote.control(context, "seekBy", -10_000) }
+        Round(if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, if (paused) "Play" else "Pause", big = true) { TvRemote.control(context, "toggle") }
+        Round(Icons.Filled.Forward10, "Forward 10 seconds") { TvRemote.control(context, "seekBy", 10_000) }
+    }
+}
+
 /**
- * The TV player's own settings, the ones its remote's menus have: sound track, subtitles and their
- * timing, speed, picture, zoom, sound mode and volume boost. Chosen here, they change on the TV.
+ * The TV player's own settings, as big tiles that say what's on now: Subtitles, Audio, Volume boost
+ * and Picture, then More (speed, sound, zoom). A tap opens a short list; what's picked changes on the
+ * TV at once. Below them, Stop.
  */
 @Composable
 private fun Settings(context: Context) {
@@ -317,42 +327,66 @@ private fun Settings(context: Context) {
             delay(4000)
         }
     }
-    val o = options ?: return
-    Spacer(Modifier.height(14.dp))
-    Text("Video settings", color = Dx.Text, style = MaterialTheme.typography.titleMedium)
-    Chips("Audio", o.audio) { TvRemote.setOption(context, "audio", it) }
-    Chips("Subtitles", o.subtitles) { TvRemote.setOption(context, "subtitles", it) }
-    if (o.subtitles.any { it.on && it.id != "off" }) {
-        val moved = if (o.subtitleDelayMs == 0L) "on time" else "%+.2f s".format(o.subtitleDelayMs / 1000f)
-        Chips("Subtitle timing · $moved", listOf(
-            TvRemote.Choice("-250", "Earlier", false), TvRemote.Choice("250", "Later", false), TvRemote.Choice("0", "Reset", o.subtitleDelayMs == 0L),
-        )) { TvRemote.setOption(context, "subtitleDelay", it) }
+    Spacer(Modifier.height(16.dp))
+    val o = options
+    if (o == null) {
+        Text("The TV's settings come up here as soon as it plays.", color = Dx.Muted, style = MaterialTheme.typography.bodySmall)
+    } else {
+        val moved = if (o.subtitleDelayMs == 0L) null else "%+.2f s".format(o.subtitleDelayMs / 1000f)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SettingTile("Subtitles", o.subtitles, Modifier.weight(1f), extra = listOf(
+                TvRemote.Choice("timing:-250", "Subtitles earlier", false),
+                TvRemote.Choice("timing:250", "Subtitles later", false),
+                TvRemote.Choice("timing:0", "Subtitle timing: on time" + (moved?.let { " (now $it)" } ?: ""), false),
+            ).takeIf { o.subtitles.any { it.on && it.id != "off" } }.orEmpty()) { id ->
+                if (id.startsWith("timing:")) TvRemote.setOption(context, "subtitleDelay", id.removePrefix("timing:"))
+                else TvRemote.setOption(context, "subtitles", id)
+            }
+            SettingTile("Audio", o.audio, Modifier.weight(1f)) { TvRemote.setOption(context, "audio", it) }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SettingTile("Volume boost", o.boost, Modifier.weight(1f)) { TvRemote.setOption(context, "boost", it) }
+            SettingTile("Picture", o.picture, Modifier.weight(1f)) { TvRemote.setOption(context, "picture", it) }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SettingTile("Speed", o.speed, Modifier.weight(1f)) { TvRemote.setOption(context, "speed", it) }
+            SettingTile("Sound", o.sound, Modifier.weight(1f)) { TvRemote.setOption(context, "sound", it) }
+            SettingTile("Zoom", o.zoom, Modifier.weight(1f)) { TvRemote.setOption(context, "zoom", it) }
+        }
     }
-    Chips("Volume boost", o.boost) { TvRemote.setOption(context, "boost", it) }
-    Chips("Sound", o.sound) { TvRemote.setOption(context, "sound", it) }
-    Chips("Speed", o.speed) { TvRemote.setOption(context, "speed", it) }
-    Chips("Picture", o.picture) { TvRemote.setOption(context, "picture", it) }
-    Chips("Zoom", o.zoom) { TvRemote.setOption(context, "zoom", it) }
+    Spacer(Modifier.height(14.dp))
+    Text(
+        "Stop playing",
+        color = Color.White, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Dx.Raised)
+            .clickable { TvRemote.control(context, "close") }.padding(vertical = 12.dp),
+    )
 }
 
-/** One setting: its name, then what there is to choose from in a row that slides sideways */
+/** One setting: its name and what's on now, on a tile; a tap lists the choices (and [extra] after them) */
 @Composable
-private fun Chips(label: String, choices: List<TvRemote.Choice>, onPick: (String) -> Unit) {
+private fun SettingTile(label: String, choices: List<TvRemote.Choice>, modifier: Modifier, extra: List<TvRemote.Choice> = emptyList(), onPick: (String) -> Unit) {
     if (choices.isEmpty()) return
-    Spacer(Modifier.height(10.dp))
-    Text(label, color = Dx.Faint, style = MaterialTheme.typography.labelMedium)
-    Spacer(Modifier.height(6.dp))
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(end = 8.dp)) {
-        items(choices) { c ->
-            Text(
-                c.name,
-                color = if (c.on) Color.Black else Dx.Text,
-                fontWeight = if (c.on) FontWeight.Bold else FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (c.on) Color.White else Dx.Raised)
-                    .clickable { onPick(c.id) }.padding(horizontal = 14.dp, vertical = 9.dp),
-            )
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Dx.Raised)
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(14.dp))
+                .clickable { open = true }.padding(horizontal = 12.dp, vertical = 10.dp),
+        ) {
+            Text(label, color = Dx.Muted, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            Text(choices.firstOrNull { it.on }?.name ?: "Choose", color = Dx.Text, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            (choices + extra).forEach { c ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(c.name, fontWeight = if (c.on) FontWeight.Bold else FontWeight.Normal) },
+                    trailingIcon = if (c.on) ({ Text("\u2713", color = Dx.Accent, fontWeight = FontWeight.Black) }) else null,
+                    onClick = { open = false; onPick(c.id) },
+                )
+            }
         }
     }
 }

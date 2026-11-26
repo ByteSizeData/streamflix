@@ -184,8 +184,12 @@ fun DiscoverScreen(stremio: Stremio, title: String, onBack: (() -> Unit)?, onAni
         onAnimeUltra?.let { AnimeUltraCard(it) }
         if (d != null) LazyRow(contentPadding = PaddingValues(horizontal = Gutter, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val types = d.types.filter { it.link != null }
-            if (types.size > 1) item {
-                PickMenu(types.firstOrNull { it.selected }?.name?.let(::typeLabel) ?: "Type", types.map { typeLabel(it.name) to it.link!! }) { stremio.discover(it) }
+            // (Anime Ultra at the end of the menu, beside Films, Series and Anime)
+            val ultra = onAnimeUltra?.let { listOf("Anime Ultra ✦" to ANIME_ULTRA) }.orEmpty()
+            if (types.size > 1 || ultra.isNotEmpty()) item {
+                PickMenu(types.firstOrNull { it.selected }?.name?.let(::typeLabel) ?: "Type", types.map { typeLabel(it.name) to it.link!! } + ultra) {
+                    if (it == ANIME_ULTRA) onAnimeUltra?.invoke() else stremio.discover(it)
+                }
             }
             val catalogs = d.catalogs.filter { it.link != null }
             if (catalogs.size > 1) item {
@@ -204,6 +208,9 @@ fun DiscoverScreen(stremio: Stremio, title: String, onBack: (() -> Unit)?, onAni
         )
     }
 }
+
+/** (what the type menu's Anime Ultra stands for: not a Discover link) */
+private const val ANIME_ULTRA = "#anime-ultra"
 
 /** Discover's way into Anime Ultra: the best anime from the big anime sites, with their ratings */
 @Composable

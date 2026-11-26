@@ -4307,7 +4307,14 @@ html[data-dx-rows] [class*="streams-list-container"] [class*="stream-placeholder
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: #fff;
-    background: #2f80ed;
+    background: linear-gradient(90deg, #00b4ff, #2f6bff 55%, #7b3cff);
+    box-shadow: 0 0 12px rgba(0, 150, 255, 0.45);
+}
+
+/* (the US flag before it, in the flag font: Windows draws no flag emoji, see the top) */
+.dxv-dub .dx-flag {
+    font-style: normal;
+    margin-right: 0.35em;
 }
 
 #app [data-dxv]:has(.dxv-dub):not([data-dx-best]) {
@@ -4340,6 +4347,43 @@ html[data-dx-rows] [class*="streams-list-container"] [class*="stream-placeholder
     border-radius: 999px;
     color: #1a1200;
     background: linear-gradient(90deg, #ffe14d, #ffb300);
+}
+
+/* Computer (the desktop app, a browser): the best match as the TV and the phone apps show it, first
+   in the list and in gold, with an orange quality tile and a gold label. (The rows of every addon's
+   group are one list to the page: a group is display: contents.) */
+html:not(.dx-tv) #app [data-dxv][data-dx-best] {
+    order: -1000000 !important;
+    margin: 0.25rem 0 0.6rem;
+    background: linear-gradient(100deg, rgba(255, 196, 0, 0.3), rgba(255, 120, 0, 0.16) 55%, rgba(255, 45, 85, 0.14)) !important;
+    box-shadow: inset 0 0 0 2px #ffc400, 0 8px 26px rgba(255, 170, 0, 0.18);
+    border-radius: var(--dx-radius-s);
+}
+
+html:not(.dx-tv) #app [data-dxv][data-dx-best]:hover {
+    background: linear-gradient(100deg, rgba(255, 196, 0, 0.42), rgba(255, 120, 0, 0.24) 55%, rgba(255, 45, 85, 0.2)) !important;
+}
+
+html:not(.dx-tv) #app [data-dxv][data-dx-best] .dxv-q {
+    background: linear-gradient(135deg, #ffb300, #ff5e00) !important;
+}
+
+html:not(.dx-tv) #app [data-dxv][data-dx-best] .dxv-main {
+    border-bottom-color: transparent;
+}
+
+html:not(.dx-tv) #app [data-dx-best] .dxv-best {
+    display: inline-block;
+    align-self: flex-start;
+    margin-bottom: 0.15rem;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    color: #1a1200;
+    background: linear-gradient(90deg, #ffe14d, #ffb300);
+}
+
+html:not(.dx-tv) #app [data-dx-best] .dxv-best::before {
+    content: "\2605  ";
 }
 
 .dx-tv #app a[data-dx-trailer] {

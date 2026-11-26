@@ -142,6 +142,8 @@ struct SearchView: View {
 /** Every catalog the addons have, by type, catalog and genre */
 struct DiscoverView: View {
     @Environment(Stremio.self) private var stremio
+    /** Anime Ultra, picked from the catalog menu */
+    @State private var ultra = false
 
     var body: some View {
         ScrollView {
@@ -160,6 +162,7 @@ struct DiscoverView: View {
         }
         .screenBackground()
         .navigationTitle("Discover")
+        .navigationDestination(isPresented: $ultra) { AnimeView(source: "anilist", list: "trending") }
         .onAppear { stremio.discoverStart() }
         .onChange(of: stremio.allRows.count) { stremio.discoverStart() }
     }
@@ -196,6 +199,8 @@ struct DiscoverView: View {
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
                     Menu {
+                        Button { ultra = true } label: { Label("Anime Ultra", systemImage: "sparkles") }
+                        Divider()
                         ForEach(d.catalogs) { c in
                             Button { if let l = c.link { stremio.discover(link: l) } } label: {
                                 if c.selected { Label(c.name, systemImage: "checkmark") } else { Text(c.name) }

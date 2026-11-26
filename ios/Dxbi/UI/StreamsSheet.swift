@@ -128,6 +128,16 @@ struct StreamsSheet: View {
         .dxGlass(interactive: true, hidden: on, in: .capsule)
     }
 
+    /// An English dub, plain to see: the US flag and bright white letters on electric blue
+    private var dubTag: some View {
+        Text("\u{1F1FA}\u{1F1F8}  ENGLISH DUB")
+            .font(.caption.weight(.black))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+            .background(LinearGradient(colors: [Color(red: 0, green: 0.71, blue: 1), Color(red: 0.18, green: 0.42, blue: 1), Color(red: 0.48, green: 0.24, blue: 1)], startPoint: .leading, endPoint: .trailing), in: .capsule)
+    }
+
     private func row(_ s: StreamOption, picked: Bool) -> some View {
         Button { onPlay(s, .player) } label: {
             VStack(alignment: .leading, spacing: 6) {
@@ -135,7 +145,7 @@ struct StreamsSheet: View {
                 if picked || s.englishDub {
                     HStack(spacing: 8) {
                         if picked { Text("★ BEST MATCH").font(.caption2.weight(.black)).foregroundStyle(Self.bestGold) }
-                        if s.englishDub { Badge(text: "ENGLISH DUB", colour: Self.dubBlue) }
+                        if s.englishDub { dubTag }
                     }
                 }
                 HStack(spacing: 6) {
