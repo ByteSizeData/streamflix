@@ -9687,6 +9687,8 @@
     state: { source: "anilist", list: "trending", genre: "", kind: "", items: [], page: 0, more: false, loading: false, error: null, round: 0 },
 
     ensure() {
+      // (a TV app from before 2.38.412 couldn't close it with Back: there it waits for the new app)
+      if (IN_TV && !(window.__dxbiTv && window.__dxbiTv.animeUltra)) return;
       if (currentRoute() !== "discover") {
         if (this.banner) this.banner.remove();
         this.banner = null;

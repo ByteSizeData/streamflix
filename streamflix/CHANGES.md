@@ -4,6 +4,16 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.412
+
+Phones, tablets, the iPad and the desktop apps. The TV app of this release is built but not attached here yet: a TV keeps 2.38.409 until it is.
+
+- **Anime Ultra in Discover's menu.** Besides the banner, Anime Ultra is at the end of Discover's first menu (Movie, Series, Anime, Other, Anime Ultra) on the computer, in the type menu on a phone or tablet, and in the catalog menu on the iPad. The TV app of this release has it too, every poster and button reachable with the remote, the genres as buttons, and Back closes it.
+- **MyAnimeList works.** Its lists came through the public Jikan service, which was shut down on 1 October 2026, so they never loaded. They now come through Tenrai, which serves the same: Top airing, Top anime, Most popular, Top films and Most anticipated, with MyAnimeList's score and AniList's on each poster.
+- **The best match stands out on the computer**, as it does on the TV and the phone apps: first in the stream list, framed in gold, with an orange quality tile and a gold ★ BEST MATCH label.
+- **English dubs are plain to see.** A bright tag with the US flag, 🇺🇸 ENGLISH DUB, on the stream lists of the phone apps, the iPad, the computer and the TV.
+- **A simpler TV remote on the phone and iPad.** Three big buttons (back ten seconds, play or pause, forward ten seconds) and the seek bar, then the TV player's settings as tiles that say what's on (Subtitles, Audio, Volume boost, Picture; Speed, Sound, Zoom): a tap lists the choices and the TV changes at once. Subtitle timing is in the Subtitles list. Stop playing is below; the TV's arrow buttons fold away while something plays. It still comes up the moment a stream is picked.
+
 ## StreamFlix 2.38.411
 
 Phones, tablets, the iPad and the desktop apps. This release has no new TV app (the TV's stays on 2.38.409).
