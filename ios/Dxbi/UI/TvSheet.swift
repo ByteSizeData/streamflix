@@ -72,7 +72,7 @@ struct TvSheet: View {
 
     @ViewBuilder
     private func chooser(_ remote: TvRemote) -> some View {
-        Text("Open dx.bi on your TV, then pick it here. What you play goes to the TV, and this becomes its remote.")
+        Text("Open StreamFlix on your TV, then pick it here. What you play goes to the TV, and this becomes its remote.")
             .font(.subheadline)
             .foregroundStyle(Dx.muted)
         if let name = remote.connecting {

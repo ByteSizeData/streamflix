@@ -98,7 +98,7 @@ private enum class Tab(val route: String, val label: String, val on: ImageVector
     Home("home", "Home", Icons.Filled.Home, Icons.Outlined.Home),
     Discover("discover", "Discover", Icons.Filled.Explore, Icons.Outlined.Explore),
     Search("search", "Search", Icons.Filled.Search, Icons.Outlined.Search),
-    // (only with dx.bi settings → Library in the tab bar: Profile → Library otherwise)
+    // (only with StreamFlix settings → Library in the tab bar: Profile → Library otherwise)
     Library("library", "Library", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary),
     Addons("addons", "Addons", Icons.Filled.Extension, Icons.Outlined.Extension),
     Profile("profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person),
@@ -108,7 +108,7 @@ private enum class Tab(val route: String, val label: String, val on: ImageVector
 private val BarSpace = 96.dp
 
 /**
- * The room under the tab bar's labels. dx.bi runs full screen, so with the system bars hidden their
+ * The room under the tab bar's labels. StreamFlix runs full screen, so with the system bars hidden their
  * inset is 0 and the bar sat on the very edge, where the gesture strip and the screen's rounded corners
  * cut into it (Home and Profile most). It keeps clear of where the navigation bar would be (up to a
  * gesture strip's height, not the 48 dp of three-button navigation) and of the rounded corners.
@@ -142,7 +142,7 @@ private fun roundedCorner(): androidx.compose.ui.unit.Dp {
 private const val CINEMETA = "https://v3-cinemeta.strem.io/manifest.json"
 
 /**
- * dx.bi on a phone: native screens over Stremio's page, which keeps doing Stremio's work underneath
+ * StreamFlix on a phone: native screens over Stremio's page, which keeps doing Stremio's work underneath
  * ([Engine]). Every screen is native: the page itself is never shown.
  */
 @Composable

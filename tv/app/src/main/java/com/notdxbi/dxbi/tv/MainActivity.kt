@@ -39,7 +39,7 @@ import androidx.webkit.WebViewRenderProcess
 import androidx.webkit.WebViewRenderProcessClient
 
 /**
- * dx.bi TV: Stremio's web app with dx.bi built in, steered with the remote. Streams play in
+ * StreamFlix TV: Stremio's web app with StreamFlix built in, steered with the remote. Streams play in
  * [PlayerActivity]; this screen stays alive underneath so Stremio keeps the watch progress.
  */
 class MainActivity : AppCompatActivity() {
@@ -93,11 +93,11 @@ class MainActivity : AppCompatActivity() {
         val root = FrameLayout(this)
         root.addView(web, webSize())
         setContentView(root)
-        // dx.bi for phones: its own screens over the page (nothing in dx.bi TV: see PhoneHooks.kt)
+        // StreamFlix for phones: its own screens over the page (nothing in StreamFlix TV: see PhoneHooks.kt)
         Phone.attach(this, root, ::js)
         // Play on TV: a phone with the app can send this TV what to play (nothing on a phone)
         TvReceiver.attach(this)
-        // Only when dx.bi is opened, not when the screen is rebuilt (after a page crash, a turned phone).
+        // Only when StreamFlix is opened, not when the screen is rebuilt (after a page crash, a turned phone).
         // (not in the phone app: the film is made for a TV screen)
         if (savedInstanceState == null && !BuildConfig.PHONE_UI) intro = Intro(this, root).also { it.start() }
         web.setBackgroundColor(getColor(R.color.background))
@@ -114,7 +114,7 @@ class MainActivity : AppCompatActivity() {
             loadWithOverviewMode = true
             setSupportZoom(false)
             builtInZoomControls = false
-            // A desktop browser's identity (Stremio's web app is made for one), plus dx.bi TV's mark
+            // A desktop browser's identity (Stremio's web app is made for one), plus StreamFlix TV's mark
             userAgentString = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/${chromeVersion()} Safari/537.36 dxbi-tv/${BuildConfigVersion.name(this@MainActivity)}"
         }
@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity() {
             override fun getDefaultVideoPoster(): Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
         // A page that has stopped answering the remote is started again, rather than left frozen until
-        // someone forces dx.bi closed. Android reports it after about five seconds, then every few
+        // someone forces StreamFlix closed. Android reports it after about five seconds, then every few
         // seconds while it lasts: three in a row is a page that isn't coming back by itself.
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_VIEW_RENDERER_CLIENT_BASIC_USAGE)) {
             WebViewCompat.setWebViewRenderProcessClient(web, object : WebViewRenderProcessClient() {
@@ -158,7 +158,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // The page's engine crashed, or Android took its memory back (TVs with 1.5–2 GB): without
-            // this, Android closes dx.bi straight back to the home screen
+            // this, Android closes StreamFlix straight back to the home screen
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
                 Diary.note("the page's engine is gone (${if (detail.didCrash()) "it crashed" else "Android took its memory"})")
                 Phone.pageGone()
@@ -205,7 +205,7 @@ class MainActivity : AppCompatActivity() {
             override fun handleOnBackPressed() = goBack()
         })
 
-        // (the link dx.bi was opened with, once: a screen rebuilt after a page crash has the same intent)
+        // (the link StreamFlix was opened with, once: a screen rebuilt after a page crash has the same intent)
         val link = intent?.data
         whenOnline { if (savedInstanceState == null && link?.scheme == "stremio") openStremioLink(link) else web.loadUrl(STREMIO_URL) }
         web.requestFocus()
@@ -220,20 +220,20 @@ class MainActivity : AppCompatActivity() {
         if (!::web.isInitialized) return
         intent.data?.takeIf { it.scheme == "stremio" }?.let {
             // Back from the background a fresh start may be due, which onStart decides before or after
-            // this depending on the Android version: onResume opens it then, here or in the fresh dx.bi
+            // this depending on the Android version: onResume opens it then, here or in the fresh StreamFlix
             if (freshStart || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) pendingLink = it
             else openStremioLink(it)
         }
     }
 
     /**
-     * Back from being stopped. A stream handed over just as dx.bi went to the background (Home pressed
+     * Back from being stopped. A stream handed over just as StreamFlix went to the background (Home pressed
      * while it was starting) may never have opened: Android doesn't start a screen for an app in the
-     * background, and nothing would ever say the player closed. dx.bi would go on thinking a stream
+     * background, and nothing would ever say the player closed. StreamFlix would go on thinking a stream
      * plays (no fresh start, no Stremio update, a restarted page sent back to its player screen): it's
      * closed here instead, and the page goes back to the list of streams.
      * (Not in onStart: a screen rebuilt after a page crash starts too, maybe before the player is up.)
-     * Looked at a moment later, and only for that same hand-off: coming straight back to dx.bi just as
+     * Looked at a moment later, and only for that same hand-off: coming straight back to StreamFlix just as
      * the stream was asked for, Android may let the player's start through after all, and closing the
      * hand-off before the player was up left it playing with nothing recording where it got to.
      */
@@ -248,13 +248,13 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Back on screen. After a long time away (the TV asleep, an evening in another app) the page and
-     * its engine are stale: dx.bi starts afresh instead, as it would from the home screen (see
+     * its engine are stale: StreamFlix starts afresh instead, as it would from the home screen (see
      * [RestartActivity]). Coming back from the player is not being away: the page was keeping the
      * watch progress all along. A long time away that ends in the player (the TV slept with it open),
      * or with how it closed still to give to the page, can't start afresh without losing that: the page
      * is marked stale instead (PlaybackBus.pageStale), kept for the rest of that sitting and replaced
-     * the next time dx.bi is left and come back to, however briefly.
-     * Decided here, done in onResume: a link that opened dx.bi has arrived by then (see onNewIntent).
+     * the next time StreamFlix is left and come back to, however briefly.
+     * Decided here, done in onResume: a link that opened StreamFlix has arrived by then (see onNewIntent).
      */
     override fun onStart() {
         super.onStart()
@@ -277,8 +277,8 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         hideSystemBars()
         if (!::web.isInitialized) return
-        // dx.bi was left with the player open, and is back with the player gone (the home screen's start
-        // closed it, or it closed while dx.bi was away): was that long enough for the page to go stale?
+        // StreamFlix was left with the player open, and is back with the player gone (the home screen's start
+        // closed it, or it closed while StreamFlix was away): was that long enough for the page to go stale?
         PlaybackBus.backOnScreen()
         val link = pendingLink
         pendingLink = null
@@ -303,7 +303,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * dx.bi has left the screen (Home, another app, the TV going to sleep): a Stremio update waiting in
+     * StreamFlix has left the screen (Home, another app, the TV going to sleep): a Stremio update waiting in
      * the page is taken now, so it never has to ask (webUpdate in dxbi-tv.js). Not while a stream plays,
      * since the page is keeping its watch progress, and not on the way out.
      */
@@ -376,7 +376,7 @@ class MainActivity : AppCompatActivity() {
             if (mayLeave && now - lastBack < 2500) finish()
             else {
                 lastBack = now
-                Toast.makeText(this, "Press Back again to leave dx.bi", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Press Back again to leave StreamFlix", Toast.LENGTH_SHORT).show()
             }
         }
         val giveUp = Runnable {
@@ -401,7 +401,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Start the page again in a lighter way: the intro film is the heaviest moment of a start, so it's
-     * switched off (it can be switched back on in dx.bi's settings). A second crash soon after says so.
+     * switched off (it can be switched back on in StreamFlix's settings). A second crash soon after says so.
      * A page stopped for not answering (see the watchdog in onCreate) wasn't short of memory: its
      * intro stays as it is.
      */
@@ -426,8 +426,8 @@ class MainActivity : AppCompatActivity() {
         if (again) {
             setContentView(View(this))
             AlertDialog.Builder(this)
-                .setTitle("dx.bi keeps stopping")
-                .setMessage("dx.bi's screen stopped twice in a row on this TV, usually because the TV is short of memory. Closing other apps (or restarting the TV) helps. Try again?")
+                .setTitle("StreamFlix keeps stopping")
+                .setMessage("StreamFlix's screen stopped twice in a row on this TV, usually because the TV is short of memory. Closing other apps (or restarting the TV) helps. Try again?")
                 .setCancelable(false)
                 .setPositiveButton("Try again") { _, _ -> recreate() }
                 .setNegativeButton("Close") { _, _ -> finish() }
@@ -504,10 +504,10 @@ class MainActivity : AppCompatActivity() {
             .setTitle(if (fireTv) "Update your Fire TV" else "Update Android System WebView")
             .setCancelable(false)
         if (fireTv) {
-            builder.setMessage("dx.bi needs a newer web engine than this Fire TV has ($major). Update it under Settings → My Fire TV → About → Check for Updates, then open dx.bi again.")
+            builder.setMessage("StreamFlix needs a newer web engine than this Fire TV has ($major). Update it under Settings → My Fire TV → About → Check for Updates, then open StreamFlix again.")
                 .setPositiveButton("Close") { _, _ -> finish() }
         } else {
-            builder.setMessage("dx.bi needs Android System WebView $MIN_WEBVIEW or newer (this TV has $major). Update it from the Play Store (search \"Android System WebView\"), then open dx.bi again.")
+            builder.setMessage("StreamFlix needs Android System WebView $MIN_WEBVIEW or newer (this TV has $major). Update it from the Play Store (search \"Android System WebView\"), then open StreamFlix again.")
                 .setPositiveButton("Open Play Store") { _, _ ->
                     openExternal("market://details?id=com.google.android.webview")
                     finish()
@@ -543,7 +543,7 @@ class MainActivity : AppCompatActivity() {
         const val STREMIO_ORIGIN = "https://web.stremio.com"
         const val STREMIO_URL = "https://web.stremio.com/"
         const val MIN_WEBVIEW = 100
-        // Away this long, dx.bi comes back as a fresh start (an episode, a meal: shorter than that isn't away)
+        // Away this long, StreamFlix comes back as a fresh start (an episode, a meal: shorter than that isn't away)
         const val FRESH_AFTER_MS = 30 * 60_000L
         private const val BACK_ANSWER_MS = 1500L
         private const val ORPHAN_CHECK_MS = 2000L

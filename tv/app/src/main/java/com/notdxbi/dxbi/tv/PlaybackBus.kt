@@ -40,20 +40,20 @@ object PlaybackBus {
     val closePending: Boolean get() = pendingClose != null
 
     /**
-     * When dx.bi was left with the player open (Home, the TV asleep), until it's back on screen: the
+     * When StreamFlix was left with the player open (Home, the TV asleep), until it's back on screen: the
      * page under the player sat there all that time, unseen
      */
     @Volatile
     var playerLeftAt = 0L
 
     /**
-     * The page is stale (it sat through a long time away, see MainActivity.onStart) and dx.bi starts
+     * The page is stale (it sat through a long time away, see MainActivity.onStart) and StreamFlix starts
      * afresh the next time it's left and come back to. False in a new process, which has a new page.
      */
     @Volatile
     var pageStale = false
 
-    /** dx.bi is back on screen after being left with the player open: away long enough to go stale? */
+    /** StreamFlix is back on screen after being left with the player open: away long enough to go stale? */
     fun backOnScreen() {
         val left = playerLeftAt
         playerLeftAt = 0
