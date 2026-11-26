@@ -160,7 +160,7 @@ private fun Chooser(context: Context) {
 
     Text("Play on TV", style = MaterialTheme.typography.headlineMedium, color = Dx.Text)
     Text(
-        "Open dx.bi on your TV, then pick it here. What you play goes to the TV, and this becomes its remote.",
+        "Open StreamFlix on your TV, then pick it here. What you play goes to the TV, and this becomes its remote.",
         color = Dx.Muted, style = MaterialTheme.typography.bodyMedium,
     )
     Spacer(Modifier.height(16.dp))

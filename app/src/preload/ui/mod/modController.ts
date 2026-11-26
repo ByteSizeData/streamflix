@@ -126,7 +126,7 @@ export const modController = {
                     const pluginName = btnId.replace('-settings', '');
                     const pluginBaseName = pluginName.split(FILE_EXTENSIONS.PLUGIN)[0]; 
 
-                    // In Stremio's redesigned Settings, dx.bi's own options have their own page
+                    // In Stremio's redesigned Settings, StreamFlix's own options have their own page
                     if (pluginBaseName === 'dxbi' && isNewLayout()) {
                         location.hash = '#/settings/dxbi-customise';
                         return;
@@ -206,9 +206,9 @@ export const modController = {
     },
         
     scrollListener: (): void => {
-        helpers.waitForElm('div > div[title="dx.bi"]').then(() => {
+        helpers.waitForElm('div > div[title="StreamFlix"]').then(() => {
             const enhanced = document.getElementById('enhanced');
-            const enhancedNav = document.querySelector('div > div[title="dx.bi"]');
+            const enhancedNav = document.querySelector('div > div[title="StreamFlix"]');
             if (!enhanced || !enhancedNav) return;
 
             enhancedNav.addEventListener("click", () => {

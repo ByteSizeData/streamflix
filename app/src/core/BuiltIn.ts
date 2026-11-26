@@ -12,7 +12,7 @@ const logger = getLogger("BuiltIn");
 export const BUILT_IN_PLUGIN = "dxbi.plugin.js";
 
 /**
- * dx.bi ships inside the app. It's kept in the plugins folder like any other plugin, so the
+ * StreamFlix ships inside the app. It's kept in the plugins folder like any other plugin, so the
  * plugin's own update check keeps working between app releases: the bundled copy only replaces
  * an older one.
  */
@@ -30,21 +30,21 @@ export function seedBuiltInPlugin(): void {
         const custom = /simkl/i.test(bundledVersion || "");
         if (!installedVersion || (bundledVersion && (custom ? installedVersion !== bundledVersion : Helpers.isNewerVersion(bundledVersion, installedVersion)))) {
             writeFileSync(installed, content, "utf-8");
-            logger.info(`Installed the built-in dx.bi plugin v${bundledVersion}.`);
+            logger.info(`Installed the built-in StreamFlix plugin v${bundledVersion}.`);
         }
     } catch (err) {
-        logger.error("Failed to install the built-in dx.bi plugin: " + (err as Error).message);
+        logger.error("Failed to install the built-in StreamFlix plugin: " + (err as Error).message);
     }
 }
 
 // What comes over from Stremio Enhanced: the Stremio sign-in, library and app settings (browser
 // storage), plugins and themes with their settings, and the streaming server it downloaded
-// (not window transparency: dx.bi's look isn't made for a see-through window)
+// (not window transparency: StreamFlix's look isn't made for a see-through window)
 const IMPORT_ITEMS = ["Local Storage", "IndexedDB", "Session Storage", "plugins", "themes", "streamingserver",
     "use_stremio_service_for_streaming", "use_server_js_for_streaming"];
 
 /**
- * First launch only: offer to bring everything over from Stremio Enhanced, so dx.bi opens signed
+ * First launch only: offer to bring everything over from Stremio Enhanced, so StreamFlix opens signed
  * in and set up exactly as before.
  */
 export async function offerEnhancedImport(): Promise<void> {
@@ -59,7 +59,7 @@ export async function offerEnhancedImport(): Promise<void> {
     const choice = preset ? (preset === "copy" ? 0 : 1) : await Helpers.showAlert(
         "question",
         "Bring your Stremio Enhanced setup?",
-        "dx.bi found Stremio Enhanced on this computer. It can copy your Stremio sign-in, library, settings, " +
+        "StreamFlix found Stremio Enhanced on this computer. It can copy your Stremio sign-in, library, settings, " +
         "plugins and themes over, so everything is just as you left it.\n\n" +
         "Close Stremio Enhanced first if it's open. Stremio Enhanced itself isn't changed.",
         ["Copy my setup", "Start fresh"]
@@ -80,7 +80,7 @@ export async function offerEnhancedImport(): Promise<void> {
 
 /**
  * Stremio's own app (Stremio 5) keeps its web profile, sign-in, addons, library and settings included,
- * in a WebView2 folder. Like the Stremio Enhanced import, dx.bi offers once to copy it, so it opens
+ * in a WebView2 folder. Like the Stremio Enhanced import, StreamFlix offers once to copy it, so it opens
  * signed in and set up just as Stremio was. Stremio has to be closed meanwhile: it holds the files open.
  */
 export async function offerStremioImport(): Promise<void> {
@@ -89,7 +89,7 @@ export async function offerStremioImport(): Promise<void> {
     if (!from) return;
     const marker = join(to, ".stremio-import-offered");
     // Asked once, except after "Skip" (Stremio was open): then again next time. A profile that has no
-    // marker at all is from before this build (plain dx.bi) and is left alone; the one dx.bi makes for
+    // marker at all is from before this build (plain StreamFlix) and is left alone; the one StreamFlix makes for
     // itself during a skipped first run must not count as that.
     const state = existsSync(marker) ? readFileSync(marker, "utf8").trim() : "";
     if (state ? state !== "skipped" : existsSync(join(to, "Local Storage"))) return;
@@ -102,8 +102,8 @@ export async function offerStremioImport(): Promise<void> {
     const choice = preset ? (preset === "copy" ? 0 : 1) : await Helpers.showAlert(
         "question",
         "Bring your Stremio setup?",
-        "dx.bi found the Stremio app on this computer. It can copy your Stremio sign-in, addons, library and settings " +
-        "over, so dx.bi opens just as Stremio was.\n\nStremio itself isn't changed.",
+        "StreamFlix found the Stremio app on this computer. It can copy your Stremio sign-in, addons, library and settings " +
+        "over, so StreamFlix opens just as Stremio was.\n\nStremio itself isn't changed.",
         ["Copy my setup", "Start fresh"]
     );
     if (choice !== 0) { offered(); return; } // Start fresh: not asked again
@@ -131,7 +131,7 @@ export async function offerStremioImport(): Promise<void> {
         }
     }
     offered();
-    if (failed && !preset) await Helpers.showAlert("warning", "Couldn't copy your Stremio setup", `Part of it couldn't be copied (${failed}). You can sign in to Stremio in dx.bi instead.`, ["OK"]);
+    if (failed && !preset) await Helpers.showAlert("warning", "Couldn't copy your Stremio setup", `Part of it couldn't be copied (${failed}). You can sign in to Stremio in StreamFlix instead.`, ["OK"]);
 }
 
 function isRunning(image: string): Promise<boolean> {

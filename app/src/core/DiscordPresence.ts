@@ -14,7 +14,7 @@ class DiscordPresence {
 
     // Only ever one connection to Discord and one pending retry: each live connection shows as its
     // own activity, so a stale one (left by a retry, or by switching off and on quickly) appeared as
-    // a second, identical dx.bi in Discord
+    // a second, identical StreamFlix in Discord
     private static retryTimer: ReturnType<typeof setTimeout> | null = null;
     private static generation = 0;
 
@@ -121,12 +121,12 @@ class DiscordPresence {
             startTimestamp,
             endTimestamp,
             largeImageKey: imageKey || DISCORD.DEFAULT_IMAGE,
-            largeImageText: "dx.bi",
+            largeImageText: "StreamFlix",
             smallImageKey: DISCORD.PLAY_IMAGE,
             smallImageText: "Playing",
             instance: false,
             type: ActivityType.Watching,
-            // the member list / profile line reads "Watching <show>" instead of "Watching dx.bi"
+            // the member list / profile line reads "Watching <show>" instead of "Watching StreamFlix"
             statusDisplayType: StatusDisplayType.DETAILS
         });
     }
@@ -136,12 +136,12 @@ class DiscordPresence {
             details,
             state,
             largeImageKey: imageKey || DISCORD.DEFAULT_IMAGE,
-            largeImageText: "dx.bi",
+            largeImageText: "StreamFlix",
             smallImageKey: DISCORD.PAUSE_IMAGE,
             smallImageText: "Paused",
             instance: false,
             type: ActivityType.Watching,
-            // the member list / profile line reads "Watching <show>" instead of "Watching dx.bi"
+            // the member list / profile line reads "Watching <show>" instead of "Watching StreamFlix"
             statusDisplayType: StatusDisplayType.DETAILS
         });
     }
@@ -151,7 +151,7 @@ class DiscordPresence {
             details,
             state: 'Exploring',
             largeImageKey: imageKey || DISCORD.DEFAULT_IMAGE,
-            largeImageText: "dx.bi",
+            largeImageText: "StreamFlix",
             smallImageKey: DISCORD.BROWSE_IMAGE,
             smallImageText: "Browsing",
             instance: false,
@@ -163,7 +163,7 @@ class DiscordPresence {
         this._updateActivity({
             details: menuName,
             largeImageKey: DISCORD.DEFAULT_IMAGE,
-            largeImageText: "dx.bi",
+            largeImageText: "StreamFlix",
             smallImageKey: DISCORD.BROWSE_IMAGE,
             smallImageText: "Browsing",
             instance: false,
@@ -218,7 +218,7 @@ class DiscordPresence {
 
     private static _sendActivity(newActivity: SetActivity): void {
         if (!this.rpc) return;
-        // every status carries a link to dx.bi for whoever sees it
+        // every status carries a link to StreamFlix for whoever sees it
         this.rpc.user?.setActivity({ ...newActivity, buttons: DISCORD.BUTTONS.map((b) => ({ ...b })) }).catch((error) => {
             this.logger.error(`Failed to set Discord activity: ${(error as Error).message}`);
         });

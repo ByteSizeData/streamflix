@@ -91,7 +91,7 @@ struct AnimeSource: Hashable, Identifiable {
     static let genres = ["Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"]
     static let kinds = [AnimeList(id: "tv", name: "Series"), AnimeList(id: "movie", name: "Films"), AnimeList(id: "ova", name: "OVA, ONA & specials")]
 
-    /** As dx.bi has them (used until the page says otherwise) */
+    /** As StreamFlix has them (used until the page says otherwise) */
     static let all = [
         AnimeSource(id: "anilist", name: "AniList", lists: [("trending", "Popular right now"), ("season", "New this season"), ("top", "Best of all time"), ("popular", "Most popular ever"), ("next", "Coming next season"), ("movies", "Best films")], filters: true),
         AnimeSource(id: "mal", name: "MyAnimeList", lists: [("airing", "Top airing"), ("top", "Top anime"), ("popular", "Most popular"), ("movies", "Top films"), ("upcoming", "Most anticipated")]),
@@ -231,7 +231,7 @@ extension ISO8601DateFormatter {
     }()
 }
 
-/** A stream as dx.bi's stream list reads it (api.phone.streams: describeStream in the plugin) */
+/** A stream as StreamFlix's stream list reads it (api.phone.streams: describeStream in the plugin) */
 struct StreamOption: Identifiable, Hashable {
     var index: Int
     var play: String
@@ -441,7 +441,7 @@ struct Account {
     }
 }
 
-/** dx.bi's own Home rows (window.__dxbi.phone) */
+/** StreamFlix's own Home rows (window.__dxbi.phone) */
 struct ListRow {
     var name: String
     var items: [Title]
@@ -553,7 +553,7 @@ struct Reviews {
     }
 }
 
-/** One of dx.bi's settings, as the TV lists them */
+/** One of StreamFlix's settings, as the TV lists them */
 struct Setting: Identifiable {
     struct Option: Hashable {
         var value: String

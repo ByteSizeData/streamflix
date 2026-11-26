@@ -48,7 +48,7 @@ function writeAbout(): void {
     }).catch(err => logger.error("Failed to write about section: " + err));
 }
 
-// The dx.bi section is built once per visit to Settings. (This used to look for a link the nav
+// The StreamFlix section is built once per visit to Settings. (This used to look for a link the nav
 // doesn't have, so any hashchange on Settings, like the one Discord presence sent when it
 // connected, built the section again and listed every plugin twice.)
 let building = false;
@@ -63,7 +63,7 @@ export function checkSettings() {
         newSettings.leave();
         return;
     }
-    // Stremio's redesigned Settings (Nov 2026): dx.bi gets its own menu group and pages
+    // Stremio's redesigned Settings (Nov 2026): StreamFlix gets its own menu group and pages
     if (newSettings.isNewLayout()) {
         ensureNewLayout();
         return;
@@ -79,7 +79,7 @@ export function checkSettings() {
 
 function ensureNewLayout(): void {
     newSettings.ensure(fillSections);
-    // Stremio re-renders its menu and pane as you move between its pages: put dx.bi back each time
+    // Stremio re-renders its menu and pane as you move between its pages: put StreamFlix back each time
     if (!newLayoutWatch) {
         const content = document.querySelector('#app [class*="settings-content"]');
         if (!content) return;
@@ -97,8 +97,8 @@ function ensureNewLayout(): void {
 function buildOldLayout(): void {
     Helpers.waitForElm("#enhanced").then(() => { building = false; }, () => { building = false; });
 
-    logger.info("Adding 'dx.bi' sections...");
-    settingsBuilder.addSection("enhanced", "dx.bi");
+    logger.info("Adding 'StreamFlix' sections...");
+    settingsBuilder.addSection("enhanced", "StreamFlix");
     settingsBuilder.addCategory("Themes", "enhanced", getThemeIcon());
     settingsBuilder.addCategory("Plugins", "enhanced", getPluginIcon());
     settingsBuilder.addCategory("About", "enhanced", getAboutIcon());

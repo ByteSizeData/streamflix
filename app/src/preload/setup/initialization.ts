@@ -20,8 +20,8 @@ export function initializeUserSettings(): void {
         }
     }
 
-    // dx.bi is built in: switched on the first time the app runs (it can still be switched off
-    // under Settings → dx.bi → Plugins, and stays off then)
+    // StreamFlix is built in: switched on the first time the app runs (it can still be switched off
+    // under Settings → StreamFlix → Plugins, and stays off then)
     if (!localStorage.getItem(BUILT_IN_ENABLED_KEY)) {
         const enabled: string[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.ENABLED_PLUGINS) || "[]");
         if (!enabled.includes(BUILT_IN_PLUGIN)) enabled.push(BUILT_IN_PLUGIN);
