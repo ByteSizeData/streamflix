@@ -4,6 +4,12 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.417
+
+The TV app, phones, tablets, the iPad and the desktop apps.
+
+- **StreamFlix everywhere, no dx.bi.** "Report a problem" (which sent nothing in StreamFlix, and spoke of dx.bi's developer and Discord) is gone from the TV, the phone apps, the iPad and the computer. The TV's "Support" entry, which showed dx.bi's developer's Buy Me a Coffee page, is gone too. The computer app's description no longer names dx.bi. Its About page keeps a one-line credit to dx.bi, as dx.bi's licence (GPL) asks.
+
 ## StreamFlix 2.38.416
 
 The TV app, phones, tablets, the iPad and the desktop apps.
