@@ -53,6 +53,8 @@ const KEEP = [
   /dx\.bi's Discord/g,
   /dx\.bi's developer/g,
   /Not something dx\\\.bi syncs/g,
+  // (the desktop app's About page: what it's built on)
+  /Built on <a href="https:\/\/github\.com\/notdxbi\/dxbi-stremio"[^>]*>dx\.bi<\/a>/g,
 ];
 function rename(text) {
   const kept = [];
@@ -108,13 +110,79 @@ function dubsFirst(text) {
   return text.replace(setting, "$1true,");
 }
 
+// The desktop app (app/, Windows, macOS and Linux): its screens and messages get the name too, it
+// keeps its things in a folder of its own (not dx.bi's, so both can be on one computer), it looks for
+// its updates in StreamFlix's releases, and its About page says what it is and what it's built on
+const REPO = "ByteSizeData/streamflix";
+const APP = join(root, "app");
+const desktop = walk(join(APP, "src"), (p) => /\.(ts|html|css)$/.test(p));
+files.push(...desktop);
+function must(text, from, to, what) {
+  if (!text.includes(from)) throw new Error(`${what} wasn't found in the desktop app`);
+  return text.replaceAll(from, to);
+}
+function desktopSource(file, text) {
+  const is = (tail) => file.replaceAll("\\", "/").endsWith(tail);
+  if (is("src/main.ts")) return must(text, 'app.setName("dxbi");', 'app.setName("streamflix");', "the app's name");
+  if (is("src/core/Properties.ts")) return must(text, 'join(Properties.baseDataPath, "dxbi")', 'join(Properties.baseDataPath, "streamflix")', "the data folder");
+  if (is("src/constants/index.ts")) {
+    let t = must(text, "notdxbi/dxbi-stremio/raw/main/", `${REPO}/raw/streamflix/`, "the version address");
+    t = must(t, "notdxbi/dxbi-stremio/main/", `${REPO}/streamflix/`, "the presence pictures' address");
+    return must(t, "notdxbi/dxbi-stremio", REPO, "the releases' address");
+  }
+  if (is("components/about-category/about-category.html")) {
+    const head = /^<div class="dxbi-about"[\s\S]*?\n<\/div>\n/;
+    const coffee = /\n<div class="option-vFOAS">\s*<div class="content-P2T0i">\s*<a href="https:\/\/buymeacoffee\.com\/notdxbi"[\s\S]*?<\/a>\s*<\/div>\s*<\/div>\n/;
+    const t = text.replace(/\r\n/g, "\n");
+    if (!head.test(t) || !coffee.test(t)) throw new Error("the About page's heading or its Buy Me a Coffee button wasn't found");
+    return t.replace(head, () => `<div class="dxbi-about" style="margin: 0.2rem 0 1.1rem; line-height: 1.7; color: #cfcfd6; font-size: 0.95rem;">
+    <div><a href="https://github.com/${REPO}" target="_blank" rel="noreferrer" style="color: #fff; font-weight: 700; text-decoration: none;">${NAME} desktop app</a> <span style="color: #8d8d96;">· v{{ version }}</span></div>
+    <div style="color: #8d8d96;">Built on <a href="https://github.com/notdxbi/dxbi-stremio" target="_blank" rel="noreferrer" style="color: var(--primary-accent-color); text-decoration: none;">dx.bi</a>, free software under the GNU GPL</div>
+</div>
+`).replace(coffee, "\n");
+  }
+  return text;
+}
+
 let renamed = 0;
 for (const file of files) {
   const before = readFileSync(file, "utf8");
-  let after = rename(before);
+  // (the desktop's own changes first: the About page's credit to dx.bi keeps dx.bi's name, see KEEP)
+  let after = rename(desktop.includes(file) ? desktopSource(file, before) : before);
   if (file === PLUGIN) after = dubsFirst(ownReports(restyle(after)));
   if (file === PLUGIN && version) after = stamp(after);
   if (after !== before) { writeFileSync(file, after); renamed++; }
+}
+
+// The desktop app's package: its name, where it's installed and updated from, its files' names, and
+// (with --version) the version the release has, which its updater compares with the releases' tags
+{
+  const path = join(APP, "package.json");
+  const pkg = JSON.parse(readFileSync(path, "utf8"));
+  const b = pkg.build;
+  if (!b || !b.nsis || !b.portable || !b.linux) throw new Error("the desktop app's build settings weren't found");
+  pkg.name = "streamflix";
+  pkg.description = `${NAME}: a Netflix-style streaming app for your Stremio addons, built on dx.bi.`;
+  pkg.repository = `https://github.com/${REPO}.git`;
+  pkg.author = NAME;
+  if (version) pkg.version = version;
+  b.appId = "app.streamflix.desktop";
+  b.productName = NAME;
+  b.publish = { provider: "github", owner: REPO.split("/")[0], repo: REPO.split("/")[1] };
+  b.artifactName = "streamflix-${os}-${arch}.${ext}";
+  b.nsis.artifactName = `${NAME}-Setup-\${arch}.\${ext}`;
+  b.portable.artifactName = `${NAME}-portable-\${arch}.\${ext}`;
+  b.linux.executableName = "streamflix";
+  writeFileSync(path, JSON.stringify(pkg, null, "\t") + "\n");
+  // (the lock file names the package too)
+  const lockPath = join(APP, "package-lock.json");
+  const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+  lock.name = "streamflix";
+  if (lock.packages && lock.packages[""]) lock.packages[""].name = "streamflix";
+  if (version) { lock.version = version; if (lock.packages && lock.packages[""]) lock.packages[""].version = version; }
+  writeFileSync(lockPath, JSON.stringify(lock, null, "\t") + "\n");
+  if (version) writeFileSync(join(APP, "version"), version);
+  renamed += 2;
 }
 
 // StreamFlix's pictures, laid out as the files they replace

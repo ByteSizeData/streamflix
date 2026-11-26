@@ -62,3 +62,10 @@ foreach ($d in $sizes.Keys) {
 New-Art -Width 960 -Height 540 -Text 'STREAMFLIX' -WidthShare 0.80 -HeightShare 0.44 -Tile $true -Bar $false -Out "$res\drawable\banner.png"
 # the iPhone and iPad icon (no transparency)
 New-Art -Width 1024 -Height 1024 -Text 'SF' -WidthShare 0.60 -HeightShare 0.54 -Tile $true -Bar $false -Out 'ios\Dxbi\Assets.xcassets\AppIcon.appiconset\icon-1024.png'
+
+# the desktop app's icons: PNGs at every size its icon files hold, packed into icon.ico (Windows) and
+# icon.icns (macOS) by pack-icons.mjs, which then removes them
+foreach ($s in 16, 24, 32, 48, 64, 128, 256, 512, 1024) {
+    New-Art -Width $s -Height $s -Text 'SF' -WidthShare 0.60 -HeightShare 0.54 -Tile $true -Bar $false -Out "app\images\sizes\icon-$s.png"
+}
+& node (Join-Path $PSScriptRoot 'pack-icons.mjs')
