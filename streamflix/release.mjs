@@ -7,6 +7,8 @@
 //   --apks          also build the two Android apps here, signed with tv/keystore.properties, and
 //                   attach them (for when the repository has no signing secrets; otherwise GitHub
 //                   builds them). Wants JAVA_HOME (a JDK 17 or newer) and tv/local.properties.
+//   --no-tv         with --apks: leave the TV app out of this release (the TV then isn't offered
+//                   an update: its app looks for streamflix-tv.apk in the latest release)
 //   --notes "text"  what's new, for the release page
 //   --dry           everything except pushing the tag and publishing
 //
@@ -26,7 +28,7 @@ import { tmpdir } from "node:os";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const has = (name) => process.argv.includes(`--${name}`);
 const option = (name) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : null; };
-const ci = has("ci"), dry = has("dry"), apks = has("apks");
+const ci = has("ci"), dry = has("dry"), apks = has("apks"), noTv = has("no-tv");
 
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], ...opts }).trim();
 const git = (...args) => run("git", args);
@@ -82,7 +84,8 @@ inWork("git", ["tag", "-f", tag]);
 const notes = [
   option("notes"),
   `StreamFlix ${version} is dx.bi ${dxbi} with StreamFlix's changes ([what they are](https://github.com/${repo}/blob/streamflix/streamflix/CHANGES.md)).`,
-  "Installed apps pick this up by themselves: the plugin within a few hours of the app being opened, and the Android apps then offer the new app. For a first install: **streamflix-tv.apk** for an Android TV box, **streamflix-mobile.apk** for an Android phone or tablet, **streamflix.ipa** for an iPhone or iPad (through a signing service or sideloading app). The app files appear here some minutes after the release itself.",
+  "Installed apps pick this up by themselves: the plugin within a few hours of the app being opened, and the Android and Windows apps then offer the new app. For a first install: **streamflix-tv.apk** for an Android TV box, **streamflix-mobile.apk** for an Android phone or tablet, **streamflix.ipa** for an iPhone or iPad (through a signing service or sideloading app), **StreamFlix-Setup-x64.exe** for Windows, **streamflix-mac-arm64.dmg** for a Mac with Apple silicon or **streamflix-mac-x64.dmg** for an Intel Mac, **streamflix-linux-x86_64.AppImage** for Linux. The app files appear here some minutes after the release itself.",
+  noTv ? "This release has no TV app: a TV keeps the one it has (the latest is in an earlier release)." : "",
 ].filter(Boolean).join("\n\n");
 
 if (dry) {
@@ -107,12 +110,12 @@ if (apks) {
   // (Windows runs a .bat through its shell, which wants the whole path, quoted)
   const gradle = process.platform === "win32" ? JSON.stringify(join(work, "tv", "gradlew.bat")) : "./gradlew";
   execFileSync(gradle, ["assembleTvRelease", "assembleMobileRelease", "--no-daemon", "--console=plain", "-q"], { cwd: join(work, "tv"), stdio: "inherit", shell: process.platform === "win32", env: { ...process.env, DXBI_UPDATE_REPO: repo } });
-  const built = [["tv", "streamflix-tv.apk"], ["mobile", "streamflix-mobile.apk"]].map(([flavor, name]) => {
+  const built = [["tv", "streamflix-tv.apk"], ["mobile", "streamflix-mobile.apk"]].filter(([flavor]) => !(noTv && flavor === "tv")).map(([flavor, name]) => {
     const to = join(work, name);
     copyFileSync(join(work, "tv/app/build/outputs/apk", flavor, "release", `app-${flavor}-release.apk`), to);
     return to;
   });
   if (dry) say(`dry run: the APKs are in ${work}`);
-  else { inWork("gh", ["release", "upload", tag, ...built, "--repo", repo, "--clobber"]); say("attached streamflix-tv.apk and streamflix-mobile.apk"); }
+  else { inWork("gh", ["release", "upload", tag, ...built, "--repo", repo, "--clobber"]); say(`attached ${built.map((f) => f.split(/[\\/]/).pop()).join(" and ")}`); }
 }
 say("done");

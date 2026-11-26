@@ -116,7 +116,7 @@ function dubsFirst(text) {
 const REPO = "ByteSizeData/streamflix";
 const APP = join(root, "app");
 const desktop = walk(join(APP, "src"), (p) => /\.(ts|html|css)$/.test(p));
-files.push(...desktop);
+files.push(...desktop, join(APP, "scripts", "fetch-mpv.sh"));
 function must(text, from, to, what) {
   if (!text.includes(from)) throw new Error(`${what} wasn't found in the desktop app`);
   return text.replaceAll(from, to);
