@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * The phone app's way into Stremio: the page underneath (Stremio's web app, dx.bi's plugin and
+ * The phone app's way into Stremio: the page underneath (Stremio's web app, StreamFlix's plugin and
  * dxbi-engine.js) does Stremio's work, and the native screens read its state and ask it for things.
  *
  * To the page: `window.__dxbiEngine.handle({id, op, args})`, run by [run].

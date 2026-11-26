@@ -8,8 +8,8 @@ import logger from "../../utils/logger";
 
 /**
  * Showing what you watch on Discord is off until someone turns it on (it's public to everyone who can
- * see you there), and the switch is deep in Settings, so people saw Discord's own "Playing dx.bi" and
- * took it for dx.bi's status (issue #121). When Discord is running and the choice was never made, a small
+ * see you there), and the switch is deep in Settings, so people saw Discord's own "Playing StreamFlix" and
+ * took it for StreamFlix's status (issue #121). When Discord is running and the choice was never made, a small
  * bar on the page offers it, once.
  */
 
@@ -53,7 +53,7 @@ function showBar(): void {
         "font:500 14px/1.4 Inter,system-ui,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.08)";
     const text = document.createElement("div");
     text.style.cssText = "flex:1";
-    text.textContent = "Show what you're watching on Discord? Your status would say the title and episode. You can change this in Settings → dx.bi → App.";
+    text.textContent = "Show what you're watching on Discord? Your status would say the title and episode. You can change this in Settings → StreamFlix → App.";
     const button = (label: string, primary: boolean) => {
         const b = document.createElement("button");
         b.textContent = label;

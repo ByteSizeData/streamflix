@@ -38,7 +38,7 @@ interface Controls {
 }
 
 /**
- * dx.bi's player controls: the same layout as on a computer (back at the top, then the times and
+ * StreamFlix's player controls: the same layout as on a computer (back at the top, then the times and
  * seek bar, playback on the left, the title in the middle, options on the right), worked by remote.
  */
 @OptIn(UnstableApi::class)
