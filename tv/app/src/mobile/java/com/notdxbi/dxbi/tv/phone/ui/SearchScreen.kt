@@ -181,7 +181,6 @@ fun DiscoverScreen(stremio: Stremio, title: String, onBack: (() -> Unit)?, onAni
     val d = discover
     Column(Modifier.fillMaxSize().background(Dx.Background).windowInsetsPadding(WindowInsets.safeDrawing)) {
         ScreenTitle(title, onBack)
-        onAnimeUltra?.let { AnimeUltraCard(it) }
         if (d != null) LazyRow(contentPadding = PaddingValues(horizontal = Gutter, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val types = d.types.filter { it.link != null }
             // (Anime Ultra at the end of the menu, beside Films, Series and Anime)
@@ -211,25 +210,6 @@ fun DiscoverScreen(stremio: Stremio, title: String, onBack: (() -> Unit)?, onAni
 
 /** (what the type menu's Anime Ultra stands for: not a Discover link) */
 private const val ANIME_ULTRA = "#anime-ultra"
-
-/** Discover's way into Anime Ultra: the best anime from the big anime sites, with their ratings */
-@Composable
-private fun AnimeUltraCard(onOpen: () -> Unit) {
-    Row(
-        Modifier.padding(horizontal = Gutter, vertical = 6.dp).fillMaxWidth()
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Dx.Accent, Color(0xFF6A0DAD))))
-            .clickable(onClick = onOpen)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text("Anime Ultra", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Black, style = MaterialTheme.typography.titleMedium)
-            Text("New, popular right now and the best of all time, with their ratings", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
-        }
-        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-    }
-}
 
 private fun typeLabel(type: String) = when (type) {
     "movie" -> "Films"

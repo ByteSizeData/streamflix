@@ -9673,8 +9673,8 @@
   };
 
   // ---------------------------------------------------------------------------
-  // Anime Ultra (computer and TV): a banner on Discover, and the end of its first menu, open the big
-  // anime sites' lists (animeDiscover) over the page, with each site's scores on the posters,
+  // Anime Ultra (computer and TV): the end of Discover's first menu opens the big anime sites' lists
+  // (animeDiscover) over the page, with each site's scores on the posters,
   // AniList's by genre and kind of release. A poster opens its title by its Kitsu id (the Anime Kitsu
   // addon gives its episodes; the screen offers to add it). On a TV every poster and button takes the
   // remote's selection, the screen scrolls to it, and Back closes it (dxbi-tv.js). The phone and iPad
@@ -9682,7 +9682,6 @@
   // ---------------------------------------------------------------------------
 
   const animeUltra = {
-    banner: null,
     panel: null,
     state: { source: "anilist", list: "trending", genre: "", kind: "", items: [], page: 0, more: false, loading: false, error: null, round: 0 },
 
@@ -9690,28 +9689,11 @@
       // (a TV app from before 2.38.412 couldn't close it with Back: there it waits for the new app)
       if (IN_TV && !(window.__dxbiTv && window.__dxbiTv.animeUltra)) return;
       if (currentRoute() !== "discover") {
-        if (this.banner) this.banner.remove();
-        this.banner = null;
         // (left by Back or a link: the screen goes with the page it was opened over)
         if (this.panel) this.close();
         return;
       }
       this.menuOption();
-      if (this.banner && this.banner.isConnected) return;
-      const bar = document.querySelector('[class*="discover-container"] [class*="selectable-inputs-container"]');
-      const content = bar || document.querySelector('[class*="discover-container"] [class*="discover-content"]');
-      if (!content) return;
-      this.style();
-      const b = document.createElement("div");
-      b.className = "dxu-banner";
-      b.setAttribute("role", "button");
-      b.tabIndex = 0;
-      b.innerHTML = '<div><b>Anime Ultra</b><span>New, popular right now and the best of all time, with their ratings</span></div><i>›</i>';
-      b.addEventListener("click", () => this.open());
-      b.addEventListener("keydown", (e) => { if (e.key === "Enter") this.open(); });
-      if (bar) bar.insertAdjacentElement("beforebegin", b);
-      else content.prepend(b);
-      this.banner = b;
     },
 
     // Discover's first menu (Movie, Series, Anime…), while it's open: Anime Ultra at its end
@@ -9745,18 +9727,14 @@
       const css = document.createElement("style");
       css.id = "dxu-style";
       css.textContent = `
-        .dxu-banner { display: flex; align-items: center; gap: 1rem; margin: 0.6rem var(--dx-gutter, 2rem) 0.9rem; padding: 0.9rem 1.2rem; border-radius: 14px; cursor: pointer; color: #fff;
           background: linear-gradient(90deg, var(--dx-accent, #e50914), #6a0dad); box-shadow: 0 6px 24px rgba(0,0,0,.35); }
-        .dxu-banner div { flex: 1; display: flex; flex-direction: column; gap: 0.15rem; }
-        .dxu-banner b { font-size: 1.25rem; font-weight: 900; letter-spacing: .01em; }
-        .dxu-banner span { font-size: 0.9rem; opacity: .88; }
-        .dxu-banner i { font-style: normal; font-size: 2rem; line-height: 1; opacity: .9; }
-        .dxu-banner:hover { filter: brightness(1.08); }
         .dxu-option { border-top: 1px solid rgba(255,255,255,.1); }
         .dxu-option [class*="label-"] { font-weight: 800; background: linear-gradient(90deg, #ff4d6d, #b15cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .dxu-option [class*="label-"]::after { content: " \\2726"; color: #b15cff; -webkit-text-fill-color: #b15cff; }
         .dxu-panel { position: fixed; inset: 0; z-index: 9000; background: #0b0b0d; color: #fff; overflow-y: auto; padding: 1.4rem 2.2rem 3rem; font-family: inherit; }
-        .dxu-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .dxu-head { position: sticky; top: -1.4rem; z-index: 2; display: flex; align-items: center; gap: 1.2rem; margin: -1.4rem -2.2rem 1rem; padding: 1.2rem 2.2rem 0.9rem; background: linear-gradient(#0b0b0d 82%, rgba(11,11,13,0)); }
+        .dxu-back { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.6rem 1.2rem 0.6rem 0.9rem; border-radius: 999px; border: 0; background: #fff; color: #000; font-size: 1rem; font-weight: 800; cursor: pointer; }
+        .dxu-back:hover { background: #e6e6e6; }
         .dxu-head h1 { font-size: 2rem; font-weight: 900; margin: 0; flex: 1; }
         .dxu-head small { display: block; font-size: 0.9rem; font-weight: 400; color: #a4a4ad; margin-top: 0.2rem; }
         .dxu-close { font-size: 1.6rem; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: #fff; cursor: pointer; }
@@ -9782,7 +9760,7 @@
         .dxu-more { display: block; margin: 1.6rem auto 0; }
         .dxu-genres { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 4px 2px; }
         .dxu-genres .dxu-pill { flex: 0 0 auto; }
-        .dxu-card:focus, .dxu-pill:focus, .dxu-select:focus, .dxu-close:focus, .dxu-banner:focus { outline: 3px solid var(--dx-focus, #fff); outline-offset: 3px; }
+        .dxu-card:focus, .dxu-pill:focus, .dxu-select:focus, .dxu-back:focus { outline: 3px solid var(--dx-focus, #fff); outline-offset: 3px; }
         .dx-tv .dxu-card:focus { transform: scale(1.05); }
       `;
       document.head.append(css);
@@ -9828,7 +9806,8 @@
       if (this.panel) this.panel.remove();
       this.panel = null;
       if (this.onKey) document.removeEventListener("keydown", this.onKey, true);
-      if (was && IN_TV && this.banner && this.banner.isConnected) this.banner.focus({ preventScroll: true });
+      const menu = was && IN_TV && document.querySelector('[class*="discover-container"] [class*="selectable-inputs"] > [class*="multiselect-menu"]:first-child [aria-haspopup="listbox"]');
+      if (menu) menu.focus({ preventScroll: true });
       return was;
     },
 
@@ -9899,7 +9878,7 @@
           ${s.list === "movies" ? "" : pill("kind", "", "Everything", !s.kind) + animeDiscover.KINDS.map(([id, name]) => pill("kind", id, name, s.kind === id)).join("")}
         </div>` : "";
       p.innerHTML = `
-        <div class="dxu-head"><h1>Anime Ultra<small>The best anime from AniList, MyAnimeList and Kitsu, with their scores</small></h1><button class="dxu-close" data-act="close" aria-label="Close">×</button></div>
+        <div class="dxu-head"><button class="dxu-back" data-act="close" aria-label="Back to Discover">‹ Back</button><h1>Anime Ultra<small>The best anime from AniList, MyAnimeList and Kitsu, with their scores</small></h1></div>
         <div class="dxu-row">${animeDiscover.SOURCES.map((x) => pill("source", x.id, x.name, x.id === s.source)).join("")}</div>
         <div class="dxu-row">${src.lists.map(([id, name]) => pill("list", id, name, id === s.list)).join("")}</div>
         ${filters}

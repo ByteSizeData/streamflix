@@ -4,6 +4,13 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.413
+
+Phones, tablets, the iPad and the desktop apps. The TV app of this release is built but not attached here yet: a TV keeps 2.38.409 until it is.
+
+- **No Anime Ultra banner on Discover.** Anime Ultra is in Discover's first menu (and on a phone or the iPad, the Anime tab's button), so the banner across the top of Discover is gone, on every app.
+- **A Back button on the computer's Anime Ultra.** "‹ Back", top left, stays in sight while the posters scroll, and returns to Discover (Esc still does too). On a phone and the iPad the screen's own back arrow does it, and on a TV the remote's Back.
+
 ## StreamFlix 2.38.412
 
 Phones, tablets, the iPad and the desktop apps. The TV app of this release is built but not attached here yet: a TV keeps 2.38.409 until it is.

@@ -1354,7 +1354,7 @@
       menuAgain();
       return true;
     }
-    // Anime Ultra, over Discover: Back closes it, the remote goes back to its banner
+    // Anime Ultra, over Discover: Back closes it, the remote goes back to Discover's first menu
     if (window.__dxbi && typeof window.__dxbi.closeAnimeUltra === "function" && window.__dxbi.closeAnimeUltra()) return true;
     if (window.__dxbi && typeof window.__dxbi.closeTrailer === "function" && window.__dxbi.closeTrailer()) return true;
     if (window.__dxbi && typeof window.__dxbi.closeParty === "function" && window.__dxbi.closeParty()) return true;
