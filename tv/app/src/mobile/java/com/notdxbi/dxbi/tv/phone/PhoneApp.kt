@@ -252,6 +252,20 @@ private fun Screens(stremio: Stremio) {
                         onSearch = { nav.switchTo(Tab.Search, "search?focus=true") },
                         onSeeAll = { link -> nav.navigate("browse?link=${Uri.encode(link)}") },
                         onCategories = { type -> nav.navigate("browse?type=$type") },
+                        onAnime = { source, list -> nav.navigate("anime?source=$source&list=$list") },
+                    )
+                }
+                // Discover anime: the big anime sites' lists (Home → Anime)
+                composable(
+                    "anime?source={source}&list={list}",
+                    arguments = listOf(navArgument("source") { defaultValue = "anilist" }, navArgument("list") { defaultValue = "trending" }),
+                ) { e ->
+                    com.notdxbi.dxbi.tv.phone.ui.AnimeScreen(
+                        stremio,
+                        startSource = e.arguments?.getString("source").orEmpty(),
+                        startList = e.arguments?.getString("list").orEmpty(),
+                        onBack = { nav.popBackStack() },
+                        onOpen = { nav.openTitle(it) },
                     )
                 }
                 composable(Tab.Discover.route) {

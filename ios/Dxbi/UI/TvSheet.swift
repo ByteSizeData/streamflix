@@ -146,6 +146,10 @@ struct TvSheet: View {
             Text("\(tv.name) isn't answering. Is the app still open on the TV?")
                 .font(.subheadline)
                 .foregroundStyle(Dx.muted)
+        } else if let now = remote.status, now.open {
+            playing(remote, now)
+        } else if remote.starting != nil {
+            starting(remote, tv)
         } else if let now = remote.status {
             if now.open {
                 playing(remote, now)
@@ -158,6 +162,30 @@ struct TvSheet: View {
             ProgressView().frame(maxWidth: .infinity).padding(20)
         }
         pad(remote)
+    }
+
+    /// Play was just sent: the TV is opening it (a torrent can take a while), and the buttons are ready
+    @ViewBuilder
+    private func starting(_ remote: TvRemote, _ tv: TvRemote.Tv) -> some View {
+        HStack(spacing: 12) {
+            ProgressView()
+            Text("Starting on \(tv.name)\u{2026}").font(.title3.weight(.bold)).lineLimit(1)
+        }
+        Text("Pause, subtitles and the rest come up here as soon as it plays. A torrent can take a minute to start.")
+            .font(.subheadline)
+            .foregroundStyle(Dx.muted)
+        HStack {
+            Spacer()
+            round("gobackward.10", "Back 10 seconds") { remote.control("seekBy", ms: -10_000) }
+            Spacer()
+            round("pause.fill", "Pause", big: true) { remote.control("toggle") }
+            Spacer()
+            round("goforward.10", "Forward 10 seconds") { remote.control("seekBy", ms: 10_000) }
+            Spacer()
+            round("stop.fill", "Stop") { remote.control("close") }
+            Spacer()
+        }
+        settings(remote)
     }
 
     @ViewBuilder
@@ -298,5 +326,43 @@ struct TvSheet: View {
     private static func clock(_ ms: Double) -> String {
         let s = max(Int(ms / 1000), 0)
         return s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s % 3600 / 60, s % 60) : String(format: "%d:%02d", s / 60, s % 60)
+    }
+}
+
+/// What the chosen TV is playing, over the bottom of every screen: a tap opens the remote
+struct TvNowBar: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    var body: some View {
+        let remote = TvRemote.shared
+        if let tv = remote.tv, !remote.showRemote, let now = remote.status, now.open || remote.starting != nil {
+            HStack(spacing: 12) {
+                Image(systemName: "tv.fill").foregroundStyle(Dx.accent)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(now.open ? (now.title.isEmpty ? "Playing" : now.title) : "Starting\u{2026}")
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    Text("On \(tv.name)").font(.caption).foregroundStyle(Dx.muted).lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                if now.open {
+                    Button { remote.control("toggle") } label: {
+                        Image(systemName: now.paused ? "play.fill" : "pause.fill").font(.title3).frame(width: 40, height: 40)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(now.paused ? "Play" : "Pause")
+                }
+            }
+            .padding(.leading, 16)
+            .padding(.trailing, 8)
+            .padding(.vertical, 8)
+            .frame(maxWidth: 520)
+            .dxGlass(in: .capsule)
+            .contentShape(.capsule)
+            .onTapGesture { remote.showRemote = true }
+            .padding(.horizontal, 16)
+            // (above the tab bar on an iPhone; an iPad's tabs are at the top)
+            .padding(.bottom, sizeClass == .regular ? 18 : 64)
+        }
     }
 }

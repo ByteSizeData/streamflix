@@ -155,14 +155,14 @@ fun PosterGrid(items: List<Title>, loading: Boolean, header: String? = null, onE
     LaunchedEffect(nearEnd, items.size) { if (nearEnd && onEnd != null && items.isNotEmpty()) onEnd() }
     LazyVerticalGrid(
         state = grid,
-        columns = GridCells.Adaptive(104.dp),
+        columns = GridCells.Adaptive(gridPosterWidth()),
         contentPadding = PaddingValues(Gutter, 4.dp, Gutter, 24.dp + LocalBarSpace.current),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         header?.let { item(span = { GridItemSpan(maxLineSpan) }) { Text(it, style = MaterialTheme.typography.titleMedium, color = Dx.Text, modifier = Modifier.padding(vertical = 6.dp)) } }
         items(items, key = { "${it.type}:${it.id}" }) { t ->
-            Art(t.art, t.name, Modifier.fillMaxWidth().aspectRatio(2f / 3f).clickable { onOpen(t) })
+            PosterTile(t) { onOpen(t) }
         }
         if (loading) item(span = { GridItemSpan(maxLineSpan) }) {
             Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Dx.Accent, modifier = Modifier.size(24.dp), strokeWidth = 2.dp) }

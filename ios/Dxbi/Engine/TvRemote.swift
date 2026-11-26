@@ -97,6 +97,10 @@ final class TvRemote {
     var problem: String?
     /// The sheet with the TVs, or the remote, is open
     var sheet = false
+    /// The app's own ask to show that sheet, wherever the viewer is (RootView presents it)
+    var showRemote = false
+    /// When Play was sent and the TV's player isn't up yet (nil: nothing on its way): the remote says it's starting
+    var starting: Date?
     /// "Play on This Device": the next Play stays here although a TV is chosen
     @ObservationIgnored var hereOnce = false
 
@@ -349,6 +353,8 @@ final class TvRemote {
                     failures = 0
                     lost = false
                     status = Status(reply.json)
+                    // (the player is up: its own buttons take over; a torrent can take a minute to start)
+                    if let since = starting, status?.open == true || Date().timeIntervalSince(since) > 120 { starting = nil }
                 } else {
                     failures += 1
                     if failures >= 4 {
@@ -369,8 +375,17 @@ final class TvRemote {
         guard let on = tv else { return "No TV is chosen." }
         guard link.hasPrefix("#/player/") else { return "That one can't be sent to the TV." }
         problem = nil
+        // The remote comes up at once, wherever the viewer is, saying the film is starting, then with
+        // the player's buttons (pause, subtitles…) as soon as the TV's player is up; or with why it
+        // didn't play. (After a moment: the stream list's own sheet is still going away.)
+        starting = Date()
+        Task {
+            try? await Task.sleep(for: .milliseconds(650))
+            showRemote = true
+        }
         let reply = await asked(on, "play", ["link": link], wait: 8)
         if let reply, reply.ok { return "Playing on \(on.name)" }
+        starting = nil
         let why = explain(reply, on)
         problem = why
         return why

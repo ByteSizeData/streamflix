@@ -4,9 +4,12 @@ import SwiftUI
 struct PosterGrid: View {
     var items: [Title]
     var onEnd: (() -> Void)?
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 108, maximum: 170), spacing: 12)], spacing: 14) {
+        // (dx.bi settings → Poster size: bigger posters, fewer to a line)
+        let least = Posters.shared.gridWidth(regular: sizeClass == .regular)
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: least, maximum: least * 1.55), spacing: 12)], spacing: 14) {
             ForEach(items) { title in
                 NavigationLink(value: Route.title(title.ref)) {
                     Color.clear
@@ -18,6 +21,7 @@ struct PosterGrid: View {
                                 Image(systemName: "checkmark.circle.fill").symbolRenderingMode(.palette).foregroundStyle(.black, .white).padding(6)
                             }
                         }
+                        .overlay(alignment: .topLeading) { PosterBadges(title: title, width: least) }
                         .zoomSource(title.id)
                 }
                 .buttonStyle(.plain)
@@ -33,6 +37,7 @@ struct PosterGrid: View {
 
 struct SearchView: View {
     @Environment(Stremio.self) private var stremio
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var query = ""
     @State private var searched = ""
     @AppStorage("recentSearches") private var recentText = ""
@@ -67,7 +72,7 @@ struct SearchView: View {
                         Shelf(title: row.heading, see: row.discover.map { .browse(link: $0, name: row.heading) }) {
                             ForEach(row.items) { title in
                                 NavigationLink(value: Route.title(title.ref)) {
-                                    PosterCard(title: title, width: 130).zoomSource(title.id)
+                                    PosterCard(title: title, width: Posters.shared.width(regular: sizeClass == .regular) * 0.87).zoomSource(title.id)
                                 }
                                 .buttonStyle(.plain)
                             }

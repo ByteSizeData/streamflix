@@ -45,6 +45,8 @@ enum Route: Hashable {
     /** A row's See All: a Discover link and the row's name */
     case browse(link: String, name: String)
     case library
+    /** Discover anime: one site's list */
+    case anime(source: String, list: String)
 }
 
 struct RootView: View {
@@ -83,6 +85,16 @@ struct RootView: View {
             }
         }
         .animation(.spring(duration: 0.35), value: stremio.message)
+        // Play on TV, wherever the viewer is: the TVs to pick from, then the chosen TV's remote. It
+        // comes up by itself when Play sends a film to the TV, with its pause and subtitles
+        .sheet(isPresented: Binding(get: { TvRemote.shared.showRemote }, set: { TvRemote.shared.showRemote = $0 })) {
+            TvSheet()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .overlay(alignment: .bottom) {
+            if stremio.account?.signedIn == true || stremio.guest { TvNowBar() }
+        }
         // A new release: offered once when the app opens or comes back (every few hours at most)
         .onChange(of: scenePhase, initial: true) { _, phase in
             guard phase == .active else { return }
@@ -149,6 +161,8 @@ struct Stack<Content: View>: View {
                             BrowseView(link: link, name: name)
                         case .library:
                             LibraryView()
+                        case .anime(let source, let list):
+                            AnimeView(source: source, list: list)
                         }
                     }
                 }

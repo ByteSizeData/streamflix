@@ -32,6 +32,10 @@ struct PosterCard: View {
                 Image(systemName: "checkmark.circle.fill").font(.title3).symbolRenderingMode(.palette).foregroundStyle(.black, .white).padding(8)
             }
         }
+        // IMDb and Rotten Tomatoes (or an anime site's score); below a Top 10's number
+        .overlay(alignment: rank == nil ? .topLeading : .bottomLeading) {
+            PosterBadges(title: title, width: width).padding(rank == nil ? 2 : 4)
+        }
         .clipShape(.rect(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(.white.opacity(0.1)))
         .contentShape(.rect(cornerRadius: 18))

@@ -1,6 +1,7 @@
 package com.notdxbi.dxbi.tv.phone.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,8 +73,15 @@ import com.notdxbi.dxbi.tv.phone.Stremio
 import com.notdxbi.dxbi.tv.phone.Title
 import kotlinx.coroutines.delay
 
-/** What Home shows: everything, films only or series only */
-enum class HomeFilter(val label: String) { All("Home"), Movies("Films"), Series("Series") }
+/** What Home shows: everything, films only, series only or anime (with Discover anime's lists) */
+enum class HomeFilter(val label: String) { All("Home"), Movies("Films"), Series("Series"), Anime("Anime") }
+
+/** An anime: by type, or by an anime site's id (Kitsu, MyAnimeList…) */
+fun isAnime(t: Title) = t.type == "anime" || Regex("^(kitsu|mal|anilist|anidb):").containsMatchIn(t.id)
+
+/** A Home row of anime: by type, by the addon that makes it, or by what's in it */
+fun isAnimeRow(r: com.notdxbi.dxbi.tv.phone.Row) =
+    r.type == "anime" || r.addon.contains("anime", true) || r.addon.contains("kitsu", true) || (r.items.isNotEmpty() && r.items.count(::isAnime) * 2 > r.items.size)
 
 @Composable
 fun HomeScreen(
@@ -84,6 +92,7 @@ fun HomeScreen(
     onSearch: () -> Unit,
     onSeeAll: (String) -> Unit,
     onCategories: (String) -> Unit,
+    onAnime: (source: String, list: String) -> Unit = { _, _ -> },
 ) {
     val rows by stremio.rows.collectAsState()
     val continueWatching by stremio.continueWatching.collectAsState()
@@ -113,20 +122,49 @@ fun HomeScreen(
         HomeFilter.All -> true
         HomeFilter.Movies -> type == "movie"
         HomeFilter.Series -> type == "series"
+        HomeFilter.Anime -> type == "anime"
     }
+    fun fits(t: Title) = if (filter == HomeFilter.Anime) isAnime(t) else fits(t.type)
+    val animeHome by stremio.animeHome.collectAsState()
+    LaunchedEffect(filter) { if (filter == HomeFilter.Anime) stremio.loadAnimeHome(ANIME_HOME) }
+    val account by stremio.account.collectAsState()
 
     Box(Modifier.fillMaxSize().background(Dx.Background)) {
         LazyColumn(state = list, contentPadding = PaddingValues(bottom = 24.dp + LocalBarSpace.current)) {
             item { Spacer(Modifier.windowInsetsPadding(WindowInsets.safeDrawing).height(112.dp)) }
 
-            val slides = billboard.filter { fits(it.type) }
-            item(key = "billboard") {
+            val slides = billboard.filter { fits(it) }
+            if (filter != HomeFilter.Anime) item(key = "billboard") {
                 if (slides.isNotEmpty()) Billboard(slides, onOpen, onPlay)
                 else Box(Modifier.padding(horizontal = Gutter).fillMaxWidth().aspectRatio(billboardShape()).clip(RoundedCornerShape(12.dp)).shimmer())
                 Spacer(Modifier.height(20.dp))
             }
 
-            val resume = continueWatching.filter { fits(it.title.type) }
+            // Anime: the big anime sites' lists first, with their scores (Discover anime)
+            if (filter == HomeFilter.Anime) {
+                item(key = "anime:all") {
+                    Column(Modifier.padding(start = Gutter, end = Gutter, bottom = 14.dp)) {
+                        Text("Discover anime", color = Dx.Text, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                        Text("From AniList, MyAnimeList and Kitsu, with their scores", color = Dx.Muted, style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(10.dp))
+                        Pill(selected = true, onClick = { onAnime("anilist", "trending") }) {
+                            Text("Browse every list", color = Dx.Text, style = MaterialTheme.typography.labelMedium)
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = Dx.Text, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    if (account != null && !hasAnimeAddon(account?.addons.orEmpty())) AddAnimeAddon(stremio)
+                }
+                ANIME_HOME.forEach { (source, list) ->
+                    val page = animeHome["$source/$list"]
+                    // (a site that isn't answering: its row is left out)
+                    if (page != null && page.items.isEmpty()) return@forEach
+                    item(key = "anime:$source/$list") {
+                        PosterRow(animeListName(source, list), page?.items.orEmpty(), loading = page == null, onMore = { onAnime(source, list) }, onOpen = onOpen)
+                    }
+                }
+            }
+
+            val resume = continueWatching.filter { fits(it.title) }
             if (resume.isNotEmpty()) item(key = "continue") {
                 ContinueRow(resume, onOpen = { onOpen(it.title) }, onResume = onResume, onRemove = { stremio.removeFromContinue(it.title.id) })
             }
@@ -134,16 +172,18 @@ fun HomeScreen(
             if (filter == HomeFilter.All && airing.isNotEmpty()) item(key = "airing") { AiringRow(airing) { onOpen(Title(it.id, "series", it.name)) } }
 
             myList.forEach { row ->
-                val items = row.items.filter { fits(it.type) }
+                val items = row.items.filter { fits(it) }
                 if (items.isNotEmpty()) item(key = "list:${row.name}") { PosterRow(row.name, items, onOpen = onOpen) }
             }
             forYou?.let { row ->
-                val items = row.items.filter { fits(it.type) }
+                val items = row.items.filter { fits(it) }
                 if (items.isNotEmpty()) item(key = "foryou") { PosterRow(row.name, items, onOpen = onOpen) }
             }
 
-            val catalogs = rows.filter { fits(it.type) && it.state != Load.Err && (it.type == "movie" || it.type == "series" || it.items.isNotEmpty()) }
-            if (catalogs.isEmpty()) items(3) { PosterRow("", emptyList(), loading = true, onOpen = {}) }
+            val catalogs = rows.filter {
+                (if (filter == HomeFilter.Anime) isAnimeRow(it) else fits(it.type)) && it.state != Load.Err && (it.type == "movie" || it.type == "series" || it.items.isNotEmpty())
+            }
+            if (catalogs.isEmpty() && filter != HomeFilter.Anime) items(3) { PosterRow("", emptyList(), loading = true, onOpen = {}) }
             items(catalogs, key = { "row:${it.key}:${it.index}" }) { row ->
                 if (row.state == Load.Ready && row.items.isEmpty()) return@items
                 PosterRow(
@@ -159,7 +199,8 @@ fun HomeScreen(
         var party by rememberSaveable { mutableStateOf(false) }
         if (party) PartySheet(stremio) { party = false }
         TopBar(scrolled, chips || filter != HomeFilter.All, filter, onFilter = { filter = it }, onSearch = onSearch, onParty = { party = true }, onCategories = {
-            onCategories(if (filter == HomeFilter.Series) "series" else "movie")
+            if (filter == HomeFilter.Anime) onAnime("anilist", "trending")
+            else onCategories(if (filter == HomeFilter.Series) "series" else "movie")
         })
     }
 }
@@ -200,11 +241,12 @@ private fun TopBar(
             enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
             exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut(),
         ) {
-        Row(Modifier.padding(horizontal = Gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // (slides sideways on a narrow phone: four pills don't always fit)
+        Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = Gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (filter != HomeFilter.All) {
                 Pill(selected = false, onClick = { onFilter(HomeFilter.All) }) { Icon(Icons.Filled.Close, contentDescription = "All", tint = Dx.Text, modifier = Modifier.size(18.dp)) }
             }
-            for (f in listOf(HomeFilter.Series, HomeFilter.Movies)) {
+            for (f in listOf(HomeFilter.Series, HomeFilter.Movies, HomeFilter.Anime)) {
                 if (filter == HomeFilter.All || filter == f) Pill(selected = filter == f, onClick = { onFilter(if (filter == f) HomeFilter.All else f) }) { Text(f.label, color = Dx.Text, style = MaterialTheme.typography.labelMedium) }
             }
             Pill(selected = false, onClick = onCategories) {
@@ -316,7 +358,7 @@ private fun ContinueRow(items: List<Continue>, onOpen: (Continue) -> Unit, onRes
         LazyRow(contentPadding = PaddingValues(horizontal = Gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(items, key = { it.title.id }) { c ->
                 var menu by remember { mutableStateOf(false) }
-                Column(Modifier.width(PosterWidth).clip(RoundedCornerShape(6.dp)).background(Dx.Surface)) {
+                Column(Modifier.width(posterWidth()).clip(RoundedCornerShape(6.dp)).background(Dx.Surface)) {
                     Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clickable { onResume(c) }) {
                         Art(c.title.art, c.title.name, Modifier.fillMaxSize(), RoundedCornerShape(0.dp))
                         // a play button over the art, as Netflix does

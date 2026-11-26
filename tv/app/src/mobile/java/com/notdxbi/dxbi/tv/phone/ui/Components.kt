@@ -32,6 +32,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,10 +50,99 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.notdxbi.dxbi.tv.phone.Badge
+import com.notdxbi.dxbi.tv.phone.Posters
 import com.notdxbi.dxbi.tv.phone.Title
 
 val PosterWidth = 112.dp
 val Gutter = 16.dp
+
+/** A poster's width in rows: dx.bi settings → Poster size (and bigger again on a tablet) */
+@Composable
+fun posterWidth(): Dp {
+    val look by Posters.look.collectAsState()
+    val tablet = androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600
+    val base = when (look.size) {
+        "standard" -> 112f
+        "larger" -> 160f
+        "huge" -> 196f
+        else -> 136f
+    }
+    return (if (tablet) base * 1.3f else base).dp
+}
+
+/** The narrowest a poster gets in a grid (as many to a line as fit) */
+@Composable
+fun gridPosterWidth(): Dp = posterWidth() * 0.93f
+
+/** Each site's colours: its name's tag, and the text on it */
+private fun badgeColours(b: Badge): Pair<Color, Color> = when (b.label) {
+    "IMDb" -> Color(0xFFF5C518) to Color.Black
+    "RT" -> if ((b.value.trimEnd('%').toIntOrNull() ?: 0) >= 60) Color(0xFFFA320A) to Color.White else Color(0xFF0AC855) to Color.Black
+    "MAL" -> Color(0xFF2E51A2) to Color.White
+    "AniList" -> Color(0xFF02A9FF) to Color.White
+    "Kitsu" -> Color(0xFFF75239) to Color.White
+    else -> Color(0xFF3DB4F2) to Color.White
+}
+
+/** One score on a poster: the site's tag and the score, on dark glass */
+@Composable
+fun ScoreChip(b: Badge, small: Boolean = false) {
+    val (tag, ink) = badgeColours(b)
+    Row(
+        Modifier.clip(RoundedCornerShape(4.dp)).background(Color.Black.copy(alpha = 0.72f)).padding(start = 2.dp, end = 5.dp, top = 2.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            b.label,
+            color = ink,
+            fontWeight = FontWeight.Black,
+            fontSize = if (small) 8.sp else 9.sp,
+            lineHeight = 10.sp,
+            modifier = Modifier.clip(RoundedCornerShape(2.dp)).background(tag).padding(horizontal = 3.dp, vertical = 1.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(b.value, color = Color.White, fontWeight = FontWeight.Bold, fontSize = if (small) 10.sp else 11.sp, lineHeight = 12.sp)
+    }
+}
+
+/**
+ * The ratings in a poster's corner: IMDb and Rotten Tomatoes (an anime's site score when neither), or
+ * what the list brought (Discover anime). Asked for as the poster comes into view.
+ */
+@Composable
+fun PosterBadges(title: Title, width: Dp, modifier: Modifier = Modifier) {
+    val look by Posters.look.collectAsState()
+    if (!look.ratings) return
+    val all by Posters.scores.collectAsState()
+    LaunchedEffect(title.type, title.id) { if (title.badges.isEmpty()) Posters.want(title) }
+    val s = all["${title.type}:${title.id}"]
+    val chips = buildList {
+        if (title.badges.isNotEmpty()) addAll(title.badges.take(2))
+        else {
+            (s?.imdb ?: title.imdb)?.let { add(Badge("IMDb", it)) }
+            s?.rt?.let { add(Badge("RT", "$it%")) }
+            if (isEmpty()) s?.anime?.let { add(it) }
+        }
+    }
+    if (chips.isEmpty()) return
+    val small = width < 120.dp
+    // (side by side when they fit, else one above the other)
+    if (width >= 132.dp || chips.size == 1) {
+        Row(modifier.padding(5.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) { chips.forEach { ScoreChip(it, small) } }
+    } else {
+        Column(modifier.padding(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) { chips.forEach { ScoreChip(it, small) } }
+    }
+}
+
+/** A poster in a grid: as wide as its column, with its ratings */
+@Composable
+fun PosterTile(title: Title, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(2f / 3f)) {
+        Art(title.art, title.name, Modifier.fillMaxSize().combinedClickableCompat(onClick))
+        PosterBadges(title, maxWidth, Modifier.align(Alignment.TopStart))
+    }
+}
 
 /** A placeholder that gently pulses while something loads */
 @Composable
@@ -85,23 +176,25 @@ fun Art(url: String?, name: String, modifier: Modifier, shape: RoundedCornerShap
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PosterCard(title: Title, width: Dp = PosterWidth, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
+fun PosterCard(title: Title, width: Dp = posterWidth(), onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
     val haptics = LocalHapticFeedback.current
-    Art(
-        title.art,
-        title.name,
-        Modifier
-            .width(width)
-            .aspectRatio(2f / 3f)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick?.let { { haptics.performHapticFeedback(HapticFeedbackType.LongPress); it() } },
-            ),
-    )
+    Box(Modifier.width(width).aspectRatio(2f / 3f)) {
+        Art(
+            title.art,
+            title.name,
+            Modifier
+                .fillMaxSize()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick?.let { { haptics.performHapticFeedback(HapticFeedbackType.LongPress); it() } },
+                ),
+        )
+        PosterBadges(title, width, Modifier.align(Alignment.TopStart))
+    }
 }
 
 @Composable
-fun PosterPlaceholder(width: Dp = PosterWidth) {
+fun PosterPlaceholder(width: Dp = posterWidth()) {
     Box(Modifier.width(width).aspectRatio(2f / 3f).clip(RoundedCornerShape(6.dp)).shimmer())
 }
 

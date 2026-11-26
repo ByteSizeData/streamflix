@@ -210,7 +210,7 @@ struct DxbiSettingsView: View {
 
     /** How Stremio's page looks: the app's own screens don't use these */
     private static let webOnly: Set<String> = [
-        "liteMode", "builtInTheme", "previews", "ratings", "animeTitles", "wideContinue", "librarySort", "trailers",
+        "liteMode", "builtInTheme", "previews", "animeTitles", "wideContinue", "librarySort", "trailers",
         "whoIsWatching", "addonTools", "posterAccent", "crispPosters", "streamTools", "streamRows", "splash", "introSound",
         "profileSync", "uiSounds", "focusColour", "videoRowsOnly", "newEpisodes", "accent", "tvTorrents",
     ]

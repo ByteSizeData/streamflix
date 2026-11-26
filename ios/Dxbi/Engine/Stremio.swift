@@ -79,6 +79,9 @@ final class Stremio {
         page.onControl = { [weak self] c in self?.playback?.control(c) }
         Downloads.shared.stremio = self
         TvRemote.shared.page = page
+        // How posters look, as last seen; their scores are asked for as they come into view
+        if let look = cache.string(forKey: "x.look").flatMap({ Json.decode($0) as? JSON }) { applyLook(look) }
+        Posters.shared.asker = { [weak self] title in self?.wantScores(title) }
         for field in ["ctx", "board", "continue_watching_preview", "meta_details", "search", "discover", "library", "installed_addons", "remote_addons", "streaming_server"] {
             page.watch(field)
         }
@@ -178,6 +181,10 @@ final class Stremio {
                 rows = layout.arrange(allRows)
                 cache.set(Json.encode(l), forKey: "x.layout")
             }
+            if let look = await dx("phone.look") as? JSON {
+                applyLook(look)
+                cache.set(Json.encode(look), forKey: "x.look")
+            }
             if let list = await dx("phone.myList") as? [Any] {
                 myList = list.compactMap { $0 as? JSON }.map(ListRow.init)
                 cache.set(Json.encode(list), forKey: "x.myList")
@@ -200,6 +207,79 @@ final class Stremio {
                     return
                 }
                 try? await Task.sleep(for: .seconds(1.5))
+            }
+        }
+    }
+
+    // MARK: - Ratings on posters: asked for as posters come into view, forty at a time, once a launch each
+
+    @ObservationIgnored private var scoreQueue: [String: Title] = [:]
+    @ObservationIgnored private var scoreOrder: [String] = []
+    @ObservationIgnored private var scoresAsked = Set<String>()
+    @ObservationIgnored private var scoreTask: Task<Void, Never>?
+
+    private func applyLook(_ look: JSON) {
+        let posters = Posters.shared
+        let ratings = look.isNull("ratings") ? true : look.bool("ratings")
+        if posters.ratings != ratings { posters.ratings = ratings }
+        let size = look.text("posterSize") ?? "large"
+        if posters.size != size { posters.size = size }
+    }
+
+    private func wantScores(_ t: Title) {
+        guard Posters.shared.ratings, !t.id.isEmpty, !t.type.isEmpty else { return }
+        let key = "\(t.type):\(t.id)"
+        guard scoresAsked.insert(key).inserted else { return }
+        scoreQueue[key] = t
+        scoreOrder.append(key)
+        guard scoreTask == nil else { return }
+        scoreTask = Task {
+            // (a row's posters come in together: one request for them)
+            try? await Task.sleep(for: .milliseconds(250))
+            while !scoreOrder.isEmpty {
+                let keys = Array(scoreOrder.prefix(40))
+                scoreOrder.removeFirst(keys.count)
+                let batch = keys.compactMap { scoreQueue.removeValue(forKey: $0) }
+                Task { await askScores(batch) }
+            }
+            scoreTask = nil
+        }
+    }
+
+    private func askScores(_ batch: [Title]) async {
+        let list: [Any] = batch.map { ["type": $0.type, "id": $0.id, "imdb": $0.imdb ?? NSNull()] as JSON }
+        guard let answer = await ask("dx", ["method": "phone.scores", "args": [list]], timeout: 90) as? JSON else {
+            // (asked again when they next come into view)
+            for t in batch { scoresAsked.remove("\(t.type):\(t.id)") }
+            return
+        }
+        var all = Posters.shared.scores
+        for (key, value) in answer { all[key] = Posters.Scores(value as? JSON) }
+        Posters.shared.scores = all
+    }
+
+    // MARK: - Discover anime: the big anime sites' lists (dx.bi's animeDiscover)
+
+    /** Home's Anime: the first page of each of AnimeSource.home, by "source/list" */
+    var animeHome: [String: AnimePage] = [:]
+    @ObservationIgnored private var animeHomeAt = Date.distantPast
+
+    func animeSources() async -> [AnimeSource] {
+        ((await dx("phone.animeSources")) as? [Any] ?? []).compactMap { $0 as? JSON }.map(AnimeSource.init)
+    }
+
+    func anime(_ source: String, _ list: String, page: Int) async -> AnimePage {
+        AnimePage(await ask("dx", ["method": "phone.anime", "args": [source, list, page]], timeout: 60) as? JSON)
+    }
+
+    func loadAnimeHome() {
+        // (half an hour between asks: the sites' lists change by the day)
+        if Date().timeIntervalSince(animeHomeAt) < 30 * 60, animeHome.values.contains(where: { !$0.items.isEmpty }) { return }
+        animeHomeAt = Date()
+        for (source, list) in AnimeSource.home {
+            Task {
+                let page = await anime(source, list, page: 1)
+                animeHome["\(source)/\(list)"] = page
             }
         }
     }

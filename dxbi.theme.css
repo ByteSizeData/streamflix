@@ -78,6 +78,11 @@
 @media (max-width: 1050px) { :root { --dx-cols: 4; --dx-wide-cols: 2.6; } }
 @media (min-width: 2201px) { :root { --dx-cols: 8; --dx-wide-cols: 5.4; } }
 
+/* POSTER SIZE (dx.bi settings → Poster size): fewer, bigger posters to a row and a grid */
+:root[data-dx-size="large"] { --dx-size: 0.84; }
+:root[data-dx-size="larger"] { --dx-size: 0.7; }
+:root[data-dx-size="huge"] { --dx-size: 0.58; }
+
 /* =====================================================================
    2. BASE
    ===================================================================== */
@@ -529,7 +534,7 @@ body[data-dx-route="board"] #app [class*="board-container"] [class*="nav-content
 #app [class*="board-content-"]:not([class*="board-content-container"]) [class*="meta-row"] > [class*="meta-items-container"] > *,
 #app [class*="search-content"] [class*="meta-row"] > [class*="meta-items-container"] > * {
     display: block !important;
-    flex: 0 0 calc(100% / var(--dx-cols)) !important;
+    flex: 0 0 calc(100% / (var(--dx-cols) * var(--dx-size, 1))) !important;
     max-width: none !important;
     padding: 0 0.35rem !important;
     scroll-snap-align: start;
@@ -543,7 +548,7 @@ body[data-dx-route="board"] #app [class*="board-container"] [class*="nav-content
 /* Landscape rows (and Continue Watching, made landscape by the plugin) */
 #app [class*="board-content-"]:not([class*="board-content-container"]) [class*="board-row-landscape"] > [class*="meta-items-container"] > *,
 #app [class*="board-content-"]:not([class*="board-content-container"]) [class*="continue-watching-row"][data-dx-wide-row] > [class*="meta-items-container"] > * {
-    flex-basis: calc(100% / var(--dx-wide-cols, 4)) !important;
+    flex-basis: calc(100% / (var(--dx-wide-cols, 4) * var(--dx-size, 1))) !important;
 }
 
 /* =====================================================================
@@ -1359,6 +1364,29 @@ html[data-dx-lite] .dx-hero-dot.is-active::after {
 .dx-badge.is-anime i {
     background: #3db4f2;
     color: #fff;
+}
+
+/* Rotten Tomatoes beside IMDb: tomato red when fresh (60% and up), green when rotten */
+.dx-badge .dx-rt {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: 0.25rem;
+}
+
+.dx-badge .dx-rt i {
+    background: #fa320a;
+    color: #fff;
+}
+
+.dx-badge .dx-rt.is-rotten i {
+    background: #0ac855;
+    color: #000;
+}
+
+/* (a badge with the Tomatometer alone) */
+.dx-badge.is-rt .dx-rt {
+    margin-left: 0;
 }
 
 /* Continue Watching as wide cards */
@@ -2284,7 +2312,7 @@ html[data-dx-lite] .dx-hero-dot.is-active::after {
 /* Grids */
 #app [class*="discover-content"] [class*="meta-items-container"],
 #app [class*="library-content"] [class*="meta-items-container"] {
-    grid-template-columns: repeat(auto-fill, minmax(clamp(9.5rem, 11vw, 13rem), 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(calc(clamp(9.5rem, 11vw, 13rem) / var(--dx-size, 1)), 1fr)) !important;
     gap: 0.35rem 0;
     padding-bottom: 3rem;
 }

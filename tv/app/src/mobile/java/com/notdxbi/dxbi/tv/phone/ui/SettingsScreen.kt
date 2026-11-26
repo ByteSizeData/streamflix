@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
 
 /** Settings for how Stremio's page looks (TV and computer), which the phone's own screens don't use */
 private val WEB_ONLY = setOf(
-    "liteMode", "builtInTheme", "previews", "ratings", "animeTitles", "wideContinue", "librarySort", "trailers",
+    "liteMode", "builtInTheme", "previews", "animeTitles", "wideContinue", "librarySort", "trailers",
     "whoIsWatching", "addonTools", "posterAccent", "crispPosters", "streamTools", "streamRows", "splash", "introSound",
     "profileSync", "uiSounds", "focusColour", "videoRowsOnly", "newEpisodes", "accent",
     // hover cards and dimmed watched titles are the big screen's (the phone has neither)

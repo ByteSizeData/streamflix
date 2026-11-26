@@ -98,6 +98,8 @@ object TvRemote {
     val problem = MutableStateFlow<String?>(null)
     /** The sheet with the TVs, or the remote, is open */
     val sheet = MutableStateFlow(false)
+    /** When Play was sent and the TV's player isn't up yet (0: nothing on its way): the remote says it's starting */
+    val starting = MutableStateFlow(0L)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var poll: Job? = null
@@ -292,6 +294,8 @@ object TvRemote {
                     failures = 0
                     lost.value = false
                     status.value = Status.from(reply.json)
+                    // (the player is up: its own buttons take over; a torrent can take a minute to start)
+                    if (status.value?.open == true || (starting.value > 0 && System.currentTimeMillis() - starting.value > 120_000)) starting.value = 0L
                 } else if (++failures >= 4) {
                     lost.value = true
                     status.value = null
@@ -314,10 +318,15 @@ object TvRemote {
             return@withContext false
         }
         problem.value = null
-        val reply = asked(app, on, "play", JSONObject().put("link", link), readMs = 8000)
-        if (reply?.ok != true) problem.value = explain(reply, on)
-        // (the remote comes up either way: with the player's buttons, or with why it didn't play)
+        // The remote comes up at once, saying the film is starting, then with the player's buttons
+        // (pause, subtitles…) as soon as the TV's player is up; or with why it didn't play
+        starting.value = System.currentTimeMillis()
         sheet.value = true
+        val reply = asked(app, on, "play", JSONObject().put("link", link), readMs = 8000)
+        if (reply?.ok != true) {
+            starting.value = 0L
+            problem.value = explain(reply, on)
+        }
         reply?.ok == true
     }
 

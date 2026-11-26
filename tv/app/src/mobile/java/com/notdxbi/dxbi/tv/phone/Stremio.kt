@@ -89,6 +89,9 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
     val discover: StateFlow<Discover?> = engine.state("discover").map(Discover::from).stateIn(scope, SharingStarted.Eagerly, null)
 
     init {
+        // How posters look, as last seen; their scores are asked for as they come into view
+        Posters.Look.from(cache.getString("x.look", null)?.let { runCatching { JSONObject(it) }.getOrNull() })?.let { Posters.look.value = it }
+        Posters.asker = ::wantScores
         // Every time the page (re)starts: Home's rows, then dx.bi's pieces
         scope.launch {
             engine.ready.collect { up ->
@@ -141,6 +144,10 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
                 layout.value = HomeLayout.from(it)
                 cache.edit().putString("x.layout", it.toString()).apply()
             }
+            (dx("phone.look") as? JSONObject)?.let {
+                Posters.Look.from(it)?.let { look -> Posters.look.value = look }
+                cache.edit().putString("x.look", it.toString()).apply()
+            }
             (dx("phone.myList") as? JSONArray)?.let {
                 myList.value = it.objects().map { r -> ListRow(r.optString("name"), r.optJSONArray("items").objects().map(Title::from)) }
                 cache.edit().putString("x.myList", it.toString()).apply()
@@ -165,6 +172,76 @@ class Stremio(context: Context, val engine: Engine, private val scope: Coroutine
                     return@launch
                 }
                 delay(1500)
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Ratings on posters: asked for as posters come into view, forty at a time, once a launch each
+
+    private val scoreQueue = LinkedHashMap<String, Title>()
+    private val scoresAsked = HashSet<String>()
+    private var scoreJob: Job? = null
+
+    private fun wantScores(t: Title) {
+        if (!Posters.look.value.ratings || t.id.isBlank() || t.type.isBlank()) return
+        val key = "${t.type}:${t.id}"
+        synchronized(scoreQueue) {
+            if (!scoresAsked.add(key)) return
+            scoreQueue[key] = t
+        }
+        if (scoreJob?.isActive == true) return
+        scoreJob = scope.launch {
+            // (a row's posters come in together: one request for them)
+            delay(250)
+            while (true) {
+                val batch = synchronized(scoreQueue) {
+                    scoreQueue.values.take(40).also { b -> b.forEach { scoreQueue.remove("${it.type}:${it.id}") } }
+                }
+                if (batch.isEmpty()) break
+                scope.launch { askScores(batch) }
+            }
+        }
+    }
+
+    private suspend fun askScores(batch: List<Title>) {
+        val list = JSONArray(batch.map { JSONObject().put("type", it.type).put("id", it.id).put("imdb", it.imdb ?: JSONObject.NULL) })
+        val answer = runCatching {
+            engine.call("dx", JSONObject().put("method", "phone.scores").put("args", JSONArray().put(list)), 90_000)
+        }.getOrNull() as? JSONObject
+        if (answer == null) {
+            // (asked again when they next come into view)
+            synchronized(scoreQueue) { batch.forEach { scoresAsked.remove("${it.type}:${it.id}") } }
+            return
+        }
+        val got = answer.keys().asSequence().associateWith { k -> Posters.Scores.from(answer.optJSONObject(k)) }
+        Posters.scores.value = Posters.scores.value + got
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Discover anime: the big anime sites' lists (dx.bi's animeDiscover)
+
+    suspend fun animeSources(): List<AnimeSource> = AnimeSource.list(dx("phone.animeSources") as? JSONArray)
+
+    suspend fun anime(source: String, list: String, page: Int): AnimePage = AnimePage.from(
+        runCatching {
+            engine.call("dx", JSONObject().put("method", "phone.anime").put("args", JSONArray().put(source).put(list).put(page)), 60_000)
+        }.getOrNull() as? JSONObject,
+    )
+
+    /** Home's Anime tab: the first page of each of these lists, by "source/list" */
+    val animeHome = MutableStateFlow<Map<String, AnimePage>>(emptyMap())
+    private var animeHomeAt = 0L
+
+    fun loadAnimeHome(lists: List<Pair<String, String>>) {
+        val now = System.currentTimeMillis()
+        // (half an hour between asks: the sites' lists change by the day)
+        if (now - animeHomeAt < 30 * 60_000 && animeHome.value.values.any { it.items.isNotEmpty() }) return
+        animeHomeAt = now
+        lists.forEach { (source, list) ->
+            scope.launch {
+                val page = anime(source, list, 1)
+                animeHome.value = animeHome.value + ("$source/$list" to page)
             }
         }
     }

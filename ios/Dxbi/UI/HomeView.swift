@@ -11,6 +11,10 @@ struct HomeView: View {
     @State private var tv = false
     @State private var kind: String?
     @State private var pastBillboard = false
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    /** dx.bi settings → Poster size */
+    private var posterWidth: CGFloat { Posters.shared.width(regular: sizeClass == .regular) }
 
     var body: some View {
         GeometryReader { g in
@@ -24,6 +28,7 @@ struct HomeView: View {
                         Color.clear.frame(height: 90)
                     }
                     kinds
+                    if kind == "anime" { animeLists }
                     if !stremio.continueWatching.isEmpty && kind == nil {
                         Shelf(title: "Continue Watching") {
                             ForEach(stremio.continueWatching) { item in
@@ -45,7 +50,7 @@ struct HomeView: View {
                             }
                         }
                     }
-                    let rows = stremio.rows.filter { kind == nil || $0.type == kind }
+                    let rows = stremio.rows.filter { kind == nil || (kind == "anime" ? isAnimeRow($0) : $0.type == kind) }
                     ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                         if row.state == .ready && !row.items.isEmpty {
                             // Netflix's Top 10: the first row is numbered
@@ -76,18 +81,21 @@ struct HomeView: View {
         .modifier(HomeToolbar(party: $party, tv: $tv, account: $account, email: stremio.account?.email))
         .sheet(isPresented: $account) { AccountView() }
         .sheet(isPresented: $party) { PartyView() }
-        // Play on TV: the TVs to pick from, then the chosen TV's remote
-        .sheet(isPresented: $tv) {
-            TvSheet()
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+        // Play on TV: the TVs to pick from, then the chosen TV's remote (RootView shows it, so it
+        // can also come up by itself from a title's page when Play sends something to the TV)
+        .onChange(of: tv) { _, open in
+            if open {
+                TvRemote.shared.showRemote = true
+                tv = false
+            }
         }
         .refreshable { stremio.refreshExtras() }
     }
 
     /** Netflix's Movies · Series chips */
     private var kinds: some View {
-        let types = ["movie", "series", "anime"].filter { t in stremio.rows.contains { $0.type == t } }
+        // (Anime always: its tab has the anime sites' own lists)
+        let types = ["movie", "series", "anime"].filter { t in t == "anime" || stremio.rows.contains { $0.type == t } }
         return ScrollView(.horizontal) {
             HStack(spacing: 10) {
                 ForEach(types.prefix(4), id: \.self) { t in
@@ -117,7 +125,7 @@ struct HomeView: View {
         Shelf(title: name, see: see) {
             ForEach(Array(items.prefix(rank ? 10 : 30).enumerated()), id: \.element.id) { i, title in
                 NavigationLink(value: Route.title(title.ref)) {
-                    PosterCard(title: title, width: 150, rank: rank ? i + 1 : nil)
+                    PosterCard(title: title, width: posterWidth, rank: rank ? i + 1 : nil)
                         .zoomSource(title.id)
                 }
                 .buttonStyle(.plain)
@@ -126,10 +134,36 @@ struct HomeView: View {
         }
     }
 
+    /** Anime: the big anime sites' lists (Discover anime), with their scores on the posters */
+    @ViewBuilder
+    private var animeLists: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Discover Anime").font(.title2.bold())
+            Text("From AniList, MyAnimeList and Kitsu, with their scores").font(.subheadline).foregroundStyle(Dx.muted)
+            NavigationLink(value: Route.anime(source: "anilist", list: "trending")) {
+                Label("Browse every list", systemImage: "square.grid.2x2").font(.subheadline.weight(.semibold)).padding(.horizontal, 6)
+            }
+            .dxGlassButton()
+            if !stremio.installedAddons.isEmpty, !hasAnimeAddon(stremio.installedAddons.map(\.name)) { AddAnimeAddon() }
+        }
+        .padding(.horizontal, Dx.gutter)
+        .task { stremio.loadAnimeHome() }
+        ForEach(AnimeSource.home.map { "\($0.0)/\($0.1)" }, id: \.self) { key in
+            let source = String(key.split(separator: "/")[0])
+            let list = String(key.split(separator: "/")[1])
+            let page = stremio.animeHome[key]
+            if let page, !page.items.isEmpty {
+                titleRow(AnimeSource.name(source, list), page.items, see: .anime(source: source, list: list))
+            } else if page == nil {
+                loadingRow(AnimeSource.name(source, list))
+            }
+        }
+    }
+
     private func loadingRow(_ name: String) -> some View {
         Shelf(title: name) {
             ForEach(0..<4, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 18).fill(Dx.raised).frame(width: 150, height: 225)
+                RoundedRectangle(cornerRadius: 18).fill(Dx.raised).frame(width: posterWidth, height: posterWidth * 1.5)
             }
         }
         .redacted(reason: .placeholder)

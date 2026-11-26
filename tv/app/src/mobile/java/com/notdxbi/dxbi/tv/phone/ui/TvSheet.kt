@@ -226,6 +226,7 @@ private fun Chooser(context: Context) {
 private fun Remote(context: Context, tv: TvRemote.Tv) {
     val status by TvRemote.status.collectAsState()
     val lost by TvRemote.lost.collectAsState()
+    val starting by TvRemote.starting.collectAsState()
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Filled.ConnectedTv, contentDescription = null, tint = Dx.Accent, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(10.dp))
@@ -236,8 +237,9 @@ private fun Remote(context: Context, tv: TvRemote.Tv) {
     val now = status
     when {
         lost -> Text("${tv.name} isn't answering. Is the app still open on the TV?", color = Dx.Muted, style = MaterialTheme.typography.bodyMedium)
+        now?.open == true -> Playing(context, now)
+        starting > 0 -> Starting(context, tv)
         now == null -> Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Dx.Accent) }
-        now.open -> Playing(context, now)
         else -> Text(
             "Nothing is playing on the TV. Pick a film or an episode here and press Play: it opens on ${tv.name}.",
             color = Dx.Muted, style = MaterialTheme.typography.bodyMedium,
@@ -245,6 +247,26 @@ private fun Remote(context: Context, tv: TvRemote.Tv) {
     }
     Spacer(Modifier.height(18.dp))
     Pad(context)
+}
+
+/** Play was just sent: the TV is opening it (a torrent can take a while), and the buttons are ready */
+@Composable
+private fun Starting(context: Context, tv: TvRemote.Tv) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        CircularProgressIndicator(color = Dx.Accent, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(12.dp))
+        Text("Starting on ${tv.name}…", color = Dx.Text, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+    Spacer(Modifier.height(4.dp))
+    Text("Pause, subtitles and the rest come up here as soon as it plays. A torrent can take a minute to start.", color = Dx.Muted, style = MaterialTheme.typography.bodyMedium)
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+        Round(Icons.Filled.Replay10, "Back 10 seconds") { TvRemote.control(context, "seekBy", -10_000) }
+        Round(Icons.Filled.Pause, "Pause", big = true) { TvRemote.control(context, "toggle") }
+        Round(Icons.Filled.Forward10, "Forward 10 seconds") { TvRemote.control(context, "seekBy", 10_000) }
+        Round(Icons.Filled.Stop, "Stop") { TvRemote.control(context, "close") }
+    }
+    Settings(context)
 }
 
 @Composable

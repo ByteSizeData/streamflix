@@ -30,6 +30,8 @@ data class Title(
     val inLibrary: Boolean = false,
     val watched: Boolean = false,
     val trailer: String? = null,
+    /** Scores a list brought with it (Discover anime: MyAnimeList, AniList, Kitsu), shown on the poster */
+    val badges: List<Badge> = emptyList(),
 ) {
     /** Art for a card: the poster, or for titles without one the backdrop */
     val art: String? get() = poster ?: background ?: if (id.startsWith("tt")) "https://images.metahub.space/poster/small/$id/img" else null
@@ -52,7 +54,28 @@ data class Title(
             inLibrary = o.optBoolean("inLibrary"),
             watched = o.optBoolean("watched"),
             trailer = o.text("trailer"),
+            badges = o.optJSONArray("scores").objects().mapNotNull { b -> b.text("value")?.let { Badge(b.optString("label"), it) } },
         )
+    }
+}
+
+/** A score on a poster: who gives it ("IMDb", "RT", "MAL"…) and the score as they write it */
+data class Badge(val label: String, val value: String)
+
+/** One anime site's lists, for Discover anime (window.__dxbi.phone.animeSources) */
+data class AnimeSource(val id: String, val name: String, val lists: List<Pair<String, String>>) {
+    companion object {
+        fun list(a: JSONArray?) = a.objects().map { s ->
+            AnimeSource(s.optString("id"), s.optString("name"), s.optJSONArray("lists").objects().map { it.optString("id") to it.optString("name") })
+        }
+    }
+}
+
+/** A page of one of those lists, or why there's none */
+data class AnimePage(val items: List<Title>, val more: Boolean, val error: String?) {
+    companion object {
+        fun from(o: JSONObject?) = if (o == null) AnimePage(emptyList(), false, "The anime lists didn't answer. Try again.")
+        else AnimePage(o.optJSONArray("items").objects().map(Title::from), o.optBoolean("more"), o.text("error"))
     }
 }
 

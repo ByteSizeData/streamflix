@@ -19,6 +19,8 @@ struct Title: Identifiable, Hashable {
     var inLibrary = false
     var watched = false
     var trailer: String?
+    /** Scores a list brought with it (Discover anime: MyAnimeList, AniList, Kitsu), shown on the poster */
+    var badges: [ScoreBadge] = []
 
     /** Art for a card: the poster, or for titles without one the backdrop */
     var art: URL? { URL(string: poster ?? background ?? (id.hasPrefix("tt") ? "https://images.metahub.space/poster/medium/\(id)/img" : "")) }
@@ -48,6 +50,71 @@ struct Title: Identifiable, Hashable {
         inLibrary = o.bool("inLibrary")
         watched = o.bool("watched")
         trailer = o.text("trailer")
+        badges = o.objects("scores").compactMap { b in b.text("value").map { ScoreBadge(label: b.string("label"), value: $0) } }
+    }
+}
+
+/** A score on a poster: who gives it ("IMDb", "RT", "MAL"…) and the score as they write it */
+struct ScoreBadge: Hashable {
+    var label: String
+    var value: String
+}
+
+/** One anime site's lists, for Discover anime (window.__dxbi.phone.animeSources) */
+struct AnimeSource: Hashable, Identifiable {
+    var id: String
+    var name: String
+    var lists: [AnimeList]
+
+    struct AnimeList: Hashable, Identifiable {
+        var id: String
+        var name: String
+    }
+
+    init(id: String, name: String, lists: [(String, String)]) {
+        self.id = id
+        self.name = name
+        self.lists = lists.map { AnimeList(id: $0.0, name: $0.1) }
+    }
+
+    init(_ o: JSON) {
+        id = o.string("id")
+        name = o.string("name")
+        lists = o.objects("lists").map { AnimeList(id: $0.string("id"), name: $0.string("name")) }
+    }
+
+    /** As dx.bi has them (used until the page says otherwise) */
+    static let all = [
+        AnimeSource(id: "anilist", name: "AniList", lists: [("trending", "Trending now"), ("season", "Popular this season"), ("next", "Coming next season"), ("top", "Top rated"), ("popular", "All-time popular"), ("movies", "Top films")]),
+        AnimeSource(id: "mal", name: "MyAnimeList", lists: [("airing", "Top airing"), ("top", "Top anime"), ("popular", "Most popular"), ("movies", "Top films"), ("upcoming", "Most anticipated")]),
+        AnimeSource(id: "kitsu", name: "Kitsu", lists: [("trending", "Trending"), ("airing", "Top airing"), ("popular", "Most popular"), ("top", "Highest rated")]),
+    ]
+
+    /** Home's Anime: these lists first, each a row */
+    static let home = [("anilist", "trending"), ("anilist", "season"), ("mal", "airing"), ("kitsu", "top"), ("anilist", "movies"), ("anilist", "next")]
+
+    static func name(_ source: String, _ list: String) -> String {
+        guard let s = all.first(where: { $0.id == source }) else { return list }
+        return "\(s.lists.first { $0.id == list }?.name ?? list) · \(s.name)"
+    }
+}
+
+/** A page of one of those lists, or why there's none */
+struct AnimePage: Hashable {
+    var items: [Title]
+    var more: Bool
+    var error: String?
+
+    init(_ o: JSON?) {
+        guard let o else {
+            items = []
+            more = false
+            error = "The anime lists didn't answer. Try again."
+            return
+        }
+        items = o.objects("items").map(Title.init)
+        more = o.bool("more")
+        error = o.text("error")
     }
 }
 
