@@ -6,11 +6,14 @@ still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are a
 
 ## StreamFlix 2.38.410
 
-Phones, tablets and the iPad only: this release has no new TV app (the TV's stays on 2.38.409).
+Phones, tablets, the iPad and, new, Windows and Mac. This release has no new TV app (the TV's stays on 2.38.409).
 
-- **Discover anime: Kitsu's Top airing is this year's shows.** It listed whatever was still airing by its number of followers (One Piece, Detective Conan, Crayon Shin-chan…), and every page of it was the first. It's now this year's shows still airing, the most popular first, on one page.
-- **A site that isn't answering is said so at once.** MyAnimeList's lists come through Jikan, which was down for days; each list then took twelve seconds to say so. A site that didn't answer is now left alone for ten minutes (a busy one, "too many requests", is asked again at once).
-- **Grids on a phone keep three posters across at Large**, the default (two was a big jump from the old three): two across from Larger. Rows are as in 2.38.409.
+- **StreamFlix for Windows and Mac.** The desktop app (dx.bi's, which plays through mpv on Windows) as StreamFlix: its own name, icon and data folder, so it can sit beside dx.bi, and its updates come from StreamFlix's releases. **StreamFlix-Setup-x64.exe** installs it on Windows, and it updates itself from then on. On a Mac, **streamflix-mac-arm64.dmg** (Apple silicon) or **streamflix-mac-x64.dmg** (Intel): the app isn't signed by Apple, so the first time, right-click it in Applications and choose Open (or run `xattr -cr /Applications/StreamFlix.app` in Terminal); a Mac is told when there's a new version but installs it by hand. Linux gets an AppImage.
+- **iPad: the TV remote opens reliably after Play.** It waited a set 0.65 s for the stream list to close and could ask too soon, and then couldn't be opened again until the app restarted. It now opens as soon as nothing else is on screen, and the bar showing what the TV plays sits above the tab bar in every screen, which makes room for it.
+- **"Starting on the TV" lasts until the new film plays.** With something already playing on the TV, that film was taken for the new one. Disconnect clears it, and the TV is asked every second meanwhile.
+- **Ratings on posters right after the app opens.** The posters drawn from last time, before the page had started, were left without ratings. An anime catalog's own score (Kitsu puts it where IMDb's goes) is no longer labelled IMDb.
+- **Discover anime.** Back from a title comes back to the list where you were, not page one; Kitsu's Top airing is this year's shows still airing (it listed One Piece, Detective Conan and the like, and every page was the first); a list names each title once; a site that isn't answering (MyAnimeList's Jikan was down for days) is said so at once instead of after twelve seconds each time.
+- **Phone grids keep three posters across at Large**, the default; two across from Larger.
 
 ## StreamFlix 2.38.409
 
