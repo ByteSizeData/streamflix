@@ -2,7 +2,7 @@ import Helpers from '../../utils/Helpers';
 import { type ExternalPlayerStatus } from '../../interfaces/ExternalPlayerTypes';
 
 // While a stream plays in mpv or VLC: a card at the top with the title, a progress bar and where it's
-// at, so it's clear dx.bi is keeping the place. ✕ shrinks it to a small pill in the corner.
+// at, so it's clear StreamFlix is keeping the place. ✕ shrinks it to a small pill in the corner.
 
 interface Shown {
     name: string;

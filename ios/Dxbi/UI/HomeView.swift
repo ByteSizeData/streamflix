@@ -2,7 +2,7 @@ import SwiftUI
 
 /**
  * Home, the Apple TV way: a tall billboard to swipe through (logo, what it is, Play and +), then
- * Continue Watching, dx.bi's own rows and the addons' catalogs in the viewer's order.
+ * Continue Watching, StreamFlix's own rows and the addons' catalogs in the viewer's order.
  */
 struct HomeView: View {
     @Environment(Stremio.self) private var stremio
@@ -13,7 +13,7 @@ struct HomeView: View {
     @State private var pastBillboard = false
     @Environment(\.horizontalSizeClass) private var sizeClass
 
-    /** dx.bi settings → Poster size */
+    /** StreamFlix settings → Poster size */
     private var posterWidth: CGFloat { Posters.shared.width(regular: sizeClass == .regular) }
 
     var body: some View {

@@ -18,7 +18,7 @@ class StreamingServer {
     private static logFilePath = join(Properties.enhancedPath, "stremio-server.log");
     private static hideWindowsPath = join(this.streamingServerDir, "dxbi-hide-windows.js");
 
-    // dx.bi is a GUI app without a console, so on Windows every console program server.js starts
+    // StreamFlix is a GUI app without a console, so on Windows every console program server.js starts
     // (ffmpeg, ffprobe, wmic, powershell for Local Files) opened a terminal window that flashed and closed.
     // server.js never passes windowsHide, so this is loaded with --require to default it on.
     private static readonly HIDE_WINDOWS_JS = `"use strict";
@@ -175,7 +175,7 @@ for (const name of ["spawn", "spawnSync", "execFile", "execFileSync", "exec", "e
         });
     }
 
-    // Downloads ffmpeg and ffprobe into targetDir (dx.bi's own streaming server folder by default)
+    // Downloads ffmpeg and ffprobe into targetDir (StreamFlix's own streaming server folder by default)
     public static async downloadAndExtractFFmpeg(targetDir: string = this.streamingServerDir): Promise<boolean> {
         const archiveUrl = this.getFFmpegUrl();
         const archivePath = join(targetDir, (process.platform == "win32" || process.platform == "darwin") ? "ffmpeg-release.zip" : "ffmpeg-release.tar.xz");

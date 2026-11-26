@@ -1,4 +1,4 @@
-// Preserve Stremio's appearance choices under dx.bi's preset. Stremio reapplies its colours when
+// Preserve Stremio's appearance choices under StreamFlix's preset. Stremio reapplies its colours when
 // loading a stream and when its settings change, so writing mpv properties just once isn't enough.
 const PROPERTIES = new Set([
     "sub-color", "sub-border-color", "sub-back-color", "sub-border-size",

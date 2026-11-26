@@ -19,7 +19,7 @@ import kotlin.math.sin
 /**
  * The intro film, played by the TV itself over the page while it loads. The page can't afford it
  * (decoding AV1 in the web engine stopped 2 GB sticks), but every TV decodes H.264 in hardware, so
- * here it costs next to nothing. Follows dx.bi's Intro animation, Intro sound, Sound volume and accent.
+ * here it costs next to nothing. Follows StreamFlix's Intro animation, Intro sound, Sound volume and accent.
  */
 class Intro(private val activity: MainActivity, private val parent: FrameLayout) {
 
@@ -148,7 +148,7 @@ class Intro(private val activity: MainActivity, private val parent: FrameLayout)
     }
 
     companion object {
-        // dx.bi's accent colours (ACCENTS in dxbi.plugin.js)
+        // StreamFlix's accent colours (ACCENTS in dxbi.plugin.js)
         private val ACCENTS = mapOf(
             "red" to 0xFFE50914.toInt(),
             "crimson" to 0xFFD81F3C.toInt(),

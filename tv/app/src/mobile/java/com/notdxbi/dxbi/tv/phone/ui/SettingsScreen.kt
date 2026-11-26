@@ -83,7 +83,7 @@ private fun sectionIcon(group: String): androidx.compose.ui.graphics.vector.Imag
 }
 
 /**
- * dx.bi settings: the same list the TV shows, in sections like a phone's own Settings. The first page
+ * StreamFlix settings: the same list the TV shows, in sections like a phone's own Settings. The first page
  * lists the sections; each opens on its own short page (one long list of every option took a lot of
  * scrolling to find anything).
  */
@@ -104,8 +104,8 @@ fun SettingsScreen(stremio: Stremio, onBack: () -> Unit) {
 
     // the phone's own option (where videos play) leads the Player section
     val other by stremio.playInOtherApp.collectAsState()
-    val playIn = Setting("playIn", "select", "Play videos in", "dx.bi's player, or another app on this phone (VLC, mpv, MX Player…).",
-        "Player", listOf(false to "dx.bi's player", true to "External player (ask which)"), other)
+    val playIn = Setting("playIn", "select", "Play videos in", "StreamFlix's player, or another app on this phone (VLC, mpv, MX Player…).",
+        "Player", listOf(false to "StreamFlix's player", true to "External player (ask which)"), other)
     val turnsOn by stremio.playerTurns.collectAsState()
     val playerTurns = Setting("playerTurns", "toggle", "Turn with my phone", "Off: videos always play full screen, sideways. On: the player turns when you turn your phone, so you can watch upright.",
         "Player", emptyList(), turnsOn)
@@ -117,7 +117,7 @@ fun SettingsScreen(stremio: Stremio, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Dx.Background).windowInsetsPadding(WindowInsets.safeDrawing)) {
         Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { if (section != null) section = null else onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Dx.Text) }
-            Text(section ?: "dx.bi settings", style = MaterialTheme.typography.titleLarge, color = Dx.Text)
+            Text(section ?: "StreamFlix settings", style = MaterialTheme.typography.titleLarge, color = Dx.Text)
         }
         val items = list
         if (items == null) {

@@ -1,13 +1,13 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { IPC_CHANNELS } from "../constants";
 
-// The page's half of dx.bi's mpv player (see core/MpvShell.ts).
+// The page's half of StreamFlix's mpv player (see core/MpvShell.ts).
 //
 // 1. A WebView2-style `chrome.webview` transport, so Stremio's web app uses its desktop-shell player
 //    (mpv) instead of the browser's <video>. It must exist before Stremio's scripts run.
 // 2. A stand-in <video> in the player screen that mirrors mpv (time, pause, volume, speed, size) and
 //    forwards play / pause / seek / volume to it, so plugins written for the browser player
-//    (dx.bi's skip intro, up next, watch party, remembered volume…) keep working unchanged.
+//    (StreamFlix's skip intro, up next, watch party, remembered volume…) keep working unchanged.
 
 export function mpvShellEnabled(): boolean {
     try { return ipcRenderer.sendSync(IPC_CHANNELS.MPV_ENABLED) === true; } catch { return false; }
@@ -103,7 +103,7 @@ function mainWorld(): void {
     const mpv: Record<string, any> = { pause: true, volume: 100, mute: false, speed: 1, "time-pos": 0, duration: NaN };
     const barsWaiting: ((bars: unknown) => void)[] = [];
     w.__dxbiMpvState = mpv; // for problem reports
-    // For dx.bi's picture and sound features, which use mpv's own filters and shaders here
+    // For StreamFlix's picture and sound features, which use mpv's own filters and shaders here
     w.__dxbiMpv = Object.freeze({
         get: (name: string) => mpv[name],
         set: (name: string, value: unknown) => send("mpv-set-prop", [name, value]),
@@ -112,7 +112,7 @@ function mainWorld(): void {
         observe: (name: string) => send("mpv-observe-prop", name),
         // [{ name, source }] of mpv GLSL user shaders; [] removes them
         shaders: (list: { name: string; source: string }[]) => send("dxbi-shaders", list),
-        // Picture-in-picture on / off (the video in a small window on top while dx.bi minimizes)
+        // Picture-in-picture on / off (the video in a small window on top while StreamFlix minimizes)
         pip: () => send("dxbi-pip", null),
         // Black bars in the current frame: { t, b, l, r } as fractions, or null
         measureBars: () => new Promise((resolve) => {
@@ -161,7 +161,7 @@ function mainWorld(): void {
             }
         } catch (err) { if (debug.errors.length < 5) debug.errors.push(String(err)); }
         for (const fn of listeners) {
-            try { fn({ data: message }); } catch (err) { console.error("[dx.bi] shell listener", err); }
+            try { fn({ data: message }); } catch (err) { console.error("[StreamFlix] shell listener", err); }
         }
     });
 
@@ -221,7 +221,7 @@ function mainWorld(): void {
         if (container.querySelector("video:not(.dx-mpv-video)")) return; // a trailer in the browser player
         if (!proxy) {
             proxy = makeProxy();
-            // For dx.bi's stream stats (Stremio's player doesn't watch these)
+            // For StreamFlix's stream stats (Stremio's player doesn't watch these)
             send("mpv-observe-prop", "hwdec-current");
             send("mpv-observe-prop", "frame-drop-count");
         }
@@ -243,7 +243,7 @@ function mainWorld(): void {
             "html[data-dx-native-player] [class*=\"player-container\"] canvas.dx-enhance { display: none !important; }",
             // Stremio clears the page background once mpv shows a picture; themes paint html/body too
             "html[data-dx-mpv-showing], html[data-dx-mpv-showing] body { background: transparent !important; }",
-            // Stremio's own Discord switch appears for its desktop app; dx.bi has its own status
+            // Stremio's own Discord switch appears for its desktop app; StreamFlix has its own status
             "html[data-dx-native-player] [class*=\"discord-container\"] { display: none !important; }",
         ].join("\n");
         document.head.appendChild(style);

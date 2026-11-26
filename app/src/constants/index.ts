@@ -1,5 +1,5 @@
 /**
- * Centralized constants for dx.bi (based on Stremio Enhanced)
+ * Centralized constants for StreamFlix (based on Stremio Enhanced)
  * Using constants instead of magic strings improves maintainability
  */
 
@@ -135,9 +135,9 @@ export const URLS = {
     STREMIO_WEB: 'https://web.stremio.com/',
     STREMIO_WEB_ADD_ADDON: 'https://web.stremio.com/#/addons?addon=',
     REGISTRY: 'https://raw.githubusercontent.com/REVENGE977/stremio-enhanced-registry/refs/heads/main/registry.json',
-    VERSION_CHECK: 'https://github.com/notdxbi/dxbi-stremio/raw/main/app/version',
-    RELEASES_API: 'https://api.github.com/repos/notdxbi/dxbi-stremio/releases/latest',
-    RELEASES_PAGE: 'https://github.com/notdxbi/dxbi-stremio/releases/latest',
+    VERSION_CHECK: 'https://github.com/ByteSizeData/streamflix/raw/streamflix/app/version',
+    RELEASES_API: 'https://api.github.com/repos/ByteSizeData/streamflix/releases/latest',
+    RELEASES_PAGE: 'https://github.com/ByteSizeData/streamflix/releases/latest',
     STREMIO_SERVICE_GITHUB_API: "https://api.github.com/repos/Stremio/stremio-service/releases/latest",
     STREMIO_SERVICE_DOWNLOAD_PAGE: "https://www.stremio.com/download-service"
 } as const;
@@ -167,9 +167,9 @@ export const MACOS_FFPROBE_URLS = {
     arm64: "https://ffmpeg.martin-riedl.de/download/macos/arm64/1766430132_8.0.1/ffprobe.zip",
 } as const;
 
-// Discord Rich Presence: dx.bi's own Discord application, so it reads "Watching dx.bi". Images are
+// Discord Rich Presence: StreamFlix's own Discord application, so it reads "Watching StreamFlix". Images are
 // web addresses (Discord fetches them), so nothing has to be uploaded to the Discord app.
-const PRESENCE_IMAGES = 'https://raw.githubusercontent.com/notdxbi/dxbi-stremio/main/app/images/presence';
+const PRESENCE_IMAGES = 'https://raw.githubusercontent.com/ByteSizeData/streamflix/streamflix/app/images/presence';
 export const DISCORD = {
     CLIENT_ID: '1563995396290777188',
     RECONNECT_INTERVAL: 10000,
@@ -177,7 +177,7 @@ export const DISCORD = {
     PLAY_IMAGE: `${PRESENCE_IMAGES}/play.png`,
     PAUSE_IMAGE: `${PRESENCE_IMAGES}/pause.png`,
     BROWSE_IMAGE: `${PRESENCE_IMAGES}/browse.png`,
-    BUTTONS: [{ label: 'Get dx.bi', url: 'https://github.com/notdxbi/dxbi-stremio' }],
+    BUTTONS: [{ label: 'Get StreamFlix', url: 'https://github.com/ByteSizeData/streamflix' }],
 } as const;
 
 // Timeouts

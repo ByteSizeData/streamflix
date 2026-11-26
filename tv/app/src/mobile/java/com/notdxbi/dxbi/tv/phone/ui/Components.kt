@@ -57,7 +57,7 @@ import com.notdxbi.dxbi.tv.phone.Title
 val PosterWidth = 112.dp
 val Gutter = 16.dp
 
-/** A poster's width in rows: dx.bi settings → Poster size (and bigger again on a tablet) */
+/** A poster's width in rows: StreamFlix settings → Poster size (and bigger again on a tablet) */
 @Composable
 fun posterWidth(): Dp {
     val look by Posters.look.collectAsState()

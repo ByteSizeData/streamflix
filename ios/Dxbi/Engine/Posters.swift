@@ -1,9 +1,9 @@
 import SwiftUI
 
 /**
- * What a poster carries beside its art, wherever one is drawn: the ratings on it (dx.bi settings →
+ * What a poster carries beside its art, wherever one is drawn: the ratings on it (StreamFlix settings →
  * Ratings on posters) and how big posters are (Poster size). Stremio fills both in: the look from
- * dx.bi's settings, the scores as posters come into view (window.__dxbi.phone.scores, a batch at a time).
+ * StreamFlix's settings, the scores as posters come into view (window.__dxbi.phone.scores, a batch at a time).
  */
 @MainActor
 @Observable

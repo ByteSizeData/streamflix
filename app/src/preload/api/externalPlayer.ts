@@ -4,7 +4,7 @@ import { type ExternalPlayer } from '../../interfaces/ExternalPlayerTypes';
 import { externalPlayerTracker } from '../ui/externalPlayerTracker';
 
 export const externalPlayerAPI = {
-    // dx.bi's own External player setting and Stremio's "Play in external player" (in the plugin) both
+    // StreamFlix's own External player setting and Stremio's "Play in external player" (in the plugin) both
     // open streams here, so both keep their progress
     launchExternalPlayer: async (player: ExternalPlayer | 'iina', streamUrl: string, customPath?: string): Promise<{ success: boolean; error?: string }> => {
         const { found, options } = player === 'iina'
