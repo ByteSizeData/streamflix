@@ -4,6 +4,13 @@ StreamFlix is [dx.bi](https://github.com/notdxbi/dxbi-stremio) with the changes 
 changes are in [CHANGELOG.md](../CHANGELOG.md). The entries here were written while the build was
 still called "dx.bi, Simkl build", newest first; StreamFlix's own releases are above them.
 
+## StreamFlix 2.38.411
+
+Phones, tablets, the iPad and the desktop apps. This release has no new TV app (the TV's stays on 2.38.409).
+
+- **Anime Ultra, in Discover.** A banner at the top of Discover (and the Anime tab's own button) opens the best anime from AniList, MyAnimeList and Kitsu, each poster with that site's scores: AniList's Popular right now, New this season, Best of all time, Most popular ever, Coming next season and Best films, by genre (Action, Romance, Sports…) and by kind (series, films, OVAs and specials); MyAnimeList's and Kitsu's own charts beside them. On a phone, a tablet, the iPad, Windows and the Mac. A poster opens its title; anime open through the free Anime Kitsu addon, which the screen offers to add when it isn't there.
+- **No more dx.bi intro.** The desktop app played dx.bi's intro film (its name and its "ta-dum") at every start. StreamFlix leaves it out: the name STREAMFLIX rises in instead (Settings → Intro animation turns it off). The TV and phone apps never played it.
+
 ## StreamFlix 2.38.410
 
 Phones, tablets, the iPad and, new, Windows and Mac. This release has no new TV app (the TV's stays on 2.38.409).
