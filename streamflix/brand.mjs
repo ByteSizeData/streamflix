@@ -85,6 +85,8 @@ const BAR = `
 #app nav[class*="horizontal-nav-bar"] [class*="logo-container"] { width: 8.2rem; }
 #app nav[class*="horizontal-nav-bar"] [class*="logo-container"]::before { font-size: 1.9rem; white-space: nowrap; }
 #app [class*="main-nav-bars-container"] > nav[class*="vertical-nav-bar"] { left: calc(var(--dx-gutter) + 8.2rem + 1.5rem); }
+/* the intro's light version: the name on one line (it wrapped after STREAMFLI) */
+.dx-splash-mark { white-space: nowrap; font-size: clamp(4rem, 12vw, 14rem); }
 `;
 function restyle(text) {
   const theme = /\/\*@bundled-theme\*\/("(?:[^"\\]|\\.)*")/;
@@ -144,12 +146,23 @@ function desktopSource(file, text) {
   return text;
 }
 
+// The intro film the plugin carries is dx.bi's (its name, its "ta-dum"): StreamFlix leaves it out.
+// The desktop app then shows the intro's light version, the name StreamFlix rising in (Settings →
+// Intro animation turns it off). The TV app's own copy of the film is a blank file (art/overlay), and
+// the phone and iPad apps never show the page's intro.
+function noIntroFilm(text) {
+  const film = /(\n  function introVideoData\(\) \{\r?\n    return )"[A-Za-z0-9+\/=]+";/;
+  const guard = `if (!video.canPlayType('video/webm; codecs="av01.0.09M.10, opus"')) {`;
+  if (!film.test(text) || !text.includes(guard)) throw new Error("the plugin's intro film, or where it's played, wasn't found");
+  return text.replace(film, '$1"";').replace(guard, `if (!introVideoData() || !video.canPlayType('video/webm; codecs="av01.0.09M.10, opus"')) {`);
+}
+
 let renamed = 0;
 for (const file of files) {
   const before = readFileSync(file, "utf8");
   // (the desktop's own changes first: the About page's credit to dx.bi keeps dx.bi's name, see KEEP)
   let after = rename(desktop.includes(file) ? desktopSource(file, before) : before);
-  if (file === PLUGIN) after = dubsFirst(ownReports(restyle(after)));
+  if (file === PLUGIN) after = noIntroFilm(dubsFirst(ownReports(restyle(after))));
   if (file === PLUGIN && version) after = stamp(after);
   if (after !== before) { writeFileSync(file, after); renamed++; }
 }
