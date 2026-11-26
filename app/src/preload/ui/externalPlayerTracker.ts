@@ -218,7 +218,7 @@ export const externalPlayerTracker = {
         if (session && location.hash.startsWith('#/player')) externalPlayerTracker.finish(false);
     },
 
-    // The player closed (or dx.bi is closing): save the place
+    // The player closed (or StreamFlix is closing): save the place
     finish(announce = true): void {
         const s = session;
         session = null;

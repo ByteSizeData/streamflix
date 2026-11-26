@@ -2,7 +2,7 @@ import SwiftUI
 
 /**
  * A film or show, the Apple TV way: its art at the top in the art's own colour, the logo, Play (one
- * tap: dx.bi picks the stream), then the seasons and episodes. The art stays put as the page scrolls
+ * tap: StreamFlix picks the stream), then the seasons and episodes. The art stays put as the page scrolls
  * up over it, fading and blurring away.
  */
 struct TitleView: View {
@@ -11,7 +11,7 @@ struct TitleView: View {
     var ref: TitleRef
 
     @State private var choices: StreamChoices?
-    /** Play was pressed for this video: dx.bi's pick plays as soon as it's sure */
+    /** Play was pressed for this video: StreamFlix's pick plays as soon as it's sure */
     @State private var waitingFor: String?
     @State private var streamsOpen = false
     @State private var season: Int?
@@ -20,7 +20,7 @@ struct TitleView: View {
     @State private var reviewsOpen = false
     @State private var moreText = false
     @State private var autoPlayed = false
-    /** The cast with photos (TMDB, with a key in dx.bi settings), else nil */
+    /** The cast with photos (TMDB, with a key in StreamFlix settings), else nil */
     @State private var cast: [JSON]?
 
     private var details: Details? { stremio.details?.metaId == ref.id ? stremio.details : nil }
@@ -97,7 +97,7 @@ struct TitleView: View {
             guard let d = details, let v = d.videos.first(where: { $0.id == id }), let s = v.season else { return }
             season = s
         }
-        // dx.bi's reading of the streams, again as more addons answer
+        // StreamFlix's reading of the streams, again as more addons answer
         .task(id: details?.streamsKey) {
             guard details?.videoId != nil else { return }
             choices = await stremio.streams()

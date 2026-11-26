@@ -41,14 +41,14 @@ import kotlin.concurrent.thread
 /**
  * Phones and TVs: films and episodes saved to watch offline, like Netflix's downloads. A stream (an addon's
  * link, debrid ones included) is downloaded in the background with Media3's DownloadManager, its
- * subtitles alongside, and plays from the phone in dx.bi's player, picking up where it was left.
- * dx.bi picks the stream (in the quality asked for: plugin api.phone.download), or it's the one
+ * subtitles alongside, and plays from the phone in StreamFlix's player, picking up where it was left.
+ * StreamFlix picks the stream (in the quality asked for: plugin api.phone.download), or it's the one
  * chosen from the list.
  *
- * Torrents download through dx.bi's own torrent engine (TorrentEngine), which the downloader reads
+ * Torrents download through StreamFlix's own torrent engine (TorrentEngine), which the downloader reads
  * from like any other link (dxbi-torrent://<hash>…, resolved to its local address each time).
  *
- * The phone app shows them on its own screens (DownloadUi.kt). dx.bi TV shows them in the page, in
+ * The phone app shows them on its own screens (DownloadUi.kt). StreamFlix TV shows them in the page, in
  * the Downloads a computer has (the plugin's `downloads`), which asks for them through Bridge.kt:
  * [pageList], [pageAdd], [pageAct], [pageSettings].
  */
@@ -159,7 +159,7 @@ object Downloads {
                 }.getOrNull()
                 if (wanted != null) TorrentEngine.tidy(torrentDir(app), wanted)
                 // Downloads only run while the service does, and nothing else brings it back after
-                // dx.bi was updated, closed by Android or the phone restarted: they sat at
+                // StreamFlix was updated, closed by Android or the phone restarted: they sat at
                 // "Downloading 0%" for ever
                 val unfinished = runCatching {
                     manager.downloadIndex.getDownloads(Download.STATE_QUEUED, Download.STATE_DOWNLOADING, Download.STATE_RESTARTING).use { it.count > 0 }
@@ -180,7 +180,7 @@ object Downloads {
      * Where torrents being downloaded keep their own copy until it's been saved: the app's own
      * storage, never shared storage (Android/data, a memory card), which Android serves through
      * FUSE. There, libtorrent's file handling crashed Android 14's storage daemon, which took
-     * dx.bi (and every app using storage) down with it a few seconds into a download.
+     * StreamFlix (and every app using storage) down with it a few seconds into a download.
      */
     private fun torrentDir(context: Context): File = File(context.noBackupFilesDir, "torrent-parts")
 
@@ -328,7 +328,7 @@ object Downloads {
     /** Deletes every download that's been watched */
     fun removeWatched(context: Context) = _items.value.filter { it.watched && it.done }.forEach { remove(context, it) }
 
-    /** Plays a download in dx.bi's player, from the phone, where it was left */
+    /** Plays a download in StreamFlix's player, from the phone, where it was left */
     fun play(context: Context, item: Item) {
         val stream = JSONObject(item.stream.toString())
             .put("offline", item.id)
@@ -369,7 +369,7 @@ object Downloads {
     }
 
     /**
-     * Moves downloads to another place (the phone or a memory card), then restarts dx.bi: the
+     * Moves downloads to another place (the phone or a memory card), then restarts StreamFlix: the
      * downloads' store can't be reopened somewhere else while the app runs. [progress] hears how far
      * the copy is (0 to 1), on another thread.
      */
@@ -450,7 +450,7 @@ object Downloads {
     }
 
     // ---------------------------------------------------------------------------------------------
-    // dx.bi TV: the page's Downloads (the plugin's `downloads`, as on a computer), through Bridge.kt.
+    // StreamFlix TV: the page's Downloads (the plugin's `downloads`, as on a computer), through Bridge.kt.
     // These run on the main thread (Bridge hands them over).
 
     /** Told after every change (the TV's page then asks for the list again) */

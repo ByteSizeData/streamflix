@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The app icon's dark tile (the adaptive icon's background layer) -->
+<!-- The app icon's tile (the adaptive icon's background layer): black, as StreamFlix's TV banner is -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient android:angle="270" android:startColor="#FF2A2A2A" android:endColor="#FF111111" />
+    <solid android:color="#FF000000" />
 </shape>
